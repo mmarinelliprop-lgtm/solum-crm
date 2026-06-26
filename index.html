@@ -1829,9 +1829,9 @@ Para gasto:
 ACCION:{"tipo":"gasto","datos":{"fecha":"","concepto":"","categoria":"","importe":N}}`;
 
     chatHistory.push({role:'user',content});
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+    const resp = await fetch('/.netlify/functions/claude',{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01'},
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:systemPrompt,messages:chatHistory})
     });
     const data = await resp.json();
