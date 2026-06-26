@@ -1906,10 +1906,102 @@ function procesarAccion(accion){
 function addMsg(text, role){
   const el = document.createElement('div');
   el.className = `msg msg-${role}`;
-  el.textContent = text;
+
+  if(role === 'claude'){
+    el.innerHTML = renderClaudeMsg(text);
+  } else {
+    el.textContent = text;
+  }
+
   document.getElementById('chatMessages').appendChild(el);
   el.scrollIntoView({behavior:'smooth'});
   return el;
+}
+
+function renderClaudeMsg(text){
+  // Detectar bloque [PREGUNTA: ...] con opciones numeradas
+  const preguntaRegex = /\[PREGUNTA:\s*([^\]]+)\]\s*((?:\d+\..+\n?)+)/g;
+  let html = text;
+  let match;
+  let hasPregunta = false;
+
+  while((match = preguntaRegex.exec(text)) !== null){
+    hasPregunta = true;
+    const pregunta = match[1].trim();
+    const opcionesRaw = match[2].trim().split('\n').filter(l=>l.match(/^\d+\./));
+    const opcionesHTML = opcionesRaw.map((op,i)=>{
+      const label = op.replace(/^\d+\.\s*/,'').trim();
+      return `<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--card);border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.06);margin-bottom:6px;transition:all .15s" 
+        onmouseover="this.style.borderColor='var(--gold3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'">
+        <input type="checkbox" onchange="seleccionarOpcion(this,'${pregunta.replace(/'/g,"\\'")}','${label.replace(/'/g,"\\'")}',event)" 
+          style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer">
+        <span style="font-size:13px;color:var(--text2)">${label}</span>
+      </label>`;
+    }).join('');
+
+    const bloque = `<div style="margin:8px 0">
+      <div style="font-size:12px;color:var(--gold2);font-weight:600;margin-bottom:8px">❓ ${pregunta}</div>
+      <div id="opts-${Date.now()}-${i}">${opcionesHTML}</div>
+      <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <input type="text" placeholder="O escribí acá si ninguna aplica..." 
+          style="flex:1;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:7px 12px;border-radius:8px;font-size:12px;outline:none"
+          id="freetext-${Date.now()}"
+          onkeydown="if(event.key==='Enter'){enviarRespuestaLibre(this,'${pregunta.replace(/'/g,"\\'")}');event.preventDefault()}">
+        <button onclick="enviarRespuestaLibre(this.previousElementSibling,'${pregunta.replace(/'/g,"\\'")}'')" 
+          style="background:var(--gold);color:var(--navy3);border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Enviar</button>
+      </div>
+    </div>`;
+
+    html = html.replace(match[0], bloque);
+  }
+
+  if(!hasPregunta){
+    // Texto plano — preservar saltos de línea
+    html = text.replace(/\n/g,'<br>');
+  }
+
+  return html;
+}
+
+let opcionesSeleccionadas = {};
+
+function seleccionarOpcion(checkbox, pregunta, opcion, event){
+  if(!opcionesSeleccionadas[pregunta]) opcionesSeleccionadas[pregunta] = [];
+  if(checkbox.checked){
+    opcionesSeleccionadas[pregunta].push(opcion);
+  } else {
+    opcionesSeleccionadas[pregunta] = opcionesSeleccionadas[pregunta].filter(o=>o!==opcion);
+  }
+  // Si tiene algo seleccionado, mostrar botón confirmar
+  const parent = checkbox.closest('div[style]').parentElement;
+  let confirmBtn = parent.querySelector('.confirm-btn');
+  if(!confirmBtn){
+    confirmBtn = document.createElement('button');
+    confirmBtn.className = 'confirm-btn';
+    confirmBtn.style.cssText = 'margin-top:8px;background:var(--green);color:#000;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%';
+    confirmBtn.textContent = 'Confirmar selección';
+    confirmBtn.onclick = () => confirmarOpciones(pregunta);
+    parent.appendChild(confirmBtn);
+  }
+  confirmBtn.textContent = `Confirmar: ${opcionesSeleccionadas[pregunta].join(', ')}`;
+}
+
+function confirmarOpciones(pregunta){
+  const seleccionadas = opcionesSeleccionadas[pregunta] || [];
+  if(!seleccionadas.length) return;
+  const respuesta = seleccionadas.join(', ');
+  delete opcionesSeleccionadas[pregunta];
+  // Enviar como mensaje del usuario
+  document.getElementById('chatInput').value = respuesta;
+  sendChat();
+}
+
+function enviarRespuestaLibre(input, pregunta){
+  const val = input.value.trim();
+  if(!val) return;
+  input.value = '';
+  document.getElementById('chatInput').value = val;
+  sendChat();
 }
 
 function addTyping(){
