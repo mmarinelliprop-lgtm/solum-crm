@@ -739,6 +739,93 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════
 const API_KEY = 'managed-by-netlify'; // La key está en variables de entorno de Netlify
+const DB_URL = '/.netlify/functions/sheets';
+
+// ═══════════════════════════════════════════════
+// PERSISTENCIA — Google Sheets via Netlify proxy
+// ═══════════════════════════════════════════════
+async function dbGuardar(tipo, fila) {
+  try {
+    await fetch(DB_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tipo, accion:'guardar', fila})
+    });
+  } catch(e) { console.error('dbGuardar error:', e); }
+}
+
+async function dbLeer(tipo) {
+  try {
+    const r = await fetch(DB_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tipo, accion:'leer'})
+    });
+    const d = await r.json();
+    return (d.ok && d.datos) ? d.datos : [];
+  } catch(e) { return []; }
+}
+
+async function dbActualizar(tipo, id, fila) {
+  try {
+    await fetch(DB_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tipo, accion:'actualizar', id, fila})
+    });
+  } catch(e) { console.error('dbActualizar error:', e); }
+}
+
+async function dbGuardarMemoria(clave, valor) {
+  await dbGuardar('MEMORIA', [new Date().toISOString(), clave, JSON.stringify(valor)]);
+}
+
+async function cargarDatosDB() {
+  showToast('⏳ Cargando datos desde Google Sheets...');
+  try {
+    // Operaciones
+    const opRows = await dbLeer('operaciones');
+    if(opRows.length > 1) {
+      operaciones = opRows.slice(1).map(r => ({
+        id: r[0], propiedad: r[1], agente: r[2], punta: r[3],
+        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
+        ganancia_martina: parseFloat(r[6])||0, ganancia_solum: parseFloat(r[7])||0,
+        fechaEsc: r[8], estado: r[9],
+        mes: parseInt(r[10])||0, anio: parseInt(r[11])||0,
+        planillaGenerada: r[12]==='true'
+      }));
+      showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
+    }
+    // Exchange
+    const exchRows = await dbLeer('exchange');
+    if(exchRows.length > 1) {
+      exchRows.slice(1).forEach(r => {
+        const a=parseInt(r[0]), m=parseInt(r[1]);
+        if(!historicoExchange[a]) historicoExchange[a]={};
+        historicoExchange[a][m]={usd:parseFloat(r[2])||0, cotiz:parseFloat(r[3])||0};
+      });
+    }
+    // Gastos
+    const gastosRows = await dbLeer('gastos');
+    if(gastosRows.length > 1) {
+      gastosPesos = gastosRows.slice(1).map(r => ({
+        fecha:r[0], concepto:r[1], categoria:r[2],
+        importe:parseFloat(r[3])||0, cotiz:parseFloat(r[4])||0
+      }));
+    }
+    // Memoria / actualizaciones
+    const memRows = await dbLeer('MEMORIA');
+    if(memRows.length > 1) {
+      window._memoriaDB = memRows.slice(1).map(r => ({
+        fecha: r[0], clave: r[1], valor: r[2]
+      }));
+    }
+  } catch(e) {
+    console.error('Error cargando DB:', e);
+  }
+  renderDashboard();
+  detectarIncongruencias();
+}
 
 // ═══════════════════════════════════════════════
 // DATA STORE
@@ -1884,32 +1971,73 @@ Puntas válidas: "Vendedor", "Comprador"`;
 function procesarAccion(accion){
   if(accion.tipo==='operacion'){
     const d = accion.datos;
+    // Respetar el estado que viene en el JSON
+    const estadoMap = {'Cobrada':'Cobrada','Por cobrar':'Por cobrar','Caída':'Caída',
+                       'cobrada':'Cobrada','por cobrar':'Por cobrar','caída':'Caída','caida':'Caída'};
+    const estado = estadoMap[d.estado] || 'Por cobrar';
+
+    // Calcular ganancia si no viene en el JSON
+    const pctMartina = COMISIONES[d.agente]===0.80 ? 0.80 :
+                       d.agente==='propia' ? 0.80 :
+                       d.agente==='Kito'||d.agente==='Esteban' ? 0.10 : 0.20;
+    const comision = parseFloat(d.comision) || parseFloat(d.precio||0)*0.03;
+    const ganancia_martina = parseFloat(d.ganancia_martina) || comision*pctMartina;
+    const ganancia_solum = parseFloat(d.ganancia_solum) || comision*0.30;
+
     const newOp = {
-      id: operaciones.length+1,
+      id: d.id || operaciones.length+1,
       propiedad: d.propiedad||'Sin nombre',
       agente: d.agente||'propia',
       punta: d.punta||'Vendedor',
       precio: parseFloat(d.precio)||0,
-      comision: parseFloat(d.precio||0)*0.03,
+      comision,
+      ganancia_martina,
+      ganancia_solum,
       fechaEsc: d.fechaEsc||'',
-      estado: 'Por cobrar',
-      mes: d.mes||new Date().getMonth()+1,
-      anio: d.anio||new Date().getFullYear()
+      estado,
+      mes: parseInt(d.mes)||new Date().getMonth()+1,
+      anio: parseInt(d.anio)||new Date().getFullYear(),
+      planillaGenerada: estado==='Cobrada'
     };
     operaciones.push(newOp);
-    addMsg(`✅ Operación "${newOp.propiedad}" cargada al sistema. Comisión: ${fmtUSD(newOp.comision)}`,'system');
-  }
-  else if(accion.tipo==='exchange'){
+
+    // Guardar en Sheets
+    dbGuardar('operaciones', [newOp.id, newOp.propiedad, newOp.agente, newOp.punta,
+      newOp.precio, newOp.comision, newOp.ganancia_martina, newOp.ganancia_solum,
+      newOp.fechaEsc, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
+
+    // Cruzar con seguimiento del agente
+    const agSeg = mapAgenteToSeg(newOp.agente);
+    if(!segData[agSeg]) segData[agSeg]={};
+    if(!segData[agSeg][newOp.mes]) segData[agSeg][newOp.mes]={};
+    if(estado==='Por cobrar'){
+      segData[agSeg][newOp.mes].r = (segData[agSeg][newOp.mes].r||0)+1;
+    } else if(estado==='Cobrada'){
+      segData[agSeg][newOp.mes].v = (segData[agSeg][newOp.mes].v||0)+1;
+      segData[agSeg][newOp.mes].f = (segData[agSeg][newOp.mes].f||0)+newOp.comision;
+      // Cruzar con finanzas
+      if(!historicoIngresos[newOp.anio]) historicoIngresos[newOp.anio]={};
+      historicoIngresos[newOp.anio][newOp.mes] = (historicoIngresos[newOp.anio][newOp.mes]||0)+newOp.ganancia_martina;
+    }
+
+  } else if(accion.tipo==='exchange'){
     const d = accion.datos;
     if(!historicoExchange[d.anio]) historicoExchange[d.anio]={};
     historicoExchange[d.anio][d.mes]={usd:d.usd,cotiz:d.cotiz};
+    dbGuardar('exchange', [d.anio, d.mes, d.usd, d.cotiz]);
     addMsg(`✅ Exchange cargado: USD ${d.usd} a $${d.cotiz}`,'system');
-  }
-  else if(accion.tipo==='gasto'){
+
+  } else if(accion.tipo==='gasto'){
     const d = accion.datos;
     const exc = historicoExchange[new Date(d.fecha).getFullYear()]?.[new Date(d.fecha).getMonth()+1];
-    gastosPesos.push({...d, cotiz:exc?.cotiz||0});
-    addMsg(`✅ Gasto registrado: ${d.concepto} $${fmtPesos(d.importe)}`,'system');
+    const gasto = {...d, cotiz:exc?.cotiz||0};
+    gastosPesos.push(gasto);
+    dbGuardar('gastos', [gasto.fecha, gasto.concepto, gasto.categoria, gasto.importe, gasto.cotiz]);
+    addMsg(`✅ Gasto registrado: ${d.concepto} ${fmtPesos(d.importe)}`,'system');
+
+  } else if(accion.tipo==='memoria'){
+    // Guardar decisión/corrección en la memoria del sistema
+    dbGuardarMemoria(accion.clave, accion.valor);
   }
 }
 
