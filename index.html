@@ -2020,8 +2020,8 @@ function fileToBase64(file){
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        // Máximo 1200px en el lado más largo
-        const MAX = 1200;
+        // Máximo 800px en el lado más largo
+        const MAX = 800;
         let w = img.width, h = img.height;
         if(w > MAX || h > MAX){
           if(w > h){ h = Math.round(h*MAX/w); w = MAX; }
@@ -2030,8 +2030,8 @@ function fileToBase64(file){
         const canvas = document.createElement('canvas');
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        // Comprimir a JPEG 0.75
-        const b64 = canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+        // Comprimir a JPEG 0.60
+        const b64 = canvas.toDataURL('image/jpeg', 0.60).split(',')[1];
         URL.revokeObjectURL(url);
         res(b64);
       };
@@ -2099,6 +2099,7 @@ function guardarExchange(){
   const a = d.getFullYear(); const m = d.getMonth()+1;
   if(!historicoExchange[a]) historicoExchange[a]={};
   historicoExchange[a][m]={usd,cotiz};
+  dbGuardar('exchange', [a, m, usd, cotiz]);
   closeModal('modalExchange');
   renderFinanzas();
   showToast('✅ Exchange cargado');
@@ -2149,7 +2150,7 @@ function confirmarApiKey(){ return; // Manejado por Netlify
   showToast('✅ API Key cargada correctamente');
 }
 
-detectarIncongruencias();
+cargarDatosDB();
 document.getElementById('hdrDate').textContent = new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 renderDashboard();
 </script>
