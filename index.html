@@ -658,8 +658,8 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 
 
 
-<!-- Modal: API Key (desactivado — key en Netlify env vars) -->
-<div class="modal-overlay hidden" id="modalApiKey" style="z-index:2000;display:none!important">
+<!-- Modal: API Key -->
+<div class="modal-overlay" id="modalApiKey" style="z-index:2000">
   <div class="modal" style="max-width:400px;text-align:center">
     <div style="font-size:32px;margin-bottom:12px">🔑</div>
     <div class="modal-title" style="text-align:center">Ingresá tu API Key</div>
@@ -1841,10 +1841,20 @@ Estados válidos: "Por cobrar", "Cobrada", "Caída"
 Puntas válidas: "Vendedor", "Comprador"`;
 
     chatHistory.push({role:'user',content});
-    const resp = await fetch('/.netlify/functions/claude',{
+
+    // Imágenes directo a Anthropic, texto por proxy Netlify
+    const hasImage = content.some(c=>c.type==='image');
+    const endpoint = hasImage
+      ? 'https://api.anthropic.com/v1/messages'
+      : '/.netlify/functions/claude';
+    const reqHeaders = hasImage
+      ? {'Content-Type':'application/json','x-api-key':API_KEY,'anthropic-version':'2023-06-01'}
+      : {'Content-Type':'application/json'};
+
+    const resp = await fetch(endpoint,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:systemPrompt,messages:chatHistory})
+      headers:reqHeaders,
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:systemPrompt,messages:chatHistory})
     });
     const data = await resp.json();
     const reply = data.content?.[0]?.text||'Error al conectar con Claude.';
@@ -2138,7 +2148,7 @@ function showToast(msg, type='green'){
 // INIT
 // ═══════════════════════════════════════════════
 
-function confirmarApiKey(){ return; // Manejado por Netlify
+function confirmarApiKey(){
   const key = document.getElementById('apiKeyInput').value.trim();
   if(!key.startsWith('sk-')){
     showToast('⚠️ Key inválida — debe empezar con sk-', 'amber');
