@@ -2150,10 +2150,7 @@ function showToast(msg, type='green'){
 
 function confirmarApiKey(){
   const key = document.getElementById('apiKeyInput').value.trim();
-  if(!key.startsWith('sk-')){
-    showToast('⚠️ Key inválida — debe empezar con sk-', 'amber');
-    return;
-  }
+  if(!key){ showToast('⚠️ Ingresá tu API key', 'amber'); return; }
   API_KEY = key;
   document.getElementById('modalApiKey').classList.add('hidden');
   document.getElementById('apiStatusText').textContent = 'Claude conectado';
