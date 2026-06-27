@@ -554,43 +554,91 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 <div class="tab-content" id="tab-seguimiento-content">
   <div class="section-header">
     <div><div class="section-title">Seguimiento SOLUMITOS</div>
-    <div class="section-sub">Métricas mensuales y semanales · Carga manual</div></div>
+    <div class="section-sub">Tabla anual · Embudo · Calendario semanal</div></div>
     <div class="filters">
-      <button class="btn btn-outline btn-sm" id="btn-vista-ind" onclick="switchSegVista('individual')" style="border-color:var(--gold);color:var(--gold2)">Individual</button>
-      <button class="btn btn-outline btn-sm" id="btn-vista-con" onclick="switchSegVista('consolidado')">Consolidado</button>
-      <select class="filter-select" id="seg-mes" onchange="renderSeguimiento()">
-        <option value="6" selected>Junio</option>
-        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-        <option value="4">Abril</option><option value="5">Mayo</option>
-        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-        <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+      <button class="btn btn-outline btn-sm" id="btn-vista-ind" onclick="switchSegVista('tabla')" style="border-color:var(--gold);color:var(--gold2)">Tabla anual</button>
+      <button class="btn btn-outline btn-sm" id="btn-vista-cal" onclick="switchSegVista('calendario')">Calendario semanal</button>
+      <select class="filter-select" id="seg-vendedor-sel" onchange="renderSeguimiento()">
+        <option value="Martina">Martina</option>
+        <option value="Marce">Marce</option>
+        <option value="Kito">Kito</option>
+        <option value="Vicky">Vicky</option>
+        <option value="Manu">Manu</option>
+        <option value="Cris">Cris</option>
+        <option value="Ceci">Ceci</option>
+        <option value="Jose">Jose</option>
+        <option value="Luli">Luli</option>
       </select>
       <button class="btn btn-gold btn-sm" onclick="guardarSeguimiento()">💾 Guardar</button>
     </div>
   </div>
 
-  <!-- Selector de vendedor (vista individual) -->
+  <!-- Tabs de vendedores -->
   <div id="seg-vendedor-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;"></div>
 
-  <!-- Gráfico facturación mensual -->
-  <div class="chart-card" style="margin-bottom:20px">
-    <div class="chart-title">Facturación mensual vs objetivo (verde = cumple, rojo = no cumple)</div>
-    <div class="chart-wrap"><canvas id="chartSegMensual"></canvas></div>
+  <!-- Vista: Tabla anual -->
+  <div id="seg-vista-tabla">
+    <div class="table-wrap" style="overflow-x:auto;margin-bottom:24px">
+      <table id="seg-tabla-anual" style="min-width:1100px"></table>
+    </div>
+
+    <!-- Totales anuales -->
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap" id="seg-totales"></div>
+
+    <!-- Gráfico embudo -->
+    <div class="chart-card" style="margin-bottom:20px">
+      <div class="chart-title">Embudo de conversión — evolución mensual</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="chartEmbudo"></canvas></div>
+    </div>
+
+    <!-- Análisis IA -->
+    <div id="seg-analisis" style="background:var(--card2);border-radius:var(--radius2);padding:20px;border:1px solid rgba(255,255,255,0.06);margin-bottom:24px">
+      <div style="font-size:13px;font-weight:600;color:var(--gold2);margin-bottom:10px">📊 Análisis de conversión</div>
+      <div id="seg-analisis-texto" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
+    </div>
+
+    <!-- FODA -->
+    <div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">FODA del agente</div>
+        <button class="btn btn-outline btn-sm" onclick="generarFODA()" id="btn-foda">🔄 Regenerar con IA</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="foda-grid">
+        <div style="background:rgba(39,196,122,0.08);border:1px solid rgba(39,196,122,0.25);border-radius:var(--radius2);padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">💪 Fortalezas</div>
+          <div id="foda-f" contenteditable="true" style="font-size:12px;color:var(--text2);line-height:1.6;min-height:80px;outline:none" 
+            onblur="saveFoda()">Generando...</div>
+        </div>
+        <div style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.22);border-radius:var(--radius2);padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">⚠️ Debilidades</div>
+          <div id="foda-d" contenteditable="true" style="font-size:12px;color:var(--text2);line-height:1.6;min-height:80px;outline:none"
+            onblur="saveFoda()">Generando...</div>
+        </div>
+        <div style="background:rgba(74,158,255,0.08);border:1px solid rgba(74,158,255,0.22);border-radius:var(--radius2);padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🚀 Oportunidades</div>
+          <div id="foda-o" contenteditable="true" style="font-size:12px;color:var(--text2);line-height:1.6;min-height:80px;outline:none"
+            onblur="saveFoda()">Generando...</div>
+        </div>
+        <div style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.22);border-radius:var(--radius2);padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🎯 Amenazas / Desafíos</div>
+          <div id="foda-a" contenteditable="true" style="font-size:12px;color:var(--text2);line-height:1.6;min-height:80px;outline:none"
+            onblur="saveFoda()">Generando...</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Cards métricas mensuales -->
-  <div class="seg-grid" id="seg-cards"></div>
-
-  <!-- Totales anuales -->
-  <div style="display:flex;gap:12px;margin-bottom:20px;" id="seg-totales"></div>
-
-  <!-- Tabla semanal -->
-  <div class="section-header mt16">
-    <div class="section-title">Seguimiento semanal</div>
-    <div style="font-size:11px;color:var(--text3)">Ingresá la fecha de cada semana y los valores</div>
-  </div>
-  <div class="week-table-wrap">
-    <table class="week-table" id="weekTable"></table>
+  <!-- Vista: Calendario semanal -->
+  <div id="seg-vista-calendario" style="display:none">
+    <div class="filters" style="margin-bottom:16px">
+      <select class="filter-select" id="seg-cal-mes" onchange="renderCalendarioSemanal()">
+        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+        <option value="4">Abril</option><option value="5">Mayo</option><option value="6" selected>Junio</option>
+        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+        <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+      </select>
+    </div>
+    <div id="seg-calendario-wrap"></div>
   </div>
 </div>
 
@@ -820,6 +868,35 @@ async function cargarDatosDB() {
         fecha: r[0], clave: r[1], valor: r[2]
       }));
     }
+    // Cargar objetivos guardados
+    const objRows = await dbLeer('objetivos');
+    if(objRows.length > 1) {
+      objRows.slice(1).forEach(r => {
+        const vendedor=r[1], key=r[2], val=parseFloat(r[3])||0;
+        if(!segObjetivos[vendedor]) segObjetivos[vendedor]={...(OBJ_BASE[vendedor]||OBJ_BASE['Martina'])};
+        segObjetivos[vendedor][key] = val;
+      });
+    }
+    // Cargar seguimiento manual guardado
+    const segRows = await dbLeer('seguimiento');
+    if(segRows.length > 1) {
+      segRows.slice(1).forEach(r => {
+        const vendedor=r[1], mes=parseInt(r[2]), key=r[3], val=parseInt(r[4])||0;
+        if(!segData[vendedor]) segData[vendedor]={};
+        if(!segData[vendedor][mes]) segData[vendedor][mes]={};
+        segData[vendedor][mes][key] = val;
+      });
+    }
+    // Cargar FODA guardado
+    const fodaRows = await dbLeer('foda');
+    if(fodaRows.length > 1) {
+      // Tomar el más reciente por vendedor
+      const fodaMap = {};
+      fodaRows.slice(1).forEach(r => {
+        fodaMap[r[1]] = {f:r[2]||'', d:r[3]||'', o:r[4]||'', a:r[5]||''};
+      });
+      Object.assign(fodaData, fodaMap);
+    }
   } catch(e) {
     console.error('Error cargando DB:', e);
   }
@@ -831,10 +908,17 @@ async function cargarDatosDB() {
 // DATA STORE
 // ═══════════════════════════════════════════════
 const COMISIONES = {
-  'propia': 0.80,
-  'M. Victoria': 0.50, 'Manuela': 0.50,
-  'Marce': 0.50, 'Cristian': 0.50,
-  'Esteban': 0.60, 'Cecilia': 0.50
+  'propia': 0.80, 'Martina': 0.80, 'Martina Marinelli': 0.80,
+  'M. Victoria': 0.50, 'Vicky': 0.50, 'Victoria': 0.50,
+  'Maria Victoria': 0.50, 'María Victoria': 0.50,
+  'Maria Victoria Saire': 0.50, 'María Victoria Saire': 0.50,
+  'Manuela': 0.50, 'Manu': 0.50, 'Manuela Pellegrini': 0.50,
+  'Marce': 0.50, 'Marcela': 0.50, 'Marcela Corsalini': 0.50,
+  'Cristian': 0.50, 'Cris': 0.50, 'Cristian Ruiz Diaz': 0.50,
+  'Esteban': 0.60, 'Kito': 0.60, 'Esteban Romero': 0.60,
+  'Cecilia': 0.50, 'Ceci': 0.50, 'Cecilia Bruno': 0.50,
+  'Josefina': 0.50, 'Jose': 0.50,
+  'Luli': 0.50
 };
 
 // Datos demo hasta carga real
@@ -995,7 +1079,7 @@ function switchTab(tab) {
   if(tab==='ganancia') renderGanancia();
   if(tab==='operaciones') renderOperaciones();
   if(tab==='finanzas') renderFinanzas();
-  if(tab==='seguimiento') renderSeguimiento();
+  if(tab==='seguimiento') { switchSegVista('tabla'); }
   if(tab==='calendar') renderCalendar();
 }
 
@@ -1277,8 +1361,36 @@ function ejecutarPlanilla(op, g) {
 }
 
 function mapAgenteToSeg(agente) {
-  const map = {'M. Victoria':'Vicky','Manuela':'Manu','Cristian':'Cris','Esteban':'Kito','Cecilia':'Ceci','Josefina':'Jose','propia':'Martina'};
-  return map[agente] || agente;
+  const map = {
+    // Vicky
+    'M. Victoria':'Vicky','Vicky':'Vicky','Victoria':'Vicky',
+    'Maria Victoria':'Vicky','María Victoria':'Vicky',
+    'Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky',
+    'M.Victoria':'Vicky',
+    // Manu
+    'Manuela':'Manu','Manu':'Manu',
+    'Manuela Pellegrini':'Manu',
+    // Marce
+    'Marcela':'Marce','Marce':'Marce',
+    'Marcela Corsalini':'Marce',
+    // Cris
+    'Cristian':'Cris','Cris':'Cris',
+    'Cristian Ruiz Diaz':'Cris','Cristian Ruiz Díaz':'Cris',
+    // Kito
+    'Esteban':'Kito','Kito':'Kito',
+    'Esteban Romero':'Kito',
+    // Ceci
+    'Cecilia':'Ceci','Ceci':'Ceci',
+    'Cecilia Bruno':'Ceci',
+    // Jose
+    'Josefina':'Jose','Jose':'Jose',
+    // Luli
+    'Luli':'Luli',
+    // Martina / propia
+    'propia':'Martina','Martina':'Martina',
+    'Martina Marinelli':'Martina'
+  };
+  return map[agente] || map[agente?.trim()] || agente;
 }
 
 function renderDashboard(){
@@ -1306,14 +1418,14 @@ function renderDashboard(){
 
 
   // Reservas pendientes del seguimiento (solo Por cobrar, excluir caídas y cobradas)
-  const reservasPendientes = ops.filter(o=>o.estado==='Por cobrar'&&o.esReserva).length + segReservasTot;
+  const reservasPendientes = ops.filter(o=>o.estado==='Por cobrar').length;
   const montoPorCobrar = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
   const cantCaidas = ops.filter(o=>o.estado==='Caída').length;
   const montoCaidas = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
 
   document.getElementById('dash-kpis').innerHTML = `
     <div class="kpi"><div class="kpi-label">Facturado / Cobrado</div><div class="kpi-value gold">${fmtUSD(cobradas)}</div><div class="kpi-sub">${ops.filter(o=>o.estado==='Cobrada').length} operaciones cobradas</div></div>
-    <div class="kpi"><div class="kpi-label">Reservas pendientes</div><div class="kpi-value amber">${segReservasTot}</div><div class="kpi-sub">Sin cerrar aún</div></div>
+    <div class="kpi"><div class="kpi-label">Reservas pendientes</div><div class="kpi-value amber">${reservasPendientes}</div><div class="kpi-sub">Ops por cobrar</div></div>
     <div class="kpi"><div class="kpi-label">Captaciones publicadas</div><div class="kpi-value" style="color:var(--blue)">${segCaptTot}</div><div class="kpi-sub">Del seguimiento</div></div>
     <div class="kpi"><div class="kpi-label">Por cobrar</div><div class="kpi-value amber">${fmtUSD(montoPorCobrar)}</div><div class="kpi-sub">${pendientes} operaciones pendientes</div></div>
     <div class="kpi"><div class="kpi-label">Caídas</div><div class="kpi-value red">${cantCaidas}</div><div class="kpi-sub" style="color:var(--red)">${fmtUSD(montoCaidas)} perdidos</div></div>
@@ -1372,10 +1484,13 @@ function renderGanancia(){
   const ganEquipo = ops.filter(o=>o.agente!=='propia').reduce((s,o)=>s+calcGanancia(o).equipo,0);
 
 
-  const ganPropiaCobrada = ops.filter(o=>o.agente==='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).propia,0);
-  const ganPropiaPend = ops.filter(o=>o.agente==='propia'&&o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).propia,0);
-  const ganEquipoCobrada = ops.filter(o=>o.agente!=='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).equipo,0);
-  const ganEquipoPend = ops.filter(o=>o.agente!=='propia'&&o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).equipo,0);
+  // Solo cobradas en KPIs
+  const opsCob = ops.filter(o=>o.estado==='Cobrada');
+  const opsPend = ops.filter(o=>o.estado==='Por cobrar');
+  const ganPropiaCobrada = opsCob.filter(o=>o.agente==='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0);
+  const ganPropiaPend = opsPend.filter(o=>o.agente==='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0);
+  const ganEquipoCobrada = opsCob.filter(o=>o.agente!=='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0);
+  const ganEquipoPend = opsPend.filter(o=>o.agente!=='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0);
   const totCobrado = ganPropiaCobrada + ganEquipoCobrada;
   const totPend = ganPropiaPend + ganEquipoPend;
 
@@ -1383,7 +1498,7 @@ function renderGanancia(){
     <div class="kpi">
       <div class="kpi-label">Ganancia total cobrada</div>
       <div class="kpi-value green">${fmtUSD(totCobrado)}</div>
-      <div class="kpi-sub" style="color:var(--amber)">+ ${fmtUSD(totPend)} pendiente</div>
+      <div class="kpi-sub" style="color:var(--amber)">Pendiente: + ${fmtUSD(totPend)}</div>
     </div>
     <div class="kpi">
       <div class="kpi-label">Operaciones propias (80%)</div>
@@ -1397,16 +1512,16 @@ function renderGanancia(){
     </div>
     <div class="kpi">
       <div class="kpi-label">Ops propias / equipo</div>
-      <div class="kpi-value">${ops.filter(o=>o.agente==='propia').length} <span style="color:var(--text3);font-size:14px">/ ${ops.filter(o=>o.agente!=='propia').length}</span></div>
-      <div class="kpi-sub">Propias / Equipo</div>
+      <div class="kpi-value">${opsCob.filter(o=>o.agente==='propia').length} <span style="color:var(--text3);font-size:14px">/ ${opsCob.filter(o=>o.agente!=='propia').length}</span></div>
+      <div class="kpi-sub">Cobradas propias / equipo</div>
     </div>
   `;
 
   // Charts
   destroyChart('chartGanancia');
   const mesesLabel = MESES_NOMBRES.slice(1);
-  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente==='propia').reduce((s,o)=>s+calcGanancia(o).propia,0));
-  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia').reduce((s,o)=>s+calcGanancia(o).equipo,0));
+  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente==='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
+  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
   charts['chartGanancia'] = new Chart(document.getElementById('chartGanancia'),{
     type:'bar',data:{labels:mesesLabel,datasets:[
       {label:'Propia (80%)',data:gPropia,backgroundColor:'rgba(182,162,132,0.8)',borderRadius:4},
@@ -1605,44 +1720,79 @@ function switchSegVista(vista){
 }
 
 function renderSeguimiento(){
+  try{
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   segVendedorActivo = vendedor;
   const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
 
-  // ── Tabla anual: métricas × meses ──
+  // Merge datos reales + manuales + de operaciones cargadas
+  const getMd = m2 => {
+    const real = SEG_DATA_REAL[vendedor]?.[m2] || {};
+    const manual = segData?.[vendedor]?.[m2] || {};
+    return {...real, ...manual};
+  };
+
+  // ── Tabla anual ──
   const mesesCols = MESES_NOMBRES.slice(1,13);
-  let tableHTML = '<thead><tr><th class="seg-table-header" style="min-width:180px;text-align:left">Métrica</th><th class="seg-table-header">OBJ</th>';
-  mesesCols.forEach(m => tableHTML += `<th class="seg-table-header" colspan="2" style="text-align:center">${m.slice(0,3)}</th>`);
-  tableHTML += '</tr><tr><th></th><th></th>';
-  mesesCols.forEach(() => tableHTML += '<th style="font-size:9px;color:var(--text3);padding:3px 6px;text-align:center">OBJ</th><th style="font-size:9px;color:var(--text3);padding:3px 6px;text-align:center">REAL</th>');
+  const mesActualNum = new Date().getMonth()+1;
+  let tableHTML = '<thead>';
+  tableHTML += '<tr><th class="seg-table-header" style="min-width:180px;text-align:left;position:sticky;left:0;z-index:2">Métrica</th>';
+  tableHTML += '<th class="seg-table-header" style="min-width:60px;text-align:center">% Año</th>';
+  mesesCols.forEach(m => tableHTML += `<th class="seg-table-header" colspan="2" style="text-align:center;min-width:80px">${m.slice(0,3)}</th>`);
+  tableHTML += '</tr>';
+  tableHTML += '<tr><th style="position:sticky;left:0;background:var(--navy3)"></th><th style="background:var(--bg3);font-size:9px;color:var(--text3);text-align:center">Cumpl.</th>';
+  mesesCols.forEach(() => tableHTML += '<th style="font-size:9px;color:var(--text3);padding:3px 6px;text-align:center;background:var(--bg3)">OBJ</th><th style="font-size:9px;color:var(--text3);padding:3px 6px;text-align:center;background:var(--bg3)">REAL</th>');
   tableHTML += '</tr></thead><tbody>';
 
   METRICAS_SEG.forEach((met, i) => {
     const key = OBJ_KEYS[i];
     const objV = objVals[i] || 0;
-    tableHTML += `<tr><td style="padding:7px 10px;font-size:12px;color:var(--text2);font-weight:500;border-bottom:1px solid rgba(255,255,255,0.04)">${met}</td>`;
-    tableHTML += `<td style="padding:7px 6px;text-align:center;font-size:11px;color:var(--text3);border-bottom:1px solid rgba(255,255,255,0.04)">${objV}</td>`;
+
+    // Calcular % acumulado solo de meses ya procesados (hasta hoy)
+    const mesesProcesados = Array.from({length:mesActualNum},(_,mi)=>mi+1);
+    const totalReal = mesesProcesados.reduce((s,m)=>{const d=getMd(m);return s+(d[key]??0);},0);
+    const totalObj = objV * mesActualNum;
+    const pctAcum = totalObj>0 ? Math.round(totalReal/totalObj*100) : 0;
+    const pctColor = pctAcum>=100?'var(--green)':pctAcum>=70?'var(--amber)':'var(--red)';
+    const pctBg = pctAcum>=100?'rgba(39,196,122,0.12)':pctAcum>=70?'rgba(240,165,0,0.10)':'rgba(224,85,85,0.10)';
+
+    tableHTML += `<tr>`;
+    tableHTML += `<td style="padding:7px 10px;font-size:12px;color:var(--text);font-weight:500;border-bottom:1px solid rgba(255,255,255,0.04);position:sticky;left:0;background:var(--card)">${met}</td>`;
+    tableHTML += `<td style="padding:7px 6px;text-align:center;font-size:12px;font-weight:700;color:${pctColor};background:${pctBg};border-bottom:1px solid rgba(255,255,255,0.04)">${pctAcum}%</td>`;
     for(let m=1; m<=12; m++){
-      const d = {...(SEG_DATA_REAL[vendedor]?.[m]||{}), ...(segData[vendedor]?.[m]||{})};
+      const d = getMd(m);
       const real = d[key] ?? null;
-      const cumple = real !== null && real >= objV;
-      const cls = real === null ? 'seg-real-empty' : (cumple ? 'seg-real-green' : 'seg-real-red');
-      tableHTML += `<td style="padding:7px 6px;text-align:center;font-size:11px;color:var(--text3);border-bottom:1px solid rgba(255,255,255,0.04)">${objV}</td>`;
-      tableHTML += `<td class="${cls}" style="padding:7px 6px;text-align:center;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.04)">
-        <input style="width:36px;background:transparent;border:none;color:inherit;font-size:12px;font-weight:700;text-align:center;outline:none" 
+      const cumple = real !== null && objV > 0 && real >= objV;
+      const tiene = real !== null && real > 0;
+      const bgColor = real===null?'transparent':(cumple?'rgba(39,196,122,0.15)':'rgba(224,85,85,0.13)');
+      const textColor = real===null?'var(--text3)':(cumple?'var(--green)':'var(--red)');
+      tableHTML += `<td style="padding:4px 6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <input style="width:34px;background:transparent;border:1px solid transparent;color:var(--text3);font-size:11px;text-align:center;outline:none;cursor:pointer;border-radius:3px"
+          value="${objV}" title="Click para editar objetivo"
+          onchange="segObjetivos['${vendedor}']['${key}']=parseInt(this.value)||0;renderSeguimiento();dbGuardar('objetivos',[Date.now(),'${vendedor}','${key}',parseInt(this.value)||0])"
+          onfocus="this.style.background='var(--card2)';this.style.borderColor='var(--gold3)'"
+          onblur="this.style.background='transparent';this.style.borderColor='transparent'">
+      </td>`;
+      tableHTML += `<td style="padding:4px 6px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);background:${bgColor}">
+        <input style="width:34px;background:transparent;border:none;color:${textColor};font-size:12px;font-weight:700;text-align:center;outline:none"
           value="${real !== null ? real : ''}" placeholder="—"
-          onchange="setSegVal('${vendedor}',${m},'${key}',parseInt(this.value)||0);renderSeguimiento()">
+          onchange="setSegVal('${vendedor}',${m},'${key}',parseInt(this.value)||0);renderSeguimiento();dbGuardar('seguimiento',[Date.now(),'${vendedor}',${m},'${key}',parseInt(this.value)||0])">
       </td>`;
     }
     tableHTML += '</tr>';
   });
   tableHTML += '</tbody>';
-  document.getElementById('seg-tabla-anual').innerHTML = tableHTML;
+
+  const tablaEl = document.getElementById('seg-tabla-anual');
+  if(tablaEl) tablaEl.innerHTML = tableHTML;
 
   // ── Totales anuales ──
-  const allM = [...new Set([...Object.keys(SEG_DATA_REAL[vendedor]||{}), ...Object.keys(segData[vendedor]||{})].filter(k=>!isNaN(k)))];
-  const getMd = m2 => ({...(SEG_DATA_REAL[vendedor]?.[m2]||{}), ...(segData[vendedor]?.[m2]||{})});
+  const allM = [...new Set([
+    ...Object.keys(SEG_DATA_REAL[vendedor]||{}),
+    ...Object.keys(segData[vendedor]||{})
+  ].filter(k=>!isNaN(k)))];
+
   const totCap = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
   const totVen = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
   const totFac = allM.reduce((s,m)=>s+(getMd(m).f||0),0);
@@ -1653,7 +1803,8 @@ function renderSeguimiento(){
   let proyAnual=totFac;
   for(let mm=mesActual+1;mm<=12;mm++) proyAnual+=promMens*factorEst[mm-1];
 
-  document.getElementById('seg-totales').innerHTML = `
+  const totalesEl = document.getElementById('seg-totales');
+  if(totalesEl) totalesEl.innerHTML = `
     <div class="kpi" style="flex:1"><div class="kpi-label">Captaciones año</div><div class="kpi-value gold">${totCap}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ventas año</div><div class="kpi-value green">${totVen}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Facturación año</div><div class="kpi-value amber">${fmtUSD(totFac)}</div></div>
@@ -1663,66 +1814,151 @@ function renderSeguimiento(){
       <div class="kpi-sub">Est. estacionalidad inmob.</div>
     </div>`;
 
-  // ── Gráfico embudo mensual ──
+  // ── Gráfico embudo ──
   destroyChart('chartEmbudo');
   const embudoKeys = ['p','ec','acm','cp','m','r','v'];
   const embudoLabels = ['Prospección','Entrevistas','ACM','Captaciones','Muestras','Reservas','Ventas'];
   const colors = ['rgba(74,158,255,0.7)','rgba(182,162,132,0.8)','rgba(206,147,216,0.7)','rgba(128,222,234,0.7)','rgba(165,214,167,0.8)','rgba(240,165,0,0.8)','rgba(39,196,122,0.9)'];
-  const datasets = embudoKeys.map((k,i)=>({
-    label: embudoLabels[i],
-    data: Array.from({length:12},(_,mi)=>{const d=getMd(mi+1);return d[k]||0;}),
-    backgroundColor: colors[i], borderRadius:3
-  }));
   const cEl = document.getElementById('chartEmbudo');
-  if(cEl) charts['chartEmbudo'] = new Chart(cEl,{
-    type:'bar',
-    data:{labels:MESES_NOMBRES.slice(1),datasets},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:10},boxWidth:10}}},
-      scales:{x:{stacked:false,ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.02)'}},
-              y:{ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}}}
-  });
+  if(cEl){
+    charts['chartEmbudo'] = new Chart(cEl,{
+      type:'bar',
+      data:{
+        labels: MESES_NOMBRES.slice(1),
+        datasets: embudoKeys.map((k,i)=>({
+          label: embudoLabels[i],
+          data: Array.from({length:12},(_,mi)=>getMd(mi+1)[k]||0),
+          backgroundColor: colors[i],
+          borderRadius: 3
+        }))
+      },
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{labels:{color:'#b8b0a4',font:{size:10},boxWidth:10}}},
+        scales:{
+          x:{ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.02)'}},
+          y:{ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.04)'}}
+        }}
+    });
+  }
 
-  // ── Análisis de conversión con IA ──
+  // ── Análisis IA ──
   analizarConversion(vendedor, getMd, allM, obj);
+  loadFoda(vendedor);
+  if(allM.length > 0) generarFODA();
+
+
+  // ── Selector de vendedores ──
+  const vtabs = document.getElementById('seg-vendedor-tabs');
+  if(vtabs) vtabs.innerHTML = VENDEDORES_SEG.map(v=>`
+    <button onclick="document.getElementById('seg-vendedor-sel').value='${v}';renderSeguimiento()"
+      class="btn btn-sm" style="${v===vendedor?'background:var(--gold);color:var(--navy3)':'background:var(--card2);color:var(--text2);border:1px solid rgba(255,255,255,0.08)'}">${v}</button>
+  `).join('');
+  }catch(err){
+    console.error('renderSeguimiento error:',err);
+    const tablaEl = document.getElementById('seg-tabla-anual');
+    if(tablaEl) tablaEl.innerHTML = `<tr><td colspan="28" style="padding:20px;color:var(--red);text-align:center">Error: ${err.message}</td></tr>`;
+  }
+}
+
+let fodaData = {}; // {vendedor: {f,d,o,a}}
+
+async function generarFODA(){
+  const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
+  const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
+  const getMd = m2 => ({...(SEG_DATA_REAL[vendedor]?.[m2]||{}), ...(segData[vendedor]?.[m2]||{})});
+  const mesActual = new Date().getMonth()+1;
+  const allM = Array.from({length:mesActual},(_,i)=>i+1);
+
+  // Armar resumen numérico para Claude
+  const resumen = METRICAS_SEG.map((met,i)=>{
+    const key = OBJ_KEYS[i];
+    const objV = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap][i]||0;
+    const real = allM.reduce((s,m)=>s+(getMd(m)[key]||0),0);
+    const pct = objV>0?Math.round(real/(objV*mesActual)*100):0;
+    return `${met}: real=${real} obj=${objV*mesActual} cumpl=${pct}%`;
+  }).join('\n');
+
+  const btn = document.getElementById('btn-foda');
+  btn.textContent = '⏳ Generando...'; btn.disabled = true;
+
+  try {
+    const resp = await fetch('/.netlify/functions/claude', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:1000,
+        system:`Sos experto en inmobiliarias y coaching de equipos de ventas. Analizás métricas de seguimiento de asesores inmobiliarios del mercado argentino (Rosario/Cañada de Gómez). 
+Generá un FODA breve y concreto basado en los números. Cada cuadrante: 2-3 puntos cortos, accionables, específicos del rubro inmobiliario. Sin puntitos, sin markdown, texto plano separado por saltos de línea.
+Respondé EXACTAMENTE en este formato JSON:
+{"f":"punto1\\npunto2\\npunto3","d":"punto1\\npunto2","o":"punto1\\npunto2","a":"punto1\\npunto2"}`,
+        messages:[{role:'user',content:`Agente: ${vendedor}\nMeses analizados: ${mesActual}\n\nMétricas:\n${resumen}\n\nGenerá el FODA.`}]
+      })
+    });
+    const data = await resp.json();
+    const text = data.content?.[0]?.text||'{}';
+    const foda = JSON.parse(text.replace(/```json|```/g,'').trim());
+    document.getElementById('foda-f').innerHTML = (foda.f||'').replace(/\n/g,'<br>');
+    document.getElementById('foda-d').innerHTML = (foda.d||'').replace(/\n/g,'<br>');
+    document.getElementById('foda-o').innerHTML = (foda.o||'').replace(/\n/g,'<br>');
+    document.getElementById('foda-a').innerHTML = (foda.a||'').replace(/\n/g,'<br>');
+    fodaData[vendedor] = foda;
+    dbGuardar('foda', [Date.now(), vendedor, foda.f||'', foda.d||'', foda.o||'', foda.a||'']);
+  } catch(e) {
+    document.getElementById('foda-f').textContent = 'Error generando FODA. Intentá de nuevo.';
+  }
+  btn.textContent = '🔄 Regenerar con IA'; btn.disabled = false;
+}
+
+function saveFoda(){
+  const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
+  const foda = {
+    f: document.getElementById('foda-f').innerText,
+    d: document.getElementById('foda-d').innerText,
+    o: document.getElementById('foda-o').innerText,
+    a: document.getElementById('foda-a').innerText,
+  };
+  fodaData[vendedor] = foda;
+  dbGuardar('foda', [Date.now(), vendedor, foda.f, foda.d, foda.o, foda.a]);
+}
+
+function loadFoda(vendedor){
+  const foda = fodaData[vendedor];
+  if(foda){
+    document.getElementById('foda-f').innerHTML = (foda.f||'').replace(/\n/g,'<br>');
+    document.getElementById('foda-d').innerHTML = (foda.d||'').replace(/\n/g,'<br>');
+    document.getElementById('foda-o').innerHTML = (foda.o||'').replace(/\n/g,'<br>');
+    document.getElementById('foda-a').innerHTML = (foda.a||'').replace(/\n/g,'<br>');
+  } else {
+    ['foda-f','foda-d','foda-o','foda-a'].forEach(id=>{
+      document.getElementById(id).textContent = 'Hacé click en "Regenerar con IA" para generar el FODA.';
+    });
+  }
 }
 
 function analizarConversion(vendedor, getMd, allM, obj){
-  if(!allM.length){ document.getElementById('seg-analisis-texto').innerHTML = '<span style="color:var(--text3)">Sin datos cargados aún.</span>'; return; }
-  
-  const totalP = allM.reduce((s,m)=>s+(getMd(m).p||0),0);
-  const totalEc = allM.reduce((s,m)=>s+(getMd(m).ec||0),0);
-  const totalAcm = allM.reduce((s,m)=>s+(getMd(m).acm||0),0);
-  const totalCp = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
-  const totalM = allM.reduce((s,m)=>s+(getMd(m).m||0),0);
-  const totalR = allM.reduce((s,m)=>s+(getMd(m).r||0),0);
-  const totalV = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
+  const el = document.getElementById('seg-analisis-texto');
+  if(!el) return;
+  if(!allM.length){ el.innerHTML = '<span style="color:var(--text3)">Sin datos cargados aún.</span>'; return; }
 
-  const ratioProspToEc = totalP>0?Math.round(totalP/Math.max(totalEc,1)):0;
-  const ratioEcToAcm = totalEc>0?Math.round(totalEc/Math.max(totalAcm,1)):0;
-  const ratioAcmToCp = totalAcm>0?Math.round(totalAcm/Math.max(totalCp,1)):0;
-  const ratioMToR = totalM>0?Math.round(totalM/Math.max(totalR,1)):0;
-  const ratioRToV = totalR>0?Math.round(totalR/Math.max(totalV,1)):0;
+  const tot = k => allM.reduce((s,m)=>s+(getMd(m)[k]||0),0);
+  const p=tot('p'),ec=tot('ec'),acm=tot('acm'),cp=tot('cp'),m=tot('m'),r=tot('r'),v=tot('v');
 
-  // Benchmarks del rubro inmobiliario
-  const benchmarks = {prospToEc:4,ecToAcm:1.5,acmToCp:1.5,mToR:6,rToV:2};
-  
-  const lineas = [];
-  
-  const icon = (ratio, bench, inv=false) => {
-    const ok = inv ? ratio<=bench : ratio<=bench;
-    return ok ? '✅' : '⚠️';
-  };
+  const ratio = (a,b) => b>0 ? Math.round(a/b*10)/10 : '—';
+  const bench = {pToEc:4, ecToAcm:1.5, acmToCp:1.5, mToR:7, rToV:2};
 
-  lineas.push(`<b>Embudo de ${vendedor} — ${allM.length} meses analizados</b>`);
-  lineas.push('');
-  lineas.push(`${icon(ratioProspToEc,benchmarks.prospToEc)} <b>Prospección → Entrevistas:</b> cada ${ratioProspToEc} prospectos generan 1 entrevista (benchmark del rubro: cada 4). ${ratioProspToEc>6?'<span style="color:var(--red)">Alta dispersión — revisar calidad de prospección.</span>':ratioProspToEc<=3?'<span style="color:var(--green)">Excelente conversión.</span>':'<span style="color:var(--amber)">En rango normal.</span>'}`);
-  lineas.push(`${icon(ratioEcToAcm,benchmarks.ecToAcm)} <b>Entrevistas → ACM:</b> ${ratioEcToAcm} entrevistas por ACM presentado. ${ratioEcToAcm>3?'<span style="color:var(--red)">Muchas entrevistas sin llegar a ACM — posible problema de precalificación.</span>':'<span style="color:var(--green)">Buena tasa de avance.</span>'}`);
-  lineas.push(`${icon(ratioAcmToCp,benchmarks.acmToCp)} <b>ACM → Captación publicada:</b> ${ratioAcmToCp}:1. ${ratioAcmToCp>3?'<span style="color:var(--amber)">Presentás muchos ACM pero captás pocos. Revisá precio o perfil de propietario.</span>':'<span style="color:var(--green)">Buena efectividad de cierre de captación.</span>'}`);
-  lineas.push(`${icon(ratioMToR,benchmarks.mToR)} <b>Muestras → Reservas:</b> cada ${ratioMToR} muestras generan 1 reserva. Benchmark inmob.: cada 6-8. ${ratioMToR>10?'<span style="color:var(--red)">Alta cantidad de muestras por reserva. Revisar match comprador-propiedad.</span>':ratioMToR<=5?'<span style="color:var(--green)">Conversión muy eficiente.</span>':'<span style="color:var(--amber)">Dentro del rango normal.</span>'}`);
-  lineas.push(`${icon(ratioRToV,benchmarks.rToV)} <b>Reservas → Ventas cerradas:</b> ${ratioRToV}:1. ${ratioRToV>3?'<span style="color:var(--red)">Muchas reservas que no llegan a escritura. Revisá condiciones de reserva o financiamiento.</span>':'<span style="color:var(--green)">Buena tasa de cierre definitivo.</span>'}`);
+  const icon = (val, bch) => (val!=='—'&&val<=bch) ? '✅' : '⚠️';
 
-  document.getElementById('seg-analisis-texto').innerHTML = lineas.join('<br>');
+  const lineas = [
+    `<b>Embudo de ${vendedor} — ${allM.length} meses</b>`,
+    '',
+    `${icon(ratio(p,ec),bench.pToEc)} <b>Prospección → Entrevistas:</b> ${ratio(p,ec)}:1 (benchmark: ${bench.pToEc}:1). ${ratio(p,ec)>6?'<span style="color:var(--red)">Alta dispersión — revisá calidad de contactos.</span>':ratio(p,ec)<=3?'<span style="color:var(--green)">Excelente conversión.</span>':'<span style="color:var(--amber)">En rango normal.</span>'}`,
+    `${icon(ratio(ec,acm),bench.ecToAcm)} <b>Entrevistas → ACM:</b> ${ratio(ec,acm)}:1 (benchmark: ${bench.ecToAcm}:1). ${ratio(ec,acm)>3?'<span style="color:var(--red)">Muchas entrevistas sin llegar a ACM.</span>':'<span style="color:var(--green)">Buena tasa de avance.</span>'}`,
+    `${icon(ratio(acm,cp),bench.acmToCp)} <b>ACM → Captación publicada:</b> ${ratio(acm,cp)}:1 (benchmark: ${bench.acmToCp}:1). ${ratio(acm,cp)>3?'<span style="color:var(--amber)">Presentás muchos ACM pero captás pocos.</span>':'<span style="color:var(--green)">Buena efectividad de captación.</span>'}`,
+    `${icon(ratio(m,r),bench.mToR)} <b>Muestras → Reservas:</b> ${ratio(m,r)}:1 (benchmark: ${bench.mToR}:1). ${ratio(m,r)>10?'<span style="color:var(--red)">Muchas muestras por reserva — revisá match comprador/propiedad.</span>':ratio(m,r)<=5?'<span style="color:var(--green)">Conversión muy eficiente.</span>':'<span style="color:var(--amber)">Dentro del rango normal.</span>'}`,
+    `${icon(ratio(r,v),bench.rToV)} <b>Reservas → Ventas:</b> ${ratio(r,v)}:1 (benchmark: ${bench.rToV}:1). ${ratio(r,v)>3?'<span style="color:var(--red)">Muchas reservas que no cierran — revisá condiciones.</span>':'<span style="color:var(--green)">Buena tasa de cierre.</span>'}`,
+  ];
+  el.innerHTML = lineas.join('<br>');
 }
 
 function renderCalendarioSemanal(){
@@ -1891,41 +2127,117 @@ async function sendChat(){
 
     if(text) content.push({type:'text',text});
 
-    const systemPrompt = `Sos el asistente de Martina Marinelli (Mat. 2543), corredora bajo SOLUM Negocios Inmobiliarios, Rosario. Trabajás en el CRM SOLUMITOS. Todo en USD.
+    const systemPrompt = `Sos el asistente de Martina Marinelli (Mat. 2543), corredora bajo SOLUM Negocios Inmobiliarios, Rosario y Cañada de Gómez. Trabajás en el CRM SOLUMITOS. Todo en USD.
 
-ESTRUCTURA DE COMISIONES:
-- Vendedores: M. Victoria (Vicky), Manuela (Manu), Marce, Cristian (Cris), Esteban (Kito) → 50-60%. Cecilia (Ceci) → 50%.
-- Martina sola → 80% (20% queda en oficina SOLUM)
-- Vendedor vende → Martina gana diferencial (10-20% según el agente)
-- Comisión al cliente: 3% del precio de venta
+═══════════════════════════════════════════════
+ESTRUCTURA DE COMISIONES
+═══════════════════════════════════════════════
+Comisión al cliente: siempre 3% del precio/monto de oferta.
 
-REGLA CRÍTICA DE FORMATO — MUY IMPORTANTE:
-Cuando necesitás hacer preguntas a Martina, SIEMPRE usá este formato exacto con opciones numeradas para que ella pueda responder con el número:
+Agentes y porcentajes:
+- Vicky (M. Victoria, Maria Victoria Saire): agente 50% / Martina 20% / SOLUM 30%
+- Manu (Manuela, Manuela Pellegrini): agente 50% / Martina 20% / SOLUM 30%
+- Marce (Marcela, Marcela Corsalini): agente 50% / Martina 20% / SOLUM 30%
+- Cris (Cristian, Cristian Ruiz Diaz): agente 50% / Martina 20% / SOLUM 30%
+- Ceci (Cecilia, Cecilia Bruno): agente 50% / Martina 20% / SOLUM 30%
+- Kito (Esteban, Esteban Romero): agente 60% / Martina 10% / SOLUM 30%
+- Propia (Martina sola): Martina 80% / SOLUM 20%
+
+Fórmulas:
+- Comisión bruta = monto oferta × 3%
+- Ganancia Martina = comisión bruta × % Martina según agente
+- Ganancia SOLUM = comisión bruta × 30%
+
+═══════════════════════════════════════════════
+MAPEO DE ESTADOS
+═══════════════════════════════════════════════
+- Vendida → Cobrada
+- Conformada → Por cobrar
+- Pendiente → Por cobrar
+- Rechazada → Caída
+
+═══════════════════════════════════════════════
+MAPEO DE COLUMNAS DE PLANILLAS
+═══════════════════════════════════════════════
+- nombre = agente
+- punta = Compradora/Vendedora → Comprador/Vendedor
+- monto oferta = precio de venta
+- comisión BRUT = comisión bruta (verificar = monto × 3%)
+- sistema 70% = agente al 50% (Martina 20%)
+- sistema 80% = operación propia Martina (80%)
+- sistema 60% = Kito (60%, Martina 10%)
+- fecha operación = fecha escritura estimada (determina el mes/año)
+- compartida, pox, Column 20 = ignorar
+
+═══════════════════════════════════════════════
+LÓGICA DE CARGA
+═══════════════════════════════════════════════
+Cuando analizás una foto o planilla:
+1. Identificá el agente → si no está claro, preguntá
+2. Identificá la punta (Comprador/Vendedor) → si no está clara, preguntá
+3. Calculá comisión bruta (monto × 3%) y verificá contra lo que figura
+4. Determiná el estado según el mapeo
+5. Usá la fecha de escritura/operación para el mes/año
+6. Mostrá resumen antes de cargar y esperá confirmación
+
+Si hay dos puntas (comprador Y vendedor) → son DOS operaciones separadas.
+
+Duplicados: si ves misma dirección + misma punta → alertar antes de cargar.
+
+═══════════════════════════════════════════════
+CUANDO TE MANDAN UNA FOTO DE RESERVA/BOLETO
+═══════════════════════════════════════════════
+Extraé estos campos en orden:
+1. Dirección/propiedad → campo "propiedad"
+2. Precio de venta → campo "precio" (en USD)
+3. Agente → buscá en el documento quién firma o quién está asignado
+   - Si no figura → preguntá: [PREGUNTA: ¿Quién es el agente de esta operación?] con lista de agentes
+4. Punta → ¿representa al vendedor o al comprador?
+   - Si no está claro → preguntá: [PREGUNTA: ¿Qué punta representa esta reserva?] 1. Vendedor 2. Comprador 3. Las dos puntas
+5. Fecha de escritura estimada → buscá fecha de escritura, posesión o vencimiento
+6. Estado → si es reserva nueva = "Por cobrar"
+7. Calculá: comisión = precio × 3%, ganancia_martina según agente, ganancia_solum = comisión × 30%
+
+Si falta el precio → preguntá antes de calcular.
+Si falta el agente → preguntá siempre, no asumir.
+Si la foto tiene las dos puntas → generá DOS acciones ACCION separadas.
+
+Mostrá siempre un resumen antes de cargar:
+"Voy a cargar: [dirección] | Agente: [X] | Punta: [X] | Precio: $X | Comisión: $X | Estado: Por cobrar | Escritura: [fecha]"
+Esperá confirmación antes de generar el ACCION.
+
+═══════════════════════════════════════════════
+CRUCES AUTOMÁTICOS
+═══════════════════════════════════════════════
+Al cargar una operación:
+- Por cobrar → +1 Reservas del agente ese mes en Seguimiento
+- Cobrada → +1 Ventas + suma Facturación del agente + suma Ingresos de Martina en Finanzas
+
+═══════════════════════════════════════════════
+FORMATO DE PREGUNTAS — OBLIGATORIO
+═══════════════════════════════════════════════
+SIEMPRE preguntá con este formato exacto, UNA pregunta a la vez:
 
 [PREGUNTA: texto de la pregunta]
 1. opción uno
 2. opción dos
 3. opción tres
 
-NUNCA uses HTML (<details>, <summary>, bullets, markdown headers ##). Solo texto plano con el formato de pregunta + opciones numeradas. Una pregunta a la vez.
+NUNCA uses markdown (##, **, listas con guión, <details>). Solo texto plano.
 
-Cuando analizás una planilla o archivo:
-1. Describí brevemente lo que ves
-2. Hacé UNA pregunta a la vez con opciones numeradas
-3. Esperá la respuesta antes de hacer la siguiente pregunta
-4. Una vez que tenés todo claro, generá el JSON de carga
-
-Cuando cargás datos al sistema, respondé con un JSON al final así:
-ACCION:{"tipo":"operacion","datos":{...}}
+═══════════════════════════════════════════════
+ACCIONES JSON
+═══════════════════════════════════════════════
+Para cargar operación:
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0}}
 
 Para exchange:
-ACCION:{"tipo":"exchange","datos":{"mes":N,"anio":N,"usd":N,"cotiz":N}}
+ACCION:{"tipo":"exchange","datos":{"mes":0,"anio":0,"usd":0,"cotiz":0}}
 
 Para gasto:
-ACCION:{"tipo":"gasto","datos":{"fecha":"","concepto":"","categoria":"","importe":N}}
+ACCION:{"tipo":"gasto","datos":{"fecha":"","concepto":"","categoria":"","importe":0}}
 
-Estados válidos: "Por cobrar", "Cobrada", "Caída"
-Puntas válidas: "Vendedor", "Comprador"`;
+Cuando cargás múltiples operaciones de una planilla, generá todos los ACCION:{} uno después del otro al final del mensaje, sin límite de cantidad.`;
 
     chatHistory.push({role:'user',content});
 
@@ -1938,19 +2250,20 @@ Puntas válidas: "Vendedor", "Comprador"`;
     const reply = data.content?.[0]?.text||'Error al conectar con Claude.';
 
     chatHistory.push({role:'assistant',content:reply});
+    // Guardar mensajes en Sheets
+    dbGuardar('chat', [Date.now(), 'user', typeof content==='string'?content:(content.find?.(c=>c.type==='text')?.text||'[archivo]')||'']);
+    dbGuardar('chat', [Date.now()+1, 'assistant', reply.substring(0,500)]);
     typingEl.remove();
     addMsg(reply,'claude');
 
-    // Procesar TODAS las acciones de la respuesta
-    const accionRegex = /ACCION:(\{(?:[^{}]|\{[^{}]*\})*\})/g;
-    let accionMatch2;
+    // Procesar TODAS las acciones — sin límite
+    const acciones = extraerAcciones(reply);
     let countAcc = 0;
-    while((accionMatch2 = accionRegex.exec(reply)) !== null){
+    for(const accion of acciones){
       try{
-        const accion = JSON.parse(accionMatch2[1]);
         procesarAccion(accion);
         countAcc++;
-      }catch(e){console.error('Parse error',e);}
+      }catch(e){console.error('Parse error',e,accion);}
     }
     if(countAcc > 0){
       detectarIncongruencias();
@@ -1966,6 +2279,39 @@ Puntas válidas: "Vendedor", "Comprador"`;
     console.error(err);
   }
   btn.disabled = false;
+}
+
+function extraerAcciones(text){
+  // Extrae todos los bloques ACCION:{...} sin límite, manejando JSON anidado
+  const acciones = [];
+  let i = text.indexOf('ACCION:');
+  while(i !== -1){
+    let start = text.indexOf('{', i);
+    if(start === -1) break;
+    let depth = 0, j = start, inStr = false, escape = false;
+    while(j < text.length){
+      const c = text[j];
+      if(escape){ escape=false; }
+      else if(c==='\\'){ escape=true; }
+      else if(c==='"' && !escape){ inStr=!inStr; }
+      else if(!inStr){
+        if(c==='{') depth++;
+        else if(c==='}'){
+          depth--;
+          if(depth===0){
+            try{
+              const obj = JSON.parse(text.slice(start, j+1));
+              acciones.push(obj);
+            }catch(e){}
+            break;
+          }
+        }
+      }
+      j++;
+    }
+    i = text.indexOf('ACCION:', i+7);
+  }
+  return acciones;
 }
 
 function procesarAccion(accion){
