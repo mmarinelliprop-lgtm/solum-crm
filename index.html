@@ -1854,13 +1854,22 @@ Puntas válidas: "Vendedor", "Comprador"`;
     typingEl.remove();
     addMsg(reply,'claude');
 
-    // Procesar acción si viene
-    const accionMatch = reply.match(/ACCION:(\{.*\})/s);
-    if(accionMatch){
+    // Procesar TODAS las acciones de la respuesta
+    const accionRegex = /ACCION:(\{(?:[^{}]|\{[^{}]*\})*\})/g;
+    let accionMatch2;
+    let countAcc = 0;
+    while((accionMatch2 = accionRegex.exec(reply)) !== null){
       try{
-        const accion = JSON.parse(accionMatch[1]);
+        const accion = JSON.parse(accionMatch2[1]);
         procesarAccion(accion);
-      }catch(e){console.error('Parse action error',e);}
+        countAcc++;
+      }catch(e){console.error('Parse error',e);}
+    }
+    if(countAcc > 0){
+      detectarIncongruencias();
+      renderDashboard();
+      renderOperaciones();
+      showToast('✅ ' + countAcc + ' operación(es) cargada(s)');
     }
 
     clearFile();
