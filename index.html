@@ -358,12 +358,12 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       <select class="filter-select" id="gan-agente" onchange="renderGanancia()">
         <option value="all">Todos los agentes</option>
         <option value="propia">Operaciones propias</option>
-        <option value="M. Victoria">M. Victoria</option>
-        <option value="Manuela">Manuela</option>
+        <option value="Vicky">Vicky (M. Victoria)</option>
+        <option value="Manu">Manu (Manuela)</option>
         <option value="Marce">Marce</option>
-        <option value="Esteban">Kito</option>
-        <option value="Cristian">Cristian</option>
-        <option value="Cecilia">Cecilia</option>
+        <option value="Kito">Kito (Esteban)</option>
+        <option value="Cris">Cris (Cristian)</option>
+        <option value="Ceci">Ceci (Cecilia)</option>
       </select>
     </div>
   </div>
@@ -452,6 +452,23 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       <tbody id="ops-tabla"></tbody>
       <tfoot id="ops-totales"></tfoot>
     </table>
+  </div>
+
+  <!-- Gráficos de ganancia -->
+  <div class="chart-grid" style="margin-top:24px" id="ops-charts-wrap">
+    <div class="chart-card">
+      <div class="chart-title">Mi ganancia mensual — Cobrado vs Pendiente (USD)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartOpsMiGanancia"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Ganancia SOLUM mensual — Cobrado vs Pendiente (USD)</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="chartOpsSolum"></canvas></div>
+    </div>
+  </div>
+  <div class="chart-card" style="margin-top:16px" id="ops-proyeccion-wrap">
+    <div class="chart-title">Proyección anual de ganancia (considerando operaciones caídas)</div>
+    <div style="display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap" id="ops-proyeccion-kpis"></div>
+    <div class="chart-wrap" style="height:200px"><canvas id="chartOpsProyeccion"></canvas></div>
   </div>
 </div>
 
@@ -1089,10 +1106,26 @@ function switchTab(tab) {
 function fmtUSD(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function fmtPesos(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function calcGanancia(op){
-  const pct = COMISIONES[op.agente]||0.5;
-  if(op.agente==='propia') return {propia: op.comision*0.80, equipo:0, total:op.comision*0.80};
-  const delEquipo = op.comision*(1-pct); // diferencial Martina
-  return {propia:0, equipo: delEquipo, total: delEquipo};
+  // Si la operación ya trae ganancia_martina calculada, usarla
+  if(op.ganancia_martina !== undefined && op.ganancia_martina > 0){
+    return {
+      propia: op.agente==='propia' ? op.ganancia_martina : 0,
+      equipo: op.agente!=='propia' ? op.ganancia_martina : 0,
+      total: op.ganancia_martina,
+      solum: op.ganancia_solum || op.comision*0.30
+    };
+  }
+  // Calcular según estructura de comisiones
+  const pctAgente = COMISIONES[op.agente] || 0.50;
+  if(op.agente==='propia'){
+    return {propia: op.comision*0.80, equipo:0, total:op.comision*0.80, solum:op.comision*0.20};
+  }
+  // Agente al 50% → Martina 20%, SOLUM 30%
+  // Agente al 60% (Kito) → Martina 10%, SOLUM 30%
+  const pctMartina = pctAgente===0.60 ? 0.10 : 0.20;
+  const ganMartina = op.comision * pctMartina;
+  const ganSolum = op.comision * 0.30;
+  return {propia:0, equipo: ganMartina, total: ganMartina, solum: ganSolum};
 }
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
@@ -1145,7 +1178,10 @@ function detectarIncongruencias() {
   VENDEDORES_SEG.forEach(v => {
     for(let mes=1; mes<=mesActual; mes++) {
       const seg = getSegMes(v, mes);
-      const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&(o.agente===v||o.agente===mapNombreAgente(v)));
+      const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&(
+        normAgente(o.agente)===v || 
+        (v==='Martina' && (o.agente==='propia'||o.agente==='Martina'||o.agente==='Martina Marinelli'))
+      ));
 
       // 1. Ventas seguimiento > operaciones cobradas
       const ventasSeg = seg.v || 0;
@@ -1248,117 +1284,154 @@ function generarPlanilla(id){
 function renderPlanillaStep(op){
   const container = document.getElementById('planillaSteps');
   const g = calcGanancia(op);
+  const pctAgente = COMISIONES[op.agente] || 0.50;
+
+  // Construir steps dinámicos según datos disponibles
   const steps = [
     {
       q: `¿Confirmar que "${op.propiedad}" está cerrada y cobrada?`,
-      opts: ['Sí, generar planilla', 'Cancelar'],
-      key: 'confirmar'
+      opts: ['Sí, generar planilla', 'Cancelar'], key: 'confirmar'
     },
     {
-      q: `¿Sumar 1 venta a ${op.agente==='propia'?'tu seguimiento propio':op.agente} en ${MESES_NOMBRES[op.mes]}?`,
-      opts: ['Sí', 'No'],
-      key: 'sumarVenta'
+      q: `¿El cliente pagó el 3% de comisión o un porcentaje diferente?`,
+      opts: ['3% (estándar)', 'Porcentaje diferente — lo ingreso'], key: 'pctComision', input: true
     },
     {
-      q: `¿Sumar ${fmtUSD(op.comision)} a facturación de ${op.agente==='propia'?'Martina':op.agente} en ${MESES_NOMBRES[op.mes]}?`,
-      opts: ['Sí', 'No'],
-      key: 'sumarFact'
+      q: `¿El cliente paga IVA sobre la comisión?`,
+      opts: ['No paga IVA', 'Sí paga IVA (5,25%)'], key: 'iva'
     },
-    {
-      q: `¿Sumar ${fmtUSD(g.total)} a tus ingresos personales en Finanzas (${MESES_NOMBRES[op.mes]})?`,
-      opts: ['Sí', 'No'],
-      key: 'sumarFinanzas'
-    }
   ];
 
-  if(planillaStep >= steps.length) {
-    // Ejecutar y cerrar
-    ejecutarPlanilla(op, g);
-    return;
-  }
+  // Preguntar datos del cliente que faltan
+  if(!op.cliente) steps.push({q:'¿Nombre completo del cliente?', opts:[], key:'cliente', freetext:true});
+  if(!op.cuit) steps.push({q:'¿DNI o CUIT/CUIL del cliente?', opts:[], key:'cuit', freetext:true});
+  if(!op.mail) steps.push({q:'¿Mail del cliente?', opts:[], key:'mail', freetext:true});
+  if(!op.telefono) steps.push({q:'¿Teléfono del cliente?', opts:['Sin teléfono'], key:'telefono', freetext:true});
+  steps.push({q:'¿De dónde proviene el cliente?', opts:['Referido','Redes sociales','Portal','Cartel','Otro'], key:'origen'});
+  steps.push({q:`¿Sumar 1 venta a ${op.agente==='propia'?'tu seguimiento':op.agente} en ${MESES_NOMBRES[op.mes]}?`, opts:['Sí','No'], key:'sumarVenta'});
+  steps.push({q:`¿Sumar ${fmtUSD(g.total)} a tus ingresos en Finanzas (${MESES_NOMBRES[op.mes]})?`, opts:['Sí','No'], key:'sumarFinanzas'});
+
+  if(planillaStep >= steps.length){ ejecutarPlanilla(op, g); return; }
 
   const step = steps[planillaStep];
-  container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:13px;color:var(--text2)">${step.q}</div>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      ${step.opts.map((opt,i)=>`
-        <button onclick="responderPlanilla('${step.key}','${opt}')"
-          style="padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.1);
-          background:${i===0?'var(--gold)':'var(--card2)'};color:${i===0?'var(--navy3)':'var(--text2)'};text-align:left">
-          ${opt}
-        </button>`).join('')}
-    </div>
-    <div style="margin-top:12px;font-size:10px;color:var(--text3)">${planillaStep+1} de ${steps.length}</div>
-  `;
+
+  if(step.freetext){
+    container.innerHTML = `
+      <div style="margin-bottom:12px;font-size:13px;color:var(--text2)">${step.q}</div>
+      <input id="planilla-input" class="modal-input" placeholder="Escribí acá..." style="margin-bottom:12px">
+      ${step.opts.map(opt=>`<button onclick="responderPlanilla('${step.key}','${opt}')" 
+        style="padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:var(--card2);color:var(--text2);margin-right:8px">${opt}</button>`).join('')}
+      <button onclick="responderPlanilla('${step.key}',document.getElementById('planilla-input').value||'')"
+        style="padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:var(--gold);color:var(--navy3);margin-top:8px;display:block;width:100%">Confirmar</button>
+      <div style="margin-top:8px;font-size:10px;color:var(--text3)">${planillaStep+1} de ${steps.length}</div>`;
+  } else {
+    container.innerHTML = `
+      <div style="margin-bottom:12px;font-size:13px;color:var(--text2)">${step.q}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${step.opts.map((opt,i)=>`
+          <button onclick="responderPlanilla('${step.key}','${opt}')"
+            style="padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,0.1);
+            background:${i===0?'var(--gold)':'var(--card2)'};color:${i===0?'var(--navy3)':'var(--text2)'};text-align:left">
+            ${opt}</button>`).join('')}
+      </div>
+      <div style="margin-top:12px;font-size:10px;color:var(--text3)">${planillaStep+1} de ${steps.length}</div>`;
+  }
 }
 
 function responderPlanilla(key, val) {
   planillaRespuestas[key] = val;
-  if(val === 'Cancelar') { closeModal('modalPlanilla'); return; }
+  if(val === 'Cancelar'){ closeModal('modalPlanilla'); return; }
   planillaStep++;
   const op = operaciones.find(o=>o.id===planillaOpId);
   renderPlanillaStep(op);
 }
 
-function ejecutarPlanilla(op, g) {
+async function ejecutarPlanilla(op, g) {
   closeModal('modalPlanilla');
 
-  // Marcar como planilla generada
+  // Actualizar datos del cliente en la operación
+  if(planillaRespuestas.cliente) op.cliente = planillaRespuestas.cliente;
+  if(planillaRespuestas.cuit) op.cuit = planillaRespuestas.cuit;
+  if(planillaRespuestas.mail) op.mail = planillaRespuestas.mail;
+  if(planillaRespuestas.telefono && planillaRespuestas.telefono!=='Sin teléfono') op.telefono = planillaRespuestas.telefono;
+  if(planillaRespuestas.origen) op.origen = planillaRespuestas.origen;
+
   op.planillaGenerada = true;
   op.estado = 'Cobrada';
 
-  // Sumar venta al seguimiento
-  if(planillaRespuestas.sumarVenta === 'Sí') {
+  // Comisión real (puede ser distinta al 3%)
+  const pctComision = planillaRespuestas.pctComision === '3% (estándar)' ? 0.03 : (op.pct_comision || 0.03);
+  const tieneIVA = planillaRespuestas.iva === 'Sí paga IVA (5,25%)';
+  const iva = tieneIVA ? Math.round(op.comision * 0.0525) : 0;
+  const totalCliente = op.comision + iva;
+  const pctAgente = COMISIONES[op.agente] || 0.50;
+  const comAgente = Math.round(op.comision * pctAgente);
+  const comOficina = op.comision - comAgente;
+
+  // Seguimiento
+  if(planillaRespuestas.sumarVenta === 'Sí'){
     const agSeg = mapAgenteToSeg(op.agente);
     if(!segData[agSeg]) segData[agSeg]={};
     if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
     segData[agSeg][op.mes].v = (segData[agSeg][op.mes].v||0)+1;
-  }
-
-  // Sumar facturación al seguimiento
-  if(planillaRespuestas.sumarFact === 'Sí') {
-    const agSeg = mapAgenteToSeg(op.agente);
-    if(!segData[agSeg]) segData[agSeg]={};
-    if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
     segData[agSeg][op.mes].f = (segData[agSeg][op.mes].f||0)+op.comision;
+    dbGuardar('seguimiento',[Date.now(),agSeg,op.mes,'v',segData[agSeg][op.mes].v]);
+    dbGuardar('seguimiento',[Date.now()+1,agSeg,op.mes,'f',segData[agSeg][op.mes].f]);
   }
 
-  // Sumar a finanzas personales
-  if(planillaRespuestas.sumarFinanzas === 'Sí') {
+  // Finanzas
+  if(planillaRespuestas.sumarFinanzas === 'Sí'){
     if(!historicoIngresos[op.anio]) historicoIngresos[op.anio]={};
     historicoIngresos[op.anio][op.mes] = (historicoIngresos[op.anio][op.mes]||0)+g.total;
   }
 
-  // Generar xlsx
-  const wb = XLSX.utils.book_new();
-  if(op.agente!=='propia'){
-    const pct = COMISIONES[op.agente]||0.5;
-    const ws1 = XLSX.utils.aoa_to_sheet([
-      ['PLANILLA DE FACTURACIÓN — SOLUM NEGOCIOS INMOBILIARIOS'],[''],
-      ['Propiedad:',op.propiedad],['Agente:',op.agente],['Punta:',op.punta],
-      ['Precio de venta (USD):',op.precio],['Comisión total (3%):',op.comision],
-      ['Porcentaje agente:',pct*100+'%'],['Comisión agente:',op.comision*pct],[''],
-      ['Fecha escritura:',op.fechaEsc],['Mat. 2543 — Martina Marinelli','']
-    ]);
-    XLSX.utils.book_append_sheet(wb, ws1, op.agente+' → Martina');
+  // Actualizar en Sheets
+  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+    op.precio,op.comision,op.ganancia_martina,op.ganancia_solum,
+    op.fechaEsc,op.estado,op.mes,op.anio,true]);
+
+  // Descargar planilla usando la plantilla modelo del repo
+  try {
+    const resp = await fetch('/PLANILLA_FACTURACION_MODELO.xlsx');
+    const arrayBuffer = await resp.arrayBuffer();
+    const wb = XLSX.read(arrayBuffer, {type:'array'});
+    const ws = wb.Sheets['facturacion '];
+
+    const fecha = op.fechaEsc || new Date().toLocaleDateString('es-AR');
+    ws['D6'] = {v: fecha, t:'s'};
+    ws['C7'] = {v: op.agente==='propia'?'Martina Marinelli':op.agente, t:'s'};
+    ws['C8'] = {v: 'Venta', t:'s'};
+    ws['C9'] = {v: op.propiedad, t:'s'};
+    ws['C10'] = {v: op.compartida||'-', t:'s'};
+    ws['C11'] = {v: op.punta, t:'s'};
+    ws['C14'] = {v: op.cliente||'', t:'s'};
+    ws['C15'] = {v: op.cuit||'', t:'s'};
+    ws['C16'] = {v: op.tipo_cliente||'Consumidor Final', t:'s'};
+    ws['C18'] = {v: op.precio, t:'n'};
+    ws['C19'] = {v: pctComision, t:'n'};
+    ws['C20'] = {v: op.comision, t:'n'};
+    ws['C21'] = {v: iva||'', t: iva?'n':'s'};
+    ws['C25'] = {v: totalCliente, t:'n'};
+    ws['C26'] = {v: pctAgente, t:'n'};
+    ws['C27'] = {v: comAgente, t:'n'};
+    ws['C28'] = {v: comOficina, t:'n'};
+    ws['C31'] = {v: (op.cliente||'').toUpperCase(), t:'s'};
+    ws['C32'] = {v: op.telefono||'', t:'s'};
+    ws['C33'] = {v: op.mail||'', t:'s'};
+    ws['C34'] = {v: op.origen||planillaRespuestas.origen||'', t:'s'};
+
+    XLSX.writeFile(wb, `Planilla_${op.propiedad.replace(/\s/g,'_')}.xlsx`);
+    showToast('✅ Planilla generada: '+op.propiedad);
+  } catch(e) {
+    console.error('Error generando planilla:', e);
+    showToast('⚠️ Error al descargar la plantilla modelo', 'amber');
   }
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    ['PLANILLA DE FACTURACIÓN — SOLUM NEGOCIOS INMOBILIARIOS'],[''],
-    ['Propiedad:',op.propiedad],['Corredora:','Martina Marinelli - Mat. 2543'],
-    ['Punta:',op.punta],['Precio de venta (USD):',op.precio],
-    ['Comisión total (3%):',op.comision],
-    ['Porcentaje Martina:',op.agente==='propia'?'80%':'70%'],
-    ['Ganancia neta Martina (USD):',g.total],[''],
-    ['Fecha escritura:',op.fechaEsc]
-  ]);
-  XLSX.utils.book_append_sheet(wb, ws2, 'Martina → SOLUM');
-  XLSX.writeFile(wb, `Planilla_${op.propiedad.replace(/\s/g,'_')}.xlsx`);
 
   detectarIncongruencias();
   renderDashboard();
   renderOperaciones();
-  showToast('✅ Planilla generada: '+op.propiedad);
 }
+
 
 function mapAgenteToSeg(agente) {
   const map = {
@@ -1450,13 +1523,25 @@ function renderDashboard(){
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#b8b0a4',font:{size:11},padding:12}}}}
   });
 
-  // Ranking
-  const agentes = ['M. Victoria','Manuela','Marce','Esteban','Cristian','Cecilia'];
-  const rankData = agentes.map(a=>{
-    const aops = ops.filter(o=>o.agente===a);
+  const agentesRanking = ['Vicky','Manu','Marce','Kito','Cris','Ceci'];
+  const normAgente = (a) => {
+    const map = {
+      'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky','Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky',
+      'Manuela':'Manu','Manuela Pellegrini':'Manu',
+      'Marcela':'Marce','Marcela Corsalini':'Marce',
+      'Esteban':'Kito','Esteban Romero':'Kito',
+      'Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
+      'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+      'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci'
+    };
+    return map[a] || a;
+  };
+  // Solo operaciones cobradas para el ranking
+  const opsCobradas = ops.filter(o=>o.estado==='Cobrada');
+  const rankData = agentesRanking.map(a=>{
+    const aops = opsCobradas.filter(o=>normAgente(o.agente)===a);
     const fact = aops.reduce((s,o)=>s+o.comision,0);
-    const ganM = aops.reduce((s,o)=>s+calcGanancia(o).equipo,0);
-    return {nombre:a, fact, ganM, ops:aops.length};
+    return {nombre:a, fact, ops:aops.length};
   }).sort((a,b)=>b.fact-a.fact);
   const maxFact = rankData[0]?.fact||1;
 
@@ -1477,7 +1562,13 @@ function renderGanancia(){
   const anio = parseInt(document.getElementById('gan-anio').value);
   const agente = document.getElementById('gan-agente').value;
   let ops = operaciones.filter(o=>o.anio===anio&&(mes==='all'||o.mes===parseInt(mes)));
-  if(agente!=='all') ops = ops.filter(o=>o.agente===agente||(agente==='propia'&&o.agente==='propia'));
+  if(agente!=='all') {
+    if(agente==='propia'){
+      ops = ops.filter(o=>o.agente==='propia'||o.agente==='Martina'||o.agente==='Martina Marinelli');
+    } else {
+      ops = ops.filter(o=>normAgente(o.agente)===agente);
+    }
+  }
 
   const totGan = ops.reduce((s,o)=>s+calcGanancia(o).total,0);
   const ganPropia = ops.filter(o=>o.agente==='propia').reduce((s,o)=>s+calcGanancia(o).propia,0);
@@ -1520,8 +1611,8 @@ function renderGanancia(){
   // Charts
   destroyChart('chartGanancia');
   const mesesLabel = MESES_NOMBRES.slice(1);
-  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente==='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
-  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
+  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&(o.agente==='propia'||normAgente(o.agente)==='Martina')&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
+  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia'&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
   charts['chartGanancia'] = new Chart(document.getElementById('chartGanancia'),{
     type:'bar',data:{labels:mesesLabel,datasets:[
       {label:'Propia (80%)',data:gPropia,backgroundColor:'rgba(182,162,132,0.8)',borderRadius:4},
@@ -1566,10 +1657,13 @@ function renderOperaciones(){
   const totMiGanPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).total,0);
   // SOLUM = 20% del total (lo que queda en oficina de operaciones propias) + 30% de las del equipo
   const totSolum = ops.reduce((s,o)=>{
-    if(o.agente==='propia') return s + o.comision*0.20;
-    return s + o.comision*(1-(COMISIONES[o.agente]||0.5)) - calcGanancia(o).equipo;
+    const g = calcGanancia(o);
+    return s + (o.ganancia_solum || g.solum || o.comision*0.30);
   },0);
-  const totVendedores = ops.filter(o=>o.agente!=='propia').reduce((s,o)=>s+o.comision*(COMISIONES[o.agente]||0.5),0);
+  const totVendedores = ops.filter(o=>o.agente!=='propia').reduce((s,o)=>{
+    const pct = COMISIONES[o.agente]||0.50;
+    return s + o.comision*pct;
+  },0);
 
   document.getElementById('ops-tabla').innerHTML = ops.map(o=>{
     const g = calcGanancia(o);
@@ -1593,7 +1687,7 @@ function renderOperaciones(){
 
   document.getElementById('ops-totales').innerHTML = ops.length ? `
     <tr style="background:var(--bg3);font-weight:700;border-top:2px solid rgba(255,255,255,0.1)">
-      <td colspan="5" style="padding:12px 14px;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.6px">TOTALES (${ops.length} ops)</td>
+      <td colspan="5" style="padding:12px 14px;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.6px">TOTALES (${ops.length} ops filtradas)</td>
       <td style="color:var(--green);padding:12px 14px">
         ${fmtUSD(totMiGanCob)}<br>
         <span style="color:var(--amber);font-size:10px;font-weight:400">+ ${fmtUSD(totMiGanPend)} pend.</span>
@@ -1603,6 +1697,94 @@ function renderOperaciones(){
         Vendedores: <span style="color:var(--text2)">${fmtUSD(totVendedores)}</span>
       </td>
     </tr>` : '';
+
+  // ── Gráficos de ganancia mensual ──
+  const anioFiltro = parseInt(document.getElementById('op-anio').value)||2026;
+  const mesesLabels = MESES_NOMBRES.slice(1);
+
+  // Mi ganancia cobrada y pendiente por mes (sobre TODAS las ops del año, no solo el filtro)
+  const opsAnio = operaciones.filter(o=>o.anio===anioFiltro);
+  const miGanCobMes = mesesLabels.map((_,i)=>
+    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0));
+  const miGanPendMes = mesesLabels.map((_,i)=>
+    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).total,0));
+  const solumCobMes = mesesLabels.map((_,i)=>
+    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_solum||calcGanancia(o).solum||o.comision*0.30),0));
+  const solumPendMes = mesesLabels.map((_,i)=>
+    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0));
+
+  destroyChart('chartOpsMiGanancia');
+  const c1 = document.getElementById('chartOpsMiGanancia');
+  if(c1) charts['chartOpsMiGanancia'] = new Chart(c1,{
+    type:'bar',
+    data:{labels:mesesLabels,datasets:[
+      {label:'Cobrado',data:miGanCobMes,backgroundColor:'rgba(39,196,122,0.8)',borderRadius:3},
+      {label:'Pendiente',data:miGanPendMes,backgroundColor:'rgba(240,165,0,0.6)',borderRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11}}}},
+      scales:{x:{stacked:true,ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}},
+              y:{stacked:true,ticks:{color:'#7a7468',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+
+  destroyChart('chartOpsSolum');
+  const c2 = document.getElementById('chartOpsSolum');
+  if(c2) charts['chartOpsSolum'] = new Chart(c2,{
+    type:'bar',
+    data:{labels:mesesLabels,datasets:[
+      {label:'Cobrado',data:solumCobMes,backgroundColor:'rgba(74,158,255,0.8)',borderRadius:3},
+      {label:'Pendiente',data:solumPendMes,backgroundColor:'rgba(74,158,255,0.3)',borderRadius:3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11}}}},
+      scales:{x:{stacked:true,ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}},
+              y:{stacked:true,ticks:{color:'#7a7468',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
+
+  // ── Proyección anual ──
+  const totalCobrado = miGanCobMes.reduce((s,v)=>s+v,0);
+  const totalPendiente = miGanPendMes.reduce((s,v)=>s+v,0);
+  const totalCaido = opsAnio.filter(o=>o.estado==='Caída').reduce((s,o)=>s+calcGanancia(o).total,0);
+  const mesActual = new Date().getMonth()+1;
+  const mesesRestantes = 12 - mesActual;
+  // Promedio mensual cobrado, ajustado por tasa de caída
+  const tasaCaida = opsAnio.length>0 ? opsAnio.filter(o=>o.estado==='Caída').length/opsAnio.length : 0;
+  const promMensCob = mesActual>0 ? totalCobrado/mesActual : 0;
+  const promMensPend = mesActual>0 ? totalPendiente/mesActual : 0;
+  // Proyección: cobrado real + pendiente + proyección futura (ajustada por tasa de caída)
+  const proyFutura = promMensCob * mesesRestantes * (1 - tasaCaida);
+  const proyTotal = totalCobrado + totalPendiente + proyFutura;
+
+  document.getElementById('ops-proyeccion-kpis').innerHTML = `
+    <div class="kpi" style="flex:1;min-width:130px"><div class="kpi-label">Mi ganancia cobrada</div><div class="kpi-value green">${fmtUSD(totalCobrado)}</div></div>
+    <div class="kpi" style="flex:1;min-width:130px"><div class="kpi-label">Pendiente de cobro</div><div class="kpi-value amber">${fmtUSD(totalPendiente)}</div></div>
+    <div class="kpi" style="flex:1;min-width:130px"><div class="kpi-label">Perdido (caídas)</div><div class="kpi-value red">${fmtUSD(totalCaido)}</div><div class="kpi-sub">Tasa caída: ${Math.round(tasaCaida*100)}%</div></div>
+    <div class="kpi" style="flex:1;min-width:130px;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
+      <div class="kpi-label">Proyección anual</div>
+      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyTotal))}</div>
+      <div class="kpi-sub">Ajustada por ${Math.round(tasaCaida*100)}% de caídas</div>
+    </div>`;
+
+  // Gráfico proyección
+  destroyChart('chartOpsProyeccion');
+  const c3 = document.getElementById('chartOpsProyeccion');
+  const proyData = mesesLabels.map((_,i)=>{
+    const m = i+1;
+    if(m <= mesActual) return miGanCobMes[i];
+    return Math.round(promMensCob * (1-tasaCaida));
+  });
+  const cobData = mesesLabels.map((_,i)=>i+1<=mesActual?miGanCobMes[i]:0);
+  if(c3) charts['chartOpsProyeccion'] = new Chart(c3,{
+    type:'bar',
+    data:{labels:mesesLabels,datasets:[
+      {label:'Cobrado real',data:cobData,backgroundColor:'rgba(39,196,122,0.8)',borderRadius:3},
+      {label:'Proyección',data:proyData.map((v,i)=>i+1>mesActual?v:0),backgroundColor:'rgba(74,158,255,0.4)',borderRadius:3,borderDash:[5,5]}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11}}}},
+      scales:{x:{ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}},
+              y:{ticks:{color:'#7a7468',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}}
+  });
 }
 
 // ═══════════════════════════════════════════════
@@ -1664,7 +1846,7 @@ function renderFinanzas(){
   });
 
   destroyChart('chartCapital');
-  let capAcum = 14100;
+  let capAcum = 0;
   const capData = rows.map(r=>{capAcum+=r.resultado; return capAcum;});
   charts['chartCapital'] = new Chart(document.getElementById('chartCapital'),{
     type:'line',data:{labels:rows.map(r=>r.label),datasets:[{label:'Capital USD',data:capData,
@@ -2048,31 +2230,77 @@ const KEYWORDS_CALENDAR = {
 const calDemoEvents = [];
 
 function renderCalendar(){
-  document.getElementById('calEventsList').innerHTML = calDemoEvents.map(e=>`
-    <div class="cal-event">
-      <div>
-        <div class="cal-event-type">${e.tipo}</div>
-        <div class="cal-event-title">${e.title}</div>
-        <div class="cal-event-date">📅 ${e.date}</div>
-      </div>
-      <div style="margin-left:auto">
-        <span class="status status-cobrar" style="font-size:10px">Auto-cargado</span>
-      </div>
-    </div>`).join('');
+  document.getElementById('calStatus').innerHTML = '📅 Conectando con Google Calendar...';
+  syncCalendar();
 }
 
-function syncCalendar(){
-  showToast('🔄 Sincronizando con Google Calendar...');
-  setTimeout(()=>{
-    // Contar automáticamente en seguimiento
-    const mes = 6; const key = `${mes}`;
-    if(!seguimientoData[key]) seguimientoData[key]={};
-    calDemoEvents.forEach(e=>{
-      const m = e.tipo;
-      seguimientoData[key][m]=(seguimientoData[key][m]||0)+1;
+async function syncCalendar(){
+  const statusEl = document.getElementById('calStatus');
+  statusEl.innerHTML = '⏳ Sincronizando con Google Calendar...';
+  
+  try {
+    const resp = await fetch('/.netlify/functions/sheets', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({accion: 'calendar'})
     });
-    showToast('✅ Calendario sincronizado · '+calDemoEvents.length+' eventos detectados');
-  },1200);
+    const data = await resp.json();
+    
+    if(!data.ok || !data.eventos) throw new Error(data.error || 'Sin respuesta');
+
+    const eventos = data.eventos;
+    statusEl.innerHTML = `<span>📅</span> Conectado a Google Calendar · ${eventos.length} evento(s) detectado(s)`;
+
+    // Mapear keywords a tipo de seguimiento
+    const keyMap = {
+      'muestra':'Muestras','visita':'Muestras','prelisting':'Prelisting','pre listing':'Prelisting',
+      'acm':'ACM presentados','análisis comparativo':'ACM presentados',
+      'escritura':'Ventas','boleto':'Reservas','reserva':'Reservas',
+      'captación':'Entrevistas captación','entrevista':'Entrevistas captación'
+    };
+
+    const lista = document.getElementById('calEventsList');
+    if(eventos.length === 0){
+      lista.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sin eventos con palabras clave esta semana</div></div>';
+      return;
+    }
+
+    lista.innerHTML = eventos.map(ev => {
+      const title = ev.title.toLowerCase();
+      const tipo = Object.entries(keyMap).find(([k])=>title.includes(k))?.[1] || 'Otro';
+      const fecha = new Date(ev.date).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+      return `<div class="cal-event">
+        <div>
+          <div class="cal-event-type">${tipo}</div>
+          <div class="cal-event-title">${ev.title}</div>
+          <div class="cal-event-date">📅 ${fecha}</div>
+        </div>
+        <div style="margin-left:auto">
+          <span class="status status-cobrar" style="font-size:10px">Auto-cargado</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Actualizar seguimiento automáticamente
+    const mesActual = new Date().getMonth()+1;
+    const vendedor = 'Martina';
+    if(!segData[vendedor]) segData[vendedor]={};
+    if(!segData[vendedor][mesActual]) segData[vendedor][mesActual]={};
+    
+    eventos.forEach(ev => {
+      const title = ev.title.toLowerCase();
+      const tipo = Object.entries(keyMap).find(([k])=>title.includes(k))?.[1];
+      const keysSeg = {'Muestras':'m','Prelisting':'cp','ACM presentados':'acm','Ventas':'v','Reservas':'r','Entrevistas captación':'ec'};
+      const key = keysSeg[tipo];
+      if(key) segData[vendedor][mesActual][key] = (segData[vendedor][mesActual][key]||0)+1;
+    });
+
+    showToast(`✅ ${eventos.length} evento(s) sincronizados del calendario`);
+
+  } catch(err) {
+    statusEl.innerHTML = `<span>❌</span> Error al conectar: ${err.message}`;
+    console.error('Calendar sync error:', err);
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -2107,6 +2335,27 @@ async function sendChat(){
 
   // Mostrar mensaje usuario
   addMsg(text||(pendingFile?`[Archivo: ${pendingFile.name}]`:''), 'user');
+
+  // Si el usuario pegó ACCIONes directamente, procesarlas sin mandar a Claude
+  if(text && text.includes('ACCION:{')){
+    const acciones = extraerAcciones(text);
+    if(acciones.length > 0){
+      input.value = ''; input.style.height='auto'; // Limpiar input primero
+      let count = 0;
+      for(const a of acciones){
+        try{ procesarAccion(a); count++; }catch(e){ console.error(e); }
+      }
+      if(count > 0){
+        detectarIncongruencias();
+        renderDashboard();
+        renderOperaciones();
+        addMsg(`✅ ${count} operación(es) cargada(s) correctamente.`, 'system');
+        showToast(`✅ ${count} operación(es) cargada(s)`);
+        document.getElementById('sendBtn').disabled = false;
+        return;
+      }
+    }
+  }
   input.value = ''; input.style.height='auto';
 
   // Typing indicator
@@ -2187,24 +2436,32 @@ Duplicados: si ves misma dirección + misma punta → alertar antes de cargar.
 ═══════════════════════════════════════════════
 CUANDO TE MANDAN UNA FOTO DE RESERVA/BOLETO
 ═══════════════════════════════════════════════
-Extraé estos campos en orden:
-1. Dirección/propiedad → campo "propiedad"
-2. Precio de venta → campo "precio" (en USD)
-3. Agente → buscá en el documento quién firma o quién está asignado
-   - Si no figura → preguntá: [PREGUNTA: ¿Quién es el agente de esta operación?] con lista de agentes
-4. Punta → ¿representa al vendedor o al comprador?
-   - Si no está claro → preguntá: [PREGUNTA: ¿Qué punta representa esta reserva?] 1. Vendedor 2. Comprador 3. Las dos puntas
-5. Fecha de escritura estimada → buscá fecha de escritura, posesión o vencimiento
-6. Estado → si es reserva nueva = "Por cobrar"
-7. Calculá: comisión = precio × 3%, ganancia_martina según agente, ganancia_solum = comisión × 30%
+Extraé TODOS estos campos:
 
-Si falta el precio → preguntá antes de calcular.
-Si falta el agente → preguntá siempre, no asumir.
-Si la foto tiene las dos puntas → generá DOS acciones ACCION separadas.
+OPERACIÓN:
+1. Dirección/propiedad → "propiedad"
+2. Precio de venta → "precio" (en USD)
+3. Agente → quién firma o está asignado. Si no figura → preguntá con lista
+4. Punta → Vendedor o Comprador. Si no está claro → preguntá
+5. Fecha escritura estimada → fecha de escritura, posesión o vencimiento
+6. Estado → reserva nueva = "Por cobrar"
+7. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
+8. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
 
-Mostrá siempre un resumen antes de cargar:
-"Voy a cargar: [dirección] | Agente: [X] | Punta: [X] | Precio: $X | Comisión: $X | Estado: Por cobrar | Escritura: [fecha]"
-Esperá confirmación antes de generar el ACCION.
+DATOS DEL CLIENTE (para la planilla de facturación):
+9. Nombre completo del cliente → "cliente"
+10. DNI o CUIT/CUIL → "cuit"
+11. Mail → "mail"
+12. Teléfono → "telefono" (si figura)
+
+Al generar el ACCION, incluí los datos del cliente:
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0,"cliente":"","cuit":"","mail":"","telefono":"","pct_comision":0.03}}
+
+Si falta el precio → preguntá.
+Si falta el agente → preguntá siempre.
+Si hay dos puntas → DOS acciones ACCION separadas.
+
+Mostrá resumen antes de cargar y esperá confirmación.
 
 ═══════════════════════════════════════════════
 CRUCES AUTOMÁTICOS

@@ -1,11 +1,9 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwAS3gcGnNcUkW7Dnx86yv09tWyNmQNpMmn2QikTp3P5Tw6YNU8E73ShCuXO4F5BgX6EQ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk0b6PbEpncIzixJLm_0bHxUrF7DrwdtGpTSV37RzY-vx65oCw6cwj6ZitC3pXRCRd/exec';
 
 exports.handler = async function(event) {
   const headers = {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type'
+    'Access-Control-Allow-Origin': '*'
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -13,33 +11,21 @@ exports.handler = async function(event) {
   }
 
   try {
+    const body = JSON.parse(event.body || '{}');
     let url = APPS_SCRIPT_URL;
-    let options = { method: 'GET' };
 
-    if (event.httpMethod === 'POST') {
-      const body = JSON.parse(event.body);
-      // Para escritura usamos POST via doGet con params (Apps Script acepta GET sin auth)
-      if (body.accion === 'leer') {
-        url += `?tipo=${encodeURIComponent(body.tipo)}&accion=leer`;
-      } else {
-        // Para guardar/actualizar: mandamos como GET con data encoded
-        url += `?tipo=${encodeURIComponent(body.tipo)}&accion=${body.accion}&data=${encodeURIComponent(JSON.stringify(body))}`;
-      }
+    if (body.accion === 'calendar') {
+      url += '?accion=calendar';
+    } else if (body.accion === 'leer') {
+      url += `?tipo=${encodeURIComponent(body.tipo)}&accion=leer`;
     } else {
-      // GET directo
-      const params = event.queryStringParameters || {};
-      const qs = Object.entries(params).map(([k,v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-      if (qs) url += '?' + qs;
+      url += `?tipo=${encodeURIComponent(body.tipo)}&accion=${encodeURIComponent(body.accion)}&data=${encodeURIComponent(JSON.stringify(body))}`;
     }
 
-    const response = await fetch(url, options);
+    const response = await fetch(url);
     const text = await response.text();
 
-    return {
-      statusCode: 200,
-      headers,
-      body: text
-    };
+    return { statusCode: 200, headers, body: text };
 
   } catch (err) {
     return {
