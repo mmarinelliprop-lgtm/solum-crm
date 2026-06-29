@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzv9Q2ctoJMPvOVePV3d9RGzLDZFaGlslJIOugV23VxKkRcX6tOwWpIwj2YqMIaXXXiw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby0wpWVO47_G6ZfrqgnodaVf1GVzPkE7xNNCl-uz_c33EL6p8NRybMhL7KT0GuTmjXl1Q/exec';
 
 exports.handler = async function(event) {
   const headers = {
@@ -14,7 +14,18 @@ exports.handler = async function(event) {
     const body = JSON.parse(event.body || '{}');
     let url = APPS_SCRIPT_URL;
 
-    if (body.accion === 'leer') {
+    if (body.accion === 'calendar') {
+      url += '?accion=calendar';
+    } else if (body.accion === 'planilla') {
+      // Planilla va por POST directo (payload grande con base64)
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: 'postData=' + encodeURIComponent(JSON.stringify(body))
+      });
+      const text = await response.text();
+      return { statusCode: 200, headers, body: text };
+    } else if (body.accion === 'leer') {
       url += `?tipo=${encodeURIComponent(body.tipo)}&accion=leer`;
     } else {
       url += `?tipo=${encodeURIComponent(body.tipo)}&accion=${encodeURIComponent(body.accion)}&data=${encodeURIComponent(JSON.stringify(body))}`;
