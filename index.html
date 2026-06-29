@@ -813,6 +813,22 @@ async function dbGuardar(tipo, fila) {
   } catch(e) { console.error('dbGuardar error:', e); }
 }
 
+async function dbGuardarLote(tipo, filas) {
+  // Manda todas las filas en un solo request
+  try {
+    const resp = await fetch(DB_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tipo, accion:'guardar_lote', filas})
+    });
+    const d = await resp.json();
+    return d.ok;
+  } catch(e) { 
+    console.error('dbGuardarLote error:', e);
+    return false;
+  }
+}
+
 async function dbLeer(tipo) {
   try {
     const r = await fetch(DB_URL, {
@@ -1404,41 +1420,51 @@ async function ejecutarPlanilla(op, g) {
     op.precio,op.comision,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.estado,op.mes,op.anio,true]);
 
-  // Descargar planilla usando la plantilla modelo del repo
+  // Generar planilla via Apps Script (usa el modelo en Drive con formato completo)
   try {
-    const resp = await fetch('/PLANILLA_FACTURACION_MODELO.xlsx');
-    const arrayBuffer = await resp.arrayBuffer();
-    const wb = XLSX.read(arrayBuffer, {type:'array'});
-    const ws = wb.Sheets['facturacion '];
-
-    const fecha = op.fechaEsc || new Date().toLocaleDateString('es-AR');
-    ws['D6'] = {v: fecha, t:'s'};
-    ws['C7'] = {v: op.agente==='propia'?'Martina Marinelli':op.agente, t:'s'};
-    ws['C8'] = {v: 'Venta', t:'s'};
-    ws['C9'] = {v: op.propiedad, t:'s'};
-    ws['C10'] = {v: op.compartida||'-', t:'s'};
-    ws['C11'] = {v: op.punta, t:'s'};
-    ws['C14'] = {v: op.cliente||'', t:'s'};
-    ws['C15'] = {v: op.cuit||'', t:'s'};
-    ws['C16'] = {v: op.tipo_cliente||'Consumidor Final', t:'s'};
-    ws['C18'] = {v: op.precio, t:'n'};
-    ws['C19'] = {v: pctComision, t:'n'};
-    ws['C20'] = {v: op.comision, t:'n'};
-    ws['C21'] = {v: iva||'', t: iva?'n':'s'};
-    ws['C25'] = {v: totalCliente, t:'n'};
-    ws['C26'] = {v: pctAgente, t:'n'};
-    ws['C27'] = {v: comAgente, t:'n'};
-    ws['C28'] = {v: comOficina, t:'n'};
-    ws['C31'] = {v: (op.cliente||'').toUpperCase(), t:'s'};
-    ws['C32'] = {v: op.telefono||'', t:'s'};
-    ws['C33'] = {v: op.mail||'', t:'s'};
-    ws['C34'] = {v: op.origen||planillaRespuestas.origen||'', t:'s'};
-
-    XLSX.writeFile(wb, `Planilla_${op.propiedad.replace(/\s/g,'_')}.xlsx`);
-    showToast('✅ Planilla generada: '+op.propiedad);
+    showToast('⏳ Generando planilla...');
+    const resp = await fetch('/.netlify/functions/sheets', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        accion: 'planilla',
+        datos: {
+          fecha: op.fechaEsc || new Date().toLocaleDateString('es-AR'),
+          agente: op.agente==='propia' ? 'Martina Marinelli' : op.agente,
+          propiedad: op.propiedad,
+          compartida: op.compartida || '-',
+          punta: op.punta,
+          cliente: op.cliente || '',
+          cuit: op.cuit || '',
+          tipo_cliente: op.tipo_cliente || 'Consumidor Final',
+          precio: op.precio,
+          pct_comision: pctComision,
+          iva: iva || '',
+          pct_agente: pctAgente,
+          telefono: op.telefono || '',
+          mail: op.mail || '',
+          origen: op.origen || planillaRespuestas.origen || ''
+        }
+      })
+    });
+    const data = await resp.json();
+    if(data.ok && data.base64){
+      // Descargar el archivo
+      const bytes = Uint8Array.from(atob(data.base64), c=>c.charCodeAt(0));
+      const blob = new Blob([bytes], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = data.nombre || `Planilla_${op.propiedad.replace(/\s/g,'_')}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✅ Planilla generada: '+op.propiedad);
+    } else {
+      throw new Error(data.error || 'Error desconocido');
+    }
   } catch(e) {
     console.error('Error generando planilla:', e);
-    showToast('⚠️ Error al descargar la plantilla modelo', 'amber');
+    showToast('⚠️ Error al generar planilla: ' + e.message, 'amber');
   }
 
   detectarIncongruencias();
@@ -2420,6 +2446,13 @@ async function sendChat(){
 
     if(text) content.push({type:'text',text});
 
+    // Armar resumen de operaciones ya cargadas para contexto de Claude
+    const resumenOps = operaciones.length > 0 ? 
+      `\n\nOPERACIONES YA CARGADAS EN EL SISTEMA (${operaciones.length} total):\n` +
+      operaciones.map(o=>`ID ${o.id}: ${o.propiedad} | ${o.agente} | ${o.punta} | ${o.estado}`).join('\n') +
+      '\n\nANTES DE CARGAR UNA OPERACION, verificá que el ID no esté en esta lista. Si ya existe, NO la cargues de nuevo.'
+      : '\n\nNo hay operaciones cargadas aún.';
+
     const systemPrompt = `Sos el asistente de Martina Marinelli (Mat. 2543), corredora bajo SOLUM Negocios Inmobiliarios, Rosario y Cañada de Gómez. Trabajás en el CRM SOLUMITOS. Todo en USD.
 
 ═══════════════════════════════════════════════
@@ -2567,6 +2600,15 @@ Cuando cargás múltiples operaciones de una planilla, generá todos los ACCION:
       }catch(e){console.error('Parse error',e,accion);}
     }
     if(countAcc > 0){
+      // Guardar lote completo en Sheets
+      if(window._opBuffer && window._opBuffer.length > 0){
+        const lote = [...window._opBuffer];
+        window._opBuffer = [];
+        dbGuardarLote('operaciones', lote).then(ok=>{
+          if(ok) showToast('✅ ' + countAcc + ' operaciones guardadas en Sheets');
+          else showToast('⚠️ Cargadas en app pero error en Sheets', 'amber');
+        });
+      }
       detectarIncongruencias();
       renderDashboard();
       renderOperaciones();
@@ -2618,6 +2660,16 @@ function extraerAcciones(text){
 function procesarAccion(accion){
   if(accion.tipo==='operacion'){
     const d = accion.datos;
+    // Verificar duplicado por ID
+    if(d.id && operaciones.find(o=>o.id===d.id)){
+      console.log(`Operación ID ${d.id} ya existe, saltando.`);
+      return;
+    }
+    // Verificar duplicado por propiedad + agente + punta
+    if(operaciones.find(o=>o.propiedad===d.propiedad&&o.agente===d.agente&&o.punta===d.punta)){
+      console.log(`Operación duplicada: ${d.propiedad} / ${d.agente} / ${d.punta}, saltando.`);
+      return;
+    }
     // Respetar el estado que viene en el JSON
     const estadoMap = {'Cobrada':'Cobrada','Por cobrar':'Por cobrar','Caída':'Caída',
                        'cobrada':'Cobrada','por cobrar':'Por cobrar','caída':'Caída','caida':'Caída'};
@@ -2648,8 +2700,9 @@ function procesarAccion(accion){
     };
     operaciones.push(newOp);
 
-    // Guardar en Sheets
-    dbGuardar('operaciones', [newOp.id, newOp.propiedad, newOp.agente, newOp.punta,
+    // Acumular en buffer para guardar en lote
+    if(!window._opBuffer) window._opBuffer = [];
+    window._opBuffer.push([newOp.id, newOp.propiedad, newOp.agente, newOp.punta,
       newOp.precio, newOp.comision, newOp.ganancia_martina, newOp.ganancia_solum,
       newOp.fechaEsc, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
 
