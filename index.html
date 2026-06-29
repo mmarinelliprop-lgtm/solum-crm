@@ -861,14 +861,20 @@ async function cargarDatosDB() {
     // Operaciones
     const opRows = await dbLeer('operaciones');
     if(opRows.length > 1) {
-      operaciones = opRows.slice(1).map(r => ({
-        id: r[0], propiedad: r[1], agente: r[2], punta: r[3],
-        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
-        ganancia_martina: parseFloat(r[6])||0, ganancia_solum: parseFloat(r[7])||0,
-        fechaEsc: r[8], estado: r[9],
-        mes: parseInt(r[10])||0, anio: parseInt(r[11])||0,
-        planillaGenerada: r[12]==='true'
-      }));
+      operaciones = opRows.slice(1).map(r => {
+        // Normalizar agente al leer del Sheet
+        let agente = r[2] || 'propia';
+        if(agente==='Martina'||agente==='Martina Marinelli'||agente===''||agente==='Propia') agente='propia';
+        else agente = normAgente(agente) || agente;
+        return {
+          id: r[0], propiedad: r[1], agente, punta: r[3],
+          precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
+          ganancia_martina: parseFloat(r[6])||0, ganancia_solum: parseFloat(r[7])||0,
+          fechaEsc: r[8], estado: r[9],
+          mes: parseInt(r[10])||0, anio: parseInt(r[11])||0,
+          planillaGenerada: r[12]==='true'||r[12]===true
+        };
+      });
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
     }
     // Exchange
@@ -924,6 +930,21 @@ async function cargarDatosDB() {
       });
       Object.assign(fodaData, fodaMap);
     }
+
+    // Reconstruir seguimiento desde operaciones cargadas
+    operaciones.forEach(op => {
+      const agSeg = op.agente==='propia' ? 'Martina' : normAgente(op.agente);
+      if(!segData[agSeg]) segData[agSeg]={};
+      if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
+      const d = segData[agSeg][op.mes];
+      if(op.estado==='Por cobrar'){
+        d.r = (d.r||0)+1;
+      } else if(op.estado==='Cobrada'){
+        d.v = (d.v||0)+1;
+        d.f = (d.f||0)+op.comision;
+      }
+    });
+
   } catch(e) {
     console.error('Error cargando DB:', e);
   }
@@ -1249,6 +1270,23 @@ function detectarIncongruencias() {
   actualizarIconoAlertas();
 }
 
+function actualizarOp(id, campo, valor){
+  const op = operaciones.find(o=>o.id===id);
+  if(!op) return;
+  if(campo==='precio'){ op.precio=parseFloat(valor)||0; op.comision=Math.round(op.precio*0.03); }
+  else op[campo]=valor;
+  const pctMartina = op.agente==='propia'?0.80:(op.agente==='Kito'||op.agente==='Esteban')?0.10:0.20;
+  op.ganancia_martina = Math.round(op.comision*pctMartina*100)/100;
+  op.ganancia_solum = Math.round(op.comision*0.30*100)/100;
+  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+    op.precio,op.comision,op.ganancia_martina,op.ganancia_solum,
+    op.fechaEsc,op.estado,op.mes,op.anio,op.planillaGenerada||false]);
+  detectarIncongruencias();
+  renderDashboard();
+  renderOperaciones();
+  showToast('✅ Operación actualizada');
+}
+
 function mapNombreAgente(v) {
   // Mapear nombre de pestaña a nombre en operaciones
   const map = {'Vicky':'M. Victoria','Manu':'Manuela','Cris':'Cristian','Kito':'Esteban','Ceci':'Cecilia','Jose':'Josefina'};
@@ -1333,7 +1371,7 @@ function renderPlanillaStep(op){
   ];
 
   // Preguntar datos del cliente que faltan
-  if(!op.cliente) steps.push({q:'¿Nombre completo del cliente?', opts:[], key:'cliente', freetext:true});
+  if(!op.cliente) steps.push({q:'¿Nombre completo del cliente? (buscamos en la base de datos)', opts:[], key:'cliente', freetext:true, buscarDB:true});
   if(!op.cuit) steps.push({q:'¿DNI o CUIT/CUIL del cliente?', opts:[], key:'cuit', freetext:true});
   if(!op.mail) steps.push({q:'¿Mail del cliente?', opts:[], key:'mail', freetext:true});
   if(!op.telefono) steps.push({q:'¿Teléfono del cliente?', opts:['Sin teléfono'], key:'telefono', freetext:true});
@@ -1368,11 +1406,70 @@ function renderPlanillaStep(op){
   }
 }
 
-function responderPlanilla(key, val) {
+async function responderPlanilla(key, val) {
   planillaRespuestas[key] = val;
   if(val === 'Cancelar'){ closeModal('modalPlanilla'); return; }
+  
+  // Si es el campo cliente, buscar en la DB
+  if(key === 'cliente' && val && val.length > 2) {
+    const clientes = await buscarClienteDB(val);
+    if(clientes.length === 1) {
+      // Match único — completar automáticamente
+      const c = clientes[0];
+      planillaRespuestas.cliente = c.nombreCompleto;
+      planillaRespuestas.cuit = planillaRespuestas.cuit || c.cuit;
+      planillaRespuestas.mail = planillaRespuestas.mail || c.mail;
+      planillaRespuestas.telefono = planillaRespuestas.telefono || c.telefono;
+      // Guardar en la operación
+      const opTemp = operaciones.find(o=>o.id===planillaOpId);
+      if(opTemp){
+        opTemp.cliente = c.nombreCompleto;
+        opTemp.cuit = opTemp.cuit || c.cuit;
+        opTemp.mail = opTemp.mail || c.mail;
+        opTemp.telefono = opTemp.telefono || c.telefono;
+      }
+      showToast(`✅ Cliente encontrado: ${c.nombreCompleto}`);
+    } else if(clientes.length > 1) {
+      // Múltiples matches — mostrar opciones
+      const container = document.getElementById('planillaSteps');
+      const op = operaciones.find(o=>o.id===planillaOpId);
+      container.innerHTML = `
+        <div style="margin-bottom:12px;font-size:13px;color:var(--text2)">Encontré ${clientes.length} clientes. ¿Cuál es?</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${clientes.map(c=>`
+            <button onclick="seleccionarClienteDB('${c.nombreCompleto.replace(/'/g,"\'")}','${c.cuit}','${c.mail}','${c.telefono}')"
+              style="padding:10px 16px;border-radius:8px;font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:var(--card2);color:var(--text2);text-align:left">
+              <b>${c.nombreCompleto}</b><br>
+              <span style="font-size:11px;color:var(--text3)">${c.mail} · ${c.telefono}</span>
+            </button>`).join('')}
+          <button onclick="responderPlanilla('cliente','${val}')" 
+            style="padding:8px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text3)">
+            Ninguno — usar "${val}"
+          </button>
+        </div>`;
+      return;
+    }
+  }
+  
   planillaStep++;
   const op = operaciones.find(o=>o.id===planillaOpId);
+  renderPlanillaStep(op);
+}
+
+function seleccionarClienteDB(nombre, cuit, mail, telefono){
+  planillaRespuestas.cliente = nombre;
+  const op = operaciones.find(o=>o.id===planillaOpId);
+  if(op){
+    op.cliente = nombre;
+    op.cuit = op.cuit || cuit;
+    op.mail = op.mail || mail;
+    op.telefono = op.telefono || telefono;
+  }
+  planillaRespuestas.cuit = planillaRespuestas.cuit || cuit;
+  planillaRespuestas.mail = planillaRespuestas.mail || mail;
+  planillaRespuestas.telefono = planillaRespuestas.telefono || telefono;
+  showToast('✅ Cliente seleccionado: ' + nombre);
+  planillaStep++;
   renderPlanillaStep(op);
 }
 
@@ -1430,7 +1527,7 @@ async function ejecutarPlanilla(op, g) {
         accion: 'planilla',
         datos: {
           fecha: op.fechaEsc || new Date().toLocaleDateString('es-AR'),
-          agente: op.agente==='propia' ? 'Martina Marinelli' : op.agente,
+          agente: op.agente==='propia' ? 'Martina Marinelli' : (normAgente(op.agente) + ' / Martina Marinelli'),
           propiedad: op.propiedad,
           compartida: op.compartida || '-',
           punta: op.punta,
@@ -1440,7 +1537,7 @@ async function ejecutarPlanilla(op, g) {
           precio: op.precio,
           pct_comision: pctComision,
           iva: iva || '',
-          pct_agente: pctAgente,
+          pct_agente: op.agente==='propia' ? 0.80 : 0.70,
           telefono: op.telefono || '',
           mail: op.mail || '',
           origen: op.origen || planillaRespuestas.origen || ''
@@ -1709,18 +1806,42 @@ function renderOperaciones(){
   document.getElementById('ops-tabla').innerHTML = ops.map(o=>{
     const g = calcGanancia(o);
     const solumOp = o.agente==='propia' ? o.comision*0.20 : o.comision*(1-(COMISIONES[o.agente]||0.5))-g.equipo;
+    const estadoCls = o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':'cobrar';
+    const inputStyle = 'background:transparent;border:none;color:inherit;font-size:inherit;font-weight:inherit;outline:none;width:100%;cursor:pointer;';
+    const inputFocus = 'onfocus="this.style.background=\'var(--card2)\';this.style.border=\'1px solid var(--gold3)\';this.style.borderRadius=\'4px\';this.style.padding=\'2px 4px\'"';
+    const inputBlur = (field, id) => `onblur="this.style.background='transparent';this.style.border='none';actualizarOp(${id},'${field}',this.value)"`;
     return `<tr>
-      <td class="td-main">${o.propiedad}</td>
-      <td>${o.agente==='propia'?'<span class="tag">Propia</span>':o.agente}</td>
-      <td>${o.punta}</td>
-      <td>${fmtUSD(o.precio)}</td>
+      <td class="td-main"><input style="${inputStyle}" value="${o.propiedad}" ${inputFocus} ${inputBlur('propiedad', o.id)}></td>
+      <td>
+        <select style="${inputStyle}" onchange="actualizarOp(${o.id},'agente',this.value)">
+          <option value="propia" ${o.agente==='propia'?'selected':''}>Propia</option>
+          <option value="Vicky" ${normAgente(o.agente)==='Vicky'?'selected':''}>Vicky</option>
+          <option value="Manu" ${normAgente(o.agente)==='Manu'?'selected':''}>Manu</option>
+          <option value="Marce" ${normAgente(o.agente)==='Marce'?'selected':''}>Marce</option>
+          <option value="Kito" ${normAgente(o.agente)==='Kito'?'selected':''}>Kito</option>
+          <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
+          <option value="Ceci" ${normAgente(o.agente)==='Ceci'?'selected':''}>Ceci</option>
+        </select>
+      </td>
+      <td>
+        <select style="${inputStyle}" onchange="actualizarOp(${o.id},'punta',this.value)">
+          <option value="Vendedor" ${o.punta==='Vendedor'?'selected':''}>Vendedor</option>
+          <option value="Comprador" ${o.punta==='Comprador'?'selected':''}>Comprador</option>
+        </select>
+      </td>
+      <td><input style="${inputStyle}" type="number" value="${o.precio}" ${inputFocus} ${inputBlur('precio', o.id)}></td>
       <td>${fmtUSD(o.comision)}</td>
       <td class="text-green" style="font-weight:600">${fmtUSD(g.total)}</td>
       <td style="color:var(--blue)">${fmtUSD(Math.max(0,solumOp))}</td>
-      <td>${o.fechaEsc||'—'}</td>
-      <td><span class="status status-${o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':'cobrar'}">${o.estado}</span></td>
+      <td><input style="${inputStyle}" value="${o.fechaEsc||''}" placeholder="—" ${inputFocus} ${inputBlur('fechaEsc', o.id)}></td>
+      <td>
+        <select style="${inputStyle}" onchange="actualizarOp(${o.id},'estado',this.value)">
+          <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Por cobrar</option>
+          <option value="Cobrada" ${o.estado==='Cobrada'?'selected':''}>Cobrada</option>
+          <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
+        </select>
+      </td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" onclick="openCambiarEstado(${o.id})">Estado</button>
         <button class="btn btn-gold btn-sm" onclick="generarPlanilla(${o.id})">Planilla</button>
       </td>
     </tr>`;
