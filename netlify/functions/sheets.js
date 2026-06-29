@@ -16,12 +16,12 @@ exports.handler = async function(event) {
 
     if (body.accion === 'calendar') {
       url += '?accion=calendar';
-    } else if (body.accion === 'planilla') {
-      // Planilla va por POST directo (payload grande con base64)
+    } else if (body.accion === 'planilla' || body.accion === 'guardar_lote' || body.accion === 'guardar' || body.accion === 'actualizar') {
+      // Escrituras van por POST directo
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'postData=' + encodeURIComponent(JSON.stringify(body))
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
       });
       const text = await response.text();
       return { statusCode: 200, headers, body: text };
