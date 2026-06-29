@@ -408,13 +408,13 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       <span class="filter-label">Agente</span>
       <select class="filter-select" id="op-agente" onchange="renderOperaciones()">
         <option value="all">Todos</option>
-        <option value="propia">Propia</option>
-        <option value="M. Victoria">M. Victoria</option>
-        <option value="Manuela">Manuela</option>
+        <option value="propia">Propia (Martina)</option>
+        <option value="Vicky">Vicky</option>
+        <option value="Manu">Manu</option>
         <option value="Marce">Marce</option>
-        <option value="Esteban">Kito</option>
-        <option value="Cristian">Cristian</option>
-        <option value="Cecilia">Cecilia</option>
+        <option value="Kito">Kito</option>
+        <option value="Cris">Cris</option>
+        <option value="Ceci">Ceci</option>
       </select>
     </div>
     <div>
@@ -455,15 +455,9 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
   </div>
 
   <!-- Gráficos de ganancia -->
-  <div class="chart-grid" style="margin-top:24px" id="ops-charts-wrap">
-    <div class="chart-card">
-      <div class="chart-title">Mi ganancia mensual — Cobrado vs Pendiente (USD)</div>
-      <div class="chart-wrap" style="height:220px"><canvas id="chartOpsMiGanancia"></canvas></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-title">Ganancia SOLUM mensual — Cobrado vs Pendiente (USD)</div>
-      <div class="chart-wrap" style="height:220px"><canvas id="chartOpsSolum"></canvas></div>
-    </div>
+  <div class="chart-card" style="margin-top:24px">
+    <div class="chart-title">Mi ganancia + SOLUM mensual — Cobrado vs Pendiente (USD)</div>
+    <div class="chart-wrap" style="height:260px"><canvas id="chartOpsUnificado"></canvas></div>
   </div>
   <div class="chart-card" style="margin-top:16px" id="ops-proyeccion-wrap">
     <div class="chart-title">Proyección anual de ganancia (considerando operaciones caídas)</div>
@@ -1130,6 +1124,26 @@ function calcGanancia(op){
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
 // ═══════════════════════════════════════════════
+// NORMALIZACIÓN DE NOMBRES DE AGENTES (global)
+// ═══════════════════════════════════════════════
+function normAgente(a){
+  const map = {
+    'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky',
+    'Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky','M.Victoria':'Vicky',
+    'Manuela':'Manu','Manuela Pellegrini':'Manu',
+    'Marcela':'Marce','Marcela Corsalini':'Marce',
+    'Esteban':'Kito','Esteban Romero':'Kito',
+    'Cristian':'Cris','Cristian Ruiz Diaz':'Cris','Cristian Ruiz Díaz':'Cris',
+    'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+    'Josefina':'Jose','Jose':'Jose',
+    'Luli':'Luli',
+    'propia':'Martina','Martina':'Martina','Martina Marinelli':'Martina',
+    'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci'
+  };
+  return map[a?.trim()] || a || '';
+}
+
+// ═══════════════════════════════════════════════
 // TAB 1: DASHBOARD
 // ═══════════════════════════════════════════════
 
@@ -1501,18 +1515,28 @@ function renderDashboard(){
     <div class="kpi"><div class="kpi-label">Reservas pendientes</div><div class="kpi-value amber">${reservasPendientes}</div><div class="kpi-sub">Ops por cobrar</div></div>
     <div class="kpi"><div class="kpi-label">Captaciones publicadas</div><div class="kpi-value" style="color:var(--blue)">${segCaptTot}</div><div class="kpi-sub">Del seguimiento</div></div>
     <div class="kpi"><div class="kpi-label">Por cobrar</div><div class="kpi-value amber">${fmtUSD(montoPorCobrar)}</div><div class="kpi-sub">${pendientes} operaciones pendientes</div></div>
-    <div class="kpi"><div class="kpi-label">Caídas</div><div class="kpi-value red">${cantCaidas}</div><div class="kpi-sub" style="color:var(--red)">${fmtUSD(montoCaidas)} perdidos</div></div>
+    <div class="kpi"><div class="kpi-label">Caídas</div><div class="kpi-value red">${cantCaidas}</div><div class="kpi-sub" style="color:var(--red)">${fmtUSD(montoCaidas)} com. bruta perdida</div></div>
   `;
 
   // Chart facturación mensual
   destroyChart('chartFacturacion');
   const mesesLabel = MESES_NOMBRES.slice(1);
-  const facturMensual = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1).reduce((s,o)=>s+o.comision,0));
+  const factCobrada = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0));
+  const factPendiente = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0));
+  const factCaida = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.estado==='Caída').reduce((s,o)=>s+o.comision,0));
   charts['chartFacturacion'] = new Chart(document.getElementById('chartFacturacion'),{
-    type:'bar', data:{labels:mesesLabel,datasets:[{label:'Facturación',data:facturMensual,backgroundColor:'rgba(182,162,132,0.7)',borderColor:'var(--gold)',borderWidth:1,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:'#7a7468',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},
-              y:{ticks:{color:'#7a7468',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}}
+    type:'bar',
+    data:{labels:mesesLabel,datasets:[
+      {label:'Cobrada',data:factCobrada,backgroundColor:'rgba(39,196,122,0.8)',borderRadius:4},
+      {label:'Por cobrar',data:factPendiente,backgroundColor:'rgba(240,165,0,0.7)',borderRadius:4},
+      {label:'Caída',data:factCaida,backgroundColor:'rgba(224,85,85,0.6)',borderRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11},boxWidth:10}}},
+      scales:{
+        x:{ticks:{color:'#7a7468',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{ticks:{color:'#7a7468',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}
+      }}
   });
 
   // Chart estados (donut)
@@ -1524,18 +1548,7 @@ function renderDashboard(){
   });
 
   const agentesRanking = ['Vicky','Manu','Marce','Kito','Cris','Ceci'];
-  const normAgente = (a) => {
-    const map = {
-      'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky','Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky',
-      'Manuela':'Manu','Manuela Pellegrini':'Manu',
-      'Marcela':'Marce','Marcela Corsalini':'Marce',
-      'Esteban':'Kito','Esteban Romero':'Kito',
-      'Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
-      'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
-      'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci'
-    };
-    return map[a] || a;
-  };
+  // normAgente es función global — definida abajo
   // Solo operaciones cobradas para el ranking
   const opsCobradas = ops.filter(o=>o.estado==='Cobrada');
   const rankData = agentesRanking.map(a=>{
@@ -1611,9 +1624,10 @@ function renderGanancia(){
   // Charts
   destroyChart('chartGanancia');
   const mesesLabel = MESES_NOMBRES.slice(1);
-  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&(o.agente==='propia'||normAgente(o.agente)==='Martina')&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
-  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia'&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
-  charts['chartGanancia'] = new Chart(document.getElementById('chartGanancia'),{
+  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&(o.agente==='propia')&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
+  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
+  const ganEl = document.getElementById('chartGanancia');
+  if(ganEl) charts['chartGanancia'] = new Chart(ganEl,{
     type:'bar',data:{labels:mesesLabel,datasets:[
       {label:'Propia (80%)',data:gPropia,backgroundColor:'rgba(182,162,132,0.8)',borderRadius:4},
       {label:'Equipo (diferencial)',data:gEquipo,backgroundColor:'rgba(39,196,122,0.6)',borderRadius:4}
@@ -1623,10 +1637,11 @@ function renderGanancia(){
   });
 
   destroyChart('chartAgentes');
-  const agentes = ['M. Victoria','Manuela','Marce','Esteban','Cristian','Cecilia'];
-  const ganPorAgente = agentes.map(a=>operaciones.filter(o=>o.anio===anio&&o.agente===a).reduce((s,o)=>s+calcGanancia(o).equipo,0));
-  charts['chartAgentes'] = new Chart(document.getElementById('chartAgentes'),{
-    type:'bar',data:{labels:agentes,datasets:[{label:'Ganancia Martina',data:ganPorAgente,backgroundColor:'rgba(74,158,255,0.7)',borderRadius:4}]},
+  const agentesRank = ['Vicky','Manu','Marce','Kito','Cris','Ceci'];
+  const ganPorAgente = agentesRank.map(a=>operaciones.filter(o=>o.anio===anio&&normAgente(o.agente)===a&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
+  const agEl = document.getElementById('chartAgentes');
+  if(agEl) charts['chartAgentes'] = new Chart(agEl,{
+    type:'bar',data:{labels:agentesRank,datasets:[{label:'Ganancia Martina',data:ganPorAgente,backgroundColor:'rgba(74,158,255,0.7)',borderRadius:4}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{ticks:{color:'#7a7468',font:{size:10}},grid:{color:'rgba(255,255,255,0.05)'}},
               y:{ticks:{color:'#b8b0a4',font:{size:11}},grid:{display:false}}}}
@@ -1647,7 +1662,7 @@ function renderOperaciones(){
 
   let ops = operaciones.filter(o=>o.anio===anio);
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
-  if(agente!=='all') ops = ops.filter(o=>o.agente===agente);
+  if(agente!=='all') ops = ops.filter(o=>normAgente(o.agente)===agente||(agente==='propia'&&o.agente==='propia'));
   if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
   if(punta!=='all') ops = ops.filter(o=>o.punta===punta);
 
@@ -1685,16 +1700,33 @@ function renderOperaciones(){
     </tr>`;
   }).join('') || '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3)">Sin operaciones para este filtro</td></tr>';
 
+  // Totales separados por estado
+  const totComision = ops.reduce((s,o)=>s+o.comision,0);
+  const totComCob = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  const totComPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
+  const totComCaida = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
+  const totSolumCob = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
+  const totSolumPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
+
   document.getElementById('ops-totales').innerHTML = ops.length ? `
-    <tr style="background:var(--bg3);font-weight:700;border-top:2px solid rgba(255,255,255,0.1)">
-      <td colspan="5" style="padding:12px 14px;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.6px">TOTALES (${ops.length} ops filtradas)</td>
-      <td style="color:var(--green);padding:12px 14px">
-        ${fmtUSD(totMiGanCob)}<br>
-        <span style="color:var(--amber);font-size:10px;font-weight:400">+ ${fmtUSD(totMiGanPend)} pend.</span>
+    <tr style="background:var(--bg3);border-top:2px solid rgba(255,255,255,0.08)">
+      <td colspan="10" style="padding:0"></td>
+    </tr>
+    <tr style="background:var(--bg3);font-size:11px">
+      <td colspan="2" style="padding:10px 14px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;font-weight:700">${ops.length} ops filtradas</td>
+      <td colspan="2" style="padding:10px 14px;color:var(--text3)">Comisión bruta</td>
+      <td style="padding:10px 14px;font-weight:700;color:var(--text)">${fmtUSD(totComision)}</td>
+      <td style="padding:10px 14px">
+        <span style="color:var(--green);font-weight:700">${fmtUSD(totMiGanCob)} cobrado</span><br>
+        <span style="color:var(--amber);font-size:10px">${fmtUSD(totMiGanPend)} pendiente</span>
       </td>
-      <td style="color:var(--blue);padding:12px 14px">${fmtUSD(Math.max(0,totSolum))}</td>
-      <td colspan="3" style="padding:12px 14px;color:var(--text3);font-size:11px">
-        Vendedores: <span style="color:var(--text2)">${fmtUSD(totVendedores)}</span>
+      <td style="padding:10px 14px">
+        <span style="color:var(--blue);font-weight:700">${fmtUSD(totSolumCob)} cobrado</span><br>
+        <span style="color:rgba(74,158,255,0.6);font-size:10px">${fmtUSD(totSolumPend)} pendiente</span>
+      </td>
+      <td colspan="3" style="padding:10px 14px;color:var(--text3)">
+        Vendedores: <span style="color:var(--text2);font-weight:600">${fmtUSD(totVendedores)}</span><br>
+        <span style="color:var(--red);font-size:10px">Caídas (mi gan.): ${fmtUSD(ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).total),0))}</span>
       </td>
     </tr>` : '';
 
@@ -1713,32 +1745,21 @@ function renderOperaciones(){
   const solumPendMes = mesesLabels.map((_,i)=>
     opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0));
 
-  destroyChart('chartOpsMiGanancia');
-  const c1 = document.getElementById('chartOpsMiGanancia');
-  if(c1) charts['chartOpsMiGanancia'] = new Chart(c1,{
+  // Gráfico unificado Mi Ganancia + SOLUM
+  destroyChart('chartOpsUnificado');
+  const cu = document.getElementById('chartOpsUnificado');
+  if(cu) charts['chartOpsUnificado'] = new Chart(cu,{
     type:'bar',
     data:{labels:mesesLabels,datasets:[
-      {label:'Cobrado',data:miGanCobMes,backgroundColor:'rgba(39,196,122,0.8)',borderRadius:3},
-      {label:'Pendiente',data:miGanPendMes,backgroundColor:'rgba(240,165,0,0.6)',borderRadius:3}
+      {label:'Mi ganancia cobrada',data:miGanCobMes,backgroundColor:'rgba(39,196,122,0.85)',borderRadius:3},
+      {label:'SOLUM cobrado',data:solumCobMes,backgroundColor:'rgba(74,158,255,0.85)',borderRadius:3},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11}}}},
-      scales:{x:{stacked:true,ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}},
-              y:{stacked:true,ticks:{color:'#7a7468',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}}
-  });
-
-  destroyChart('chartOpsSolum');
-  const c2 = document.getElementById('chartOpsSolum');
-  if(c2) charts['chartOpsSolum'] = new Chart(c2,{
-    type:'bar',
-    data:{labels:mesesLabels,datasets:[
-      {label:'Cobrado',data:solumCobMes,backgroundColor:'rgba(74,158,255,0.8)',borderRadius:3},
-      {label:'Pendiente',data:solumPendMes,backgroundColor:'rgba(74,158,255,0.3)',borderRadius:3}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11}}}},
-      scales:{x:{stacked:true,ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.03)'}},
-              y:{stacked:true,ticks:{color:'#7a7468',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.05)'}}}}
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:10},boxWidth:10}}},
+      scales:{
+        x:{ticks:{color:'#7a7468',font:{size:9}},grid:{color:'rgba(255,255,255,0.02)'}},
+        y:{ticks:{color:'#7a7468',font:{size:9},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.04)'}}
+      }}
   });
 
   // ── Proyección anual ──
@@ -1755,14 +1776,37 @@ function renderOperaciones(){
   const proyFutura = promMensCob * mesesRestantes * (1 - tasaCaida);
   const proyTotal = totalCobrado + totalPendiente + proyFutura;
 
+  // Calcular totales SOLUM
+  const totalSolumCob = solumCobMes.reduce((s,v)=>s+v,0);
+  const totalSolumPend = solumPendMes.reduce((s,v)=>s+v,0);
+  const promSolumMens = mesActual>0 ? totalSolumCob/mesActual : 0;
+  const proyTotalSolum = totalSolumCob + totalSolumPend + promSolumMens*mesesRestantes*(1-tasaCaida);
+
   document.getElementById('ops-proyeccion-kpis').innerHTML = `
-    <div class="kpi" style="flex:1;min-width:130px"><div class="kpi-label">Mi ganancia cobrada</div><div class="kpi-value green">${fmtUSD(totalCobrado)}</div></div>
-    <div class="kpi" style="flex:1;min-width:130px"><div class="kpi-label">Pendiente de cobro</div><div class="kpi-value amber">${fmtUSD(totalPendiente)}</div></div>
-    <div class="kpi" style="flex:1;min-width:130px"><div class="kpi-label">Perdido (caídas)</div><div class="kpi-value red">${fmtUSD(totalCaido)}</div><div class="kpi-sub">Tasa caída: ${Math.round(tasaCaida*100)}%</div></div>
-    <div class="kpi" style="flex:1;min-width:130px;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
-      <div class="kpi-label">Proyección anual</div>
-      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyTotal))}</div>
-      <div class="kpi-sub">Ajustada por ${Math.round(tasaCaida*100)}% de caídas</div>
+    <div class="kpi" style="flex:1;min-width:120px">
+      <div class="kpi-label">Mi ganancia cobrada</div>
+      <div class="kpi-value green">${fmtUSD(totalCobrado)}</div>
+      <div class="kpi-sub" style="color:var(--amber)">${fmtUSD(totalPendiente)} pend.</div>
+    </div>
+    <div class="kpi" style="flex:1;min-width:120px">
+      <div class="kpi-label">SOLUM cobrado</div>
+      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(totalSolumCob)}</div>
+      <div class="kpi-sub" style="color:rgba(74,158,255,0.7)">${fmtUSD(totalSolumPend)} pend.</div>
+    </div>
+    <div class="kpi" style="flex:1;min-width:120px">
+      <div class="kpi-label">Caídas (mi ganancia perdida)</div>
+      <div class="kpi-value red">${fmtUSD(totalCaido)}</div>
+      <div class="kpi-sub">Tasa de caída: ${Math.round(tasaCaida*100)}%</div>
+    </div>
+    <div class="kpi" style="flex:1;min-width:120px;border:1px solid rgba(39,196,122,0.3);background:rgba(39,196,122,0.06)">
+      <div class="kpi-label">Proy. mi ganancia</div>
+      <div class="kpi-value green">${fmtUSD(Math.round(proyTotal))}</div>
+      <div class="kpi-sub">Ajustada por caídas</div>
+    </div>
+    <div class="kpi" style="flex:1;min-width:120px;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.06)">
+      <div class="kpi-label">Proy. SOLUM</div>
+      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyTotalSolum))}</div>
+      <div class="kpi-sub">Ajustada por caídas</div>
     </div>`;
 
   // Gráfico proyección
