@@ -2197,11 +2197,7 @@ function renderSeguimiento(){
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
 
   // Merge datos reales + manuales + de operaciones cargadas
-  const getMd = m2 => {
-    const real = SEG_DATA_REAL[vendedor]?.[m2] || {};
-    const manual = segData?.[vendedor]?.[m2] || {};
-    return {...real, ...manual};
-  };
+  const getMd = m2 => getSegMes(vendedor, m2);
 
   // ── Tabla anual ──
   const mesesCols = MESES_NOMBRES.slice(1,13);
@@ -2396,7 +2392,7 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
   container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3)">⏳ Generando análisis...</div>`;
 
   const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
-  const getMd = m2 => ({...(SEG_DATA_REAL[vendedor]?.[m2]||{}), ...(segData[vendedor]?.[m2]||{})});
+  const getMd = m2 => getSegMes(vendedor, m2);
   const mesActual = new Date().getMonth()+1;
   const allM = Array.from({length:mesActual},(_,i)=>i+1);
 
