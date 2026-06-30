@@ -464,7 +464,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     <table>
       <thead><tr>
         <th>Propiedad</th><th>Agente</th><th>Punta</th>
-        <th>Precio venta</th><th>% Com.</th><th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>Est. escritura</th>
+        <th>Precio venta</th><th>% Com.</th><th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>🤝 Vendedor</th><th>Est. escritura</th>
         <th>Estado</th><th>Acciones</th>
       </tr></thead>
       <tbody id="ops-tabla"></tbody>
@@ -1926,6 +1926,7 @@ function renderOperaciones(){
       <td>
         <input style="${inputStyle};color:var(--blue)" type="number" value="${o.ganancia_solum||Math.max(0,solumOp)}" ${inputFocus} ${inputBlur('ganancia_solum', o.id)}>
       </td>
+      <td style="color:var(--text2);font-size:12px">${o.agente==='Martina'?'—':fmtUSD(o.comision - (o.ganancia_martina||g.total) - (o.ganancia_solum||Math.max(0,solumOp)))}</td>
       <td><input style="${inputStyle}" value="${fmtFecha(o.fechaEsc)}" placeholder="—" ${inputFocus} ${inputBlur('fechaEsc', o.id)}></td>
       <td>
         <select style="${inputStyle}" onchange="actualizarOp(${o.id},'estado',this.value)">
