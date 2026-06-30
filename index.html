@@ -357,7 +357,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       </select>
       <select class="filter-select" id="gan-agente" onchange="renderGanancia()">
         <option value="all">Todos los agentes</option>
-        <option value="propia">Operaciones propias</option>
+        <option value="Martina">Martina (propias)</option>
         <option value="Vicky">Vicky (M. Victoria)</option>
         <option value="Manu">Manu (Manuela)</option>
         <option value="Marce">Marce</option>
@@ -408,7 +408,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       <span class="filter-label">Agente</span>
       <select class="filter-select" id="op-agente" onchange="renderOperaciones()">
         <option value="all">Todos</option>
-        <option value="propia">Propia (Martina)</option>
+        <option value="Martina">Martina (propia)</option>
         <option value="Vicky">Vicky</option>
         <option value="Manu">Manu</option>
         <option value="Marce">Marce</option>
@@ -696,7 +696,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     <div class="modal-field"><label class="modal-label">Precio de venta (USD)</label><input class="modal-input" id="mo-precio" type="number" placeholder="100000"></div>
     <div class="modal-field"><label class="modal-label">Agente</label>
       <select class="modal-input" id="mo-agente">
-        <option value="propia">Operación propia (Martina)</option>
+        <option value="Martina">Operación propia (Martina)</option>
         <option value="M. Victoria">M. Victoria</option><option value="Manuela">Manuela</option>
         <option value="Marce">Marce</option><option value="Esteban">Kito</option>
         <option value="Cristian">Cristian</option><option value="Cecilia">Cecilia</option>
@@ -863,9 +863,18 @@ async function cargarDatosDB() {
     if(opRows.length > 1) {
       operaciones = opRows.slice(1).map(r => {
         // Normalizar agente al leer del Sheet
-        let agente = r[2] || 'propia';
-        if(agente==='Martina'||agente==='Martina Marinelli'||agente===''||agente==='Propia') agente='propia';
-        else agente = normAgente(agente) || agente;
+        let agente = String(r[2] || '').trim();
+        const mapAgente = {
+          'Martina Marinelli':'Martina','Propia':'Martina','propia':'Martina','':'Martina',
+          'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky',
+          'Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky',
+          'Manuela':'Manu','Manuela Pellegrini':'Manu',
+          'Marcela':'Marce','Marcela Corsalini':'Marce',
+          'Esteban':'Kito','Esteban Romero':'Kito',
+          'Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
+          'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+        };
+        agente = mapAgente[agente] || agente;
         return {
           id: r[0], propiedad: r[1], agente, punta: r[3],
           precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
@@ -910,14 +919,24 @@ async function cargarDatosDB() {
         segObjetivos[vendedor][key] = val;
       });
     }
-    // Cargar seguimiento manual guardado
+    // Cargar seguimiento manual guardado (datos reales + objetivos)
     const segRows = await dbLeer('seguimiento');
     if(segRows.length > 1) {
       segRows.slice(1).forEach(r => {
-        const vendedor=r[1], mes=parseInt(r[2]), key=r[3], val=parseInt(r[4])||0;
+        const vendedor=r[1], mes=parseInt(r[2]), key=String(r[3]), val=parseFloat(r[4])||0;
         if(!segData[vendedor]) segData[vendedor]={};
-        if(!segData[vendedor][mes]) segData[vendedor][mes]={};
-        segData[vendedor][mes][key] = val;
+        
+        if(key.startsWith('obj_')) {
+          // Objetivo mensual: obj_KEY guardado en mes específico
+          const metrica = key.replace('obj_','');
+          if(!segObjetivos[vendedor]) segObjetivos[vendedor]={};
+          if(!segObjetivos[vendedor][mes]) segObjetivos[vendedor][mes]={};
+          segObjetivos[vendedor][mes][metrica] = val;
+        } else {
+          // Datos reales
+          if(!segData[vendedor][mes]) segData[vendedor][mes]={};
+          segData[vendedor][mes][key] = val;
+        }
       });
     }
     // Cargar FODA guardado
@@ -931,17 +950,43 @@ async function cargarDatosDB() {
       Object.assign(fodaData, fodaMap);
     }
 
+    // Cargar seguimiento semanal guardado
+    const semRows = await dbLeer('seguimiento_semanal');
+    if(semRows && semRows.length > 1) {
+      semRows.slice(1).forEach(r => {
+        const vendedor=r[1], mes=parseInt(r[2]), semIdx=parseInt(r[3]), key=r[4], val=parseFloat(r[5])||0;
+        if(!segData[vendedor]) segData[vendedor]={};
+        if(!segData[vendedor][mes]) segData[vendedor][mes]={};
+        if(!segData[vendedor][mes].semanas) segData[vendedor][mes].semanas=[{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}}];
+        if(key==='fecha') segData[vendedor][mes].semanas[semIdx].fecha = val;
+        else segData[vendedor][mes].semanas[semIdx].vals[key] = val;
+      });
+    }
+
     // Reconstruir seguimiento desde operaciones cargadas
     operaciones.forEach(op => {
-      const agSeg = op.agente==='propia' ? 'Martina' : normAgente(op.agente);
+      const agSeg = (op.agente==='Martina'||op.agente==='propia') ? 'Martina' : normAgente(op.agente);
       if(!segData[agSeg]) segData[agSeg]={};
       if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
       const d = segData[agSeg][op.mes];
       if(op.estado==='Por cobrar'){
+        // Reserva → en el mes de la reserva (op.mes)
         d.r = (d.r||0)+1;
       } else if(op.estado==='Cobrada'){
-        d.v = (d.v||0)+1;
-        d.f = (d.f||0)+op.comision;
+        // Venta → en el mes de escritura
+        // fechaEsc puede ser "MM/YYYY" o fecha completa
+        let mesEsc = op.mes, anioEsc = op.anio;
+        if(op.fechaEsc) {
+          const parts = String(op.fechaEsc).split('/');
+          if(parts.length >= 2) {
+            mesEsc = parseInt(parts[parts.length>=3?1:0]) || op.mes;
+            anioEsc = parseInt(parts[parts.length>=3?2:1]) || op.anio;
+          }
+        }
+        if(!segData[agSeg][mesEsc]) segData[agSeg][mesEsc]={};
+        segData[agSeg][mesEsc].v = (segData[agSeg][mesEsc].v||0)+1;
+        segData[agSeg][mesEsc].f = (segData[agSeg][mesEsc].f||0)+op.comision;
+        return; // ya procesamos, no seguir
       }
     });
 
@@ -956,7 +1001,7 @@ async function cargarDatosDB() {
 // DATA STORE
 // ═══════════════════════════════════════════════
 const COMISIONES = {
-  'propia': 0.80, 'Martina': 0.80, 'Martina Marinelli': 0.80,
+  'Martina': 0.80, 'propia': 0.80, 'Martina': 0.80, 'Martina Marinelli': 0.80,
   'M. Victoria': 0.50, 'Vicky': 0.50, 'Victoria': 0.50,
   'Maria Victoria': 0.50, 'María Victoria': 0.50,
   'Maria Victoria Saire': 0.50, 'María Victoria Saire': 0.50,
@@ -1140,15 +1185,15 @@ function calcGanancia(op){
   // Si la operación ya trae ganancia_martina calculada, usarla
   if(op.ganancia_martina !== undefined && op.ganancia_martina > 0){
     return {
-      propia: op.agente==='propia' ? op.ganancia_martina : 0,
-      equipo: op.agente!=='propia' ? op.ganancia_martina : 0,
+      propia: op.agente==='Martina' ? op.ganancia_martina : 0,
+      equipo: op.agente!=='Martina' ? op.ganancia_martina : 0,
       total: op.ganancia_martina,
       solum: op.ganancia_solum || op.comision*0.30
     };
   }
   // Calcular según estructura de comisiones
   const pctAgente = COMISIONES[op.agente] || 0.50;
-  if(op.agente==='propia'){
+  if(op.agente==='Martina'){
     return {propia: op.comision*0.80, equipo:0, total:op.comision*0.80, solum:op.comision*0.20};
   }
   // Agente al 50% → Martina 20%, SOLUM 30%
@@ -1231,36 +1276,46 @@ function detectarIncongruencias() {
       const seg = getSegMes(v, mes);
       const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&(
         normAgente(o.agente)===v || 
-        (v==='Martina' && (o.agente==='propia'||o.agente==='Martina'||o.agente==='Martina Marinelli'))
+        (v==='Martina' && (o.agente==='Martina'||o.agente==='Martina Marinelli'))
       ));
 
-      // 1. Ventas seguimiento > operaciones cobradas
+      // 1. Ventas: seguimiento vs operaciones cobradas (en cualquier dirección)
       const ventasSeg = seg.v || 0;
       const ventasOps = opsDelMes.filter(o=>o.estado==='Cobrada').length;
-      if(ventasSeg > ventasOps && ventasSeg > 0) {
+      if(ventasSeg !== ventasOps && (ventasSeg > 0 || ventasOps > 0)) {
         alertasActivas.push({
-          id: `v-${v}-${mes}`, tipo:'ventas',
-          msg: `${v} (${MESES_NOMBRES[mes]}): seguimiento dice ${ventasSeg} ventas pero solo hay ${ventasOps} operación(es) cobrada(s)`
+          id: `v-${v}-${mes}`, tipo:'ventas', vendedor:v, mes, valorCorrecto: ventasOps, key: 'v',
+          msg: `${v} (${MESES_NOMBRES[mes]}): seguimiento dice ${ventasSeg} venta(s) pero hay ${ventasOps} operación(es) cobrada(s). ¿Actualizar seguimiento a ${ventasOps}?`
         });
       }
 
-      // 2. Facturación seguimiento ≠ suma planillas
-      const facSeg = seg.f || 0;
-      const facOps = opsDelMes.filter(o=>o.planillaGenerada).reduce((s,o)=>s+o.comision,0);
-      if(facSeg > 0 && facOps > 0 && Math.abs(facSeg - facOps) > 50) {
+      // 2. Reservas: seguimiento vs operaciones "Por cobrar"
+      const reservasSeg = seg.r || 0;
+      const reservasOps = opsDelMes.filter(o=>o.estado==='Por cobrar').length;
+      if(reservasSeg !== reservasOps && (reservasSeg > 0 || reservasOps > 0)) {
         alertasActivas.push({
-          id: `f-${v}-${mes}`, tipo:'facturacion',
-          msg: `${v} (${MESES_NOMBRES[mes]}): seguimiento dice ${fmtUSD(facSeg)} pero planillas suman ${fmtUSD(facOps)}`
+          id: `r-${v}-${mes}`, tipo:'reservas', vendedor:v, mes, valorCorrecto: reservasOps, key: 'r',
+          msg: `${v} (${MESES_NOMBRES[mes]}): seguimiento dice ${reservasSeg} reserva(s) pero hay ${reservasOps} operación(es) por cobrar. ¿Actualizar seguimiento a ${reservasOps}?`
+        });
+      }
+
+      // 3. Facturación: seguimiento vs suma de comisiones cobradas
+      const facSeg = seg.f || 0;
+      const facOps = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+      if(Math.abs(facSeg - facOps) > 50 && (facSeg > 0 || facOps > 0)) {
+        alertasActivas.push({
+          id: `f-${v}-${mes}`, tipo:'facturacion', vendedor:v, mes, valorCorrecto: facOps, key: 'f',
+          msg: `${v} (${MESES_NOMBRES[mes]}): seguimiento dice ${fmtUSD(facSeg)} pero operaciones cobradas suman ${fmtUSD(facOps)}. ¿Actualizar a ${fmtUSD(facOps)}?`
         });
       }
     }
 
-    // 3. Reservas > 60 días sin venta
-    operaciones.filter(o=>o.esReserva && !o.planillaGenerada).forEach(op => {
-      const diasDesde = Math.floor((Date.now() - new Date(op.fechaReserva||op.fechaEsc||Date.now()).getTime()) / 86400000);
+    // 4. Reservas viejas sin cerrar
+    operaciones.filter(o=>o.estado==='Por cobrar').forEach(op => {
+      const diasDesde = Math.floor((Date.now() - new Date(op.fechaEsc||Date.now()).getTime()) / 86400000);
       if(diasDesde > 60) {
         alertasActivas.push({
-          id: `r-${op.id}`, tipo:'reserva', opId: op.id,
+          id: `vieja-${op.id}`, tipo:'reserva_vieja', opId: op.id,
           msg: `Reserva "${op.propiedad}" lleva ${diasDesde} días sin cerrar (agente: ${op.agente})`
         });
       }
@@ -1270,12 +1325,24 @@ function detectarIncongruencias() {
   actualizarIconoAlertas();
 }
 
+function corregirIncongruencia(alertaId) {
+  const alerta = alertasActivas.find(a=>a.id===alertaId);
+  if(!alerta || alerta.valorCorrecto===undefined) return;
+  if(!segData[alerta.vendedor]) segData[alerta.vendedor]={};
+  if(!segData[alerta.vendedor][alerta.mes]) segData[alerta.vendedor][alerta.mes]={};
+  segData[alerta.vendedor][alerta.mes][alerta.key] = alerta.valorCorrecto;
+  dbGuardar('seguimiento', [Date.now(), alerta.vendedor, alerta.mes, alerta.key, alerta.valorCorrecto]);
+  detectarIncongruencias();
+  renderSeguimiento();
+  showToast(`✅ Seguimiento actualizado: ${alerta.vendedor} - ${MESES_NOMBRES[alerta.mes]}`);
+}
+
 function actualizarOp(id, campo, valor){
   const op = operaciones.find(o=>o.id===id);
   if(!op) return;
   if(campo==='precio'){ op.precio=parseFloat(valor)||0; op.comision=Math.round(op.precio*0.03); }
   else op[campo]=valor;
-  const pctMartina = op.agente==='propia'?0.80:(op.agente==='Kito'||op.agente==='Esteban')?0.10:0.20;
+  const pctMartina = op.agente==='Martina'?0.80:(op.agente==='Kito'||op.agente==='Esteban')?0.10:0.20;
   op.ganancia_martina = Math.round(op.comision*pctMartina*100)/100;
   op.ganancia_solum = Math.round(op.comision*0.30*100)/100;
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
@@ -1324,7 +1391,10 @@ function renderPanelAlertas() {
     <div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06)">
       <div style="font-size:11px;color:var(--amber);text-transform:uppercase;margin-bottom:4px">${a.tipo}</div>
       <div style="font-size:12px;color:var(--text2)">${a.msg}</div>
-      <button onclick="resolverAlerta('${a.id}')" style="margin-top:8px;font-size:10px;padding:3px 10px;background:var(--card2);border:1px solid rgba(255,255,255,0.1);color:var(--text3);border-radius:4px;cursor:pointer">Marcar como revisada</button>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        ${a.valorCorrecto!==undefined ? `<button onclick="corregirIncongruencia('${a.id}')" style="font-size:10px;padding:3px 10px;background:rgba(39,196,122,0.15);border:1px solid rgba(39,196,122,0.3);color:var(--green);border-radius:4px;cursor:pointer">✓ Sí, corregir</button>` : ''}
+        <button onclick="resolverAlerta('${a.id}')" style="font-size:10px;padding:3px 10px;background:var(--card2);border:1px solid rgba(255,255,255,0.1);color:var(--text3);border-radius:4px;cursor:pointer">Ignorar</button>
+      </div>
     </div>`).join('');
 }
 
@@ -1376,7 +1446,7 @@ function renderPlanillaStep(op){
   if(!op.mail) steps.push({q:'¿Mail del cliente?', opts:[], key:'mail', freetext:true});
   if(!op.telefono) steps.push({q:'¿Teléfono del cliente?', opts:['Sin teléfono'], key:'telefono', freetext:true});
   steps.push({q:'¿De dónde proviene el cliente?', opts:['Referido','Redes sociales','Portal','Cartel','Otro'], key:'origen'});
-  steps.push({q:`¿Sumar 1 venta a ${op.agente==='propia'?'tu seguimiento':op.agente} en ${MESES_NOMBRES[op.mes]}?`, opts:['Sí','No'], key:'sumarVenta'});
+  steps.push({q:`¿Sumar 1 venta a ${op.agente==='Martina'?'tu seguimiento':op.agente} en ${MESES_NOMBRES[op.mes]}?`, opts:['Sí','No'], key:'sumarVenta'});
   steps.push({q:`¿Sumar ${fmtUSD(g.total)} a tus ingresos en Finanzas (${MESES_NOMBRES[op.mes]})?`, opts:['Sí','No'], key:'sumarFinanzas'});
 
   if(planillaStep >= steps.length){ ejecutarPlanilla(op, g); return; }
@@ -1527,7 +1597,7 @@ async function ejecutarPlanilla(op, g) {
         accion: 'planilla',
         datos: {
           fecha: op.fechaEsc || new Date().toLocaleDateString('es-AR'),
-          agente: op.agente==='propia' ? 'Martina Marinelli' : (normAgente(op.agente) + ' / Martina Marinelli'),
+          agente: op.agente==='Martina' ? 'Martina Marinelli' : (normAgente(op.agente) + ' / Martina Marinelli'),
           propiedad: op.propiedad,
           compartida: op.compartida || '-',
           punta: op.punta,
@@ -1537,7 +1607,7 @@ async function ejecutarPlanilla(op, g) {
           precio: op.precio,
           pct_comision: pctComision,
           iva: iva || '',
-          pct_agente: op.agente==='propia' ? 0.80 : 0.70,
+          pct_agente: op.agente==='Martina' ? 0.80 : 0.70,
           telefono: op.telefono || '',
           mail: op.mail || '',
           origen: op.origen || planillaRespuestas.origen || ''
@@ -1699,25 +1769,25 @@ function renderGanancia(){
   const agente = document.getElementById('gan-agente').value;
   let ops = operaciones.filter(o=>o.anio===anio&&(mes==='all'||o.mes===parseInt(mes)));
   if(agente!=='all') {
-    if(agente==='propia'){
-      ops = ops.filter(o=>o.agente==='propia'||o.agente==='Martina'||o.agente==='Martina Marinelli');
+    if(agente==='Martina'){
+      ops = ops.filter(o=>o.agente==='Martina'||o.agente==='Martina'||o.agente==='Martina Marinelli');
     } else {
       ops = ops.filter(o=>normAgente(o.agente)===agente);
     }
   }
 
   const totGan = ops.reduce((s,o)=>s+calcGanancia(o).total,0);
-  const ganPropia = ops.filter(o=>o.agente==='propia').reduce((s,o)=>s+calcGanancia(o).propia,0);
-  const ganEquipo = ops.filter(o=>o.agente!=='propia').reduce((s,o)=>s+calcGanancia(o).equipo,0);
+  const ganPropia = ops.filter(o=>o.agente==='Martina').reduce((s,o)=>s+calcGanancia(o).propia,0);
+  const ganEquipo = ops.filter(o=>o.agente!=='Martina').reduce((s,o)=>s+calcGanancia(o).equipo,0);
 
 
   // Solo cobradas en KPIs
   const opsCob = ops.filter(o=>o.estado==='Cobrada');
   const opsPend = ops.filter(o=>o.estado==='Por cobrar');
-  const ganPropiaCobrada = opsCob.filter(o=>o.agente==='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0);
-  const ganPropiaPend = opsPend.filter(o=>o.agente==='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0);
-  const ganEquipoCobrada = opsCob.filter(o=>o.agente!=='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0);
-  const ganEquipoPend = opsPend.filter(o=>o.agente!=='propia').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0);
+  const ganPropiaCobrada = opsCob.filter(o=>o.agente==='Martina').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0);
+  const ganPropiaPend = opsPend.filter(o=>o.agente==='Martina').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0);
+  const ganEquipoCobrada = opsCob.filter(o=>o.agente!=='Martina').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0);
+  const ganEquipoPend = opsPend.filter(o=>o.agente!=='Martina').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0);
   const totCobrado = ganPropiaCobrada + ganEquipoCobrada;
   const totPend = ganPropiaPend + ganEquipoPend;
 
@@ -1739,7 +1809,7 @@ function renderGanancia(){
     </div>
     <div class="kpi">
       <div class="kpi-label">Ops propias / equipo</div>
-      <div class="kpi-value">${opsCob.filter(o=>o.agente==='propia').length} <span style="color:var(--text3);font-size:14px">/ ${opsCob.filter(o=>o.agente!=='propia').length}</span></div>
+      <div class="kpi-value">${opsCob.filter(o=>o.agente==='Martina').length} <span style="color:var(--text3);font-size:14px">/ ${opsCob.filter(o=>o.agente!=='Martina').length}</span></div>
       <div class="kpi-sub">Cobradas propias / equipo</div>
     </div>
   `;
@@ -1747,8 +1817,8 @@ function renderGanancia(){
   // Charts
   destroyChart('chartGanancia');
   const mesesLabel = MESES_NOMBRES.slice(1);
-  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&(o.agente==='propia')&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
-  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='propia'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
+  const gPropia = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&(o.agente==='Martina')&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).propia),0));
+  const gEquipo = mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.agente!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
   const ganEl = document.getElementById('chartGanancia');
   if(ganEl) charts['chartGanancia'] = new Chart(ganEl,{
     type:'bar',data:{labels:mesesLabel,datasets:[
@@ -1785,7 +1855,7 @@ function renderOperaciones(){
 
   let ops = operaciones.filter(o=>o.anio===anio);
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
-  if(agente!=='all') ops = ops.filter(o=>normAgente(o.agente)===agente||(agente==='propia'&&o.agente==='propia'));
+  if(agente!=='all') ops = ops.filter(o=>normAgente(o.agente)===agente||(agente==='Martina'&&o.agente==='Martina'));
   if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
   if(punta!=='all') ops = ops.filter(o=>o.punta===punta);
 
@@ -1798,14 +1868,14 @@ function renderOperaciones(){
     const g = calcGanancia(o);
     return s + (o.ganancia_solum || g.solum || o.comision*0.30);
   },0);
-  const totVendedores = ops.filter(o=>o.agente!=='propia').reduce((s,o)=>{
+  const totVendedores = ops.filter(o=>o.agente!=='Martina').reduce((s,o)=>{
     const pct = COMISIONES[o.agente]||0.50;
     return s + o.comision*pct;
   },0);
 
   document.getElementById('ops-tabla').innerHTML = ops.map(o=>{
     const g = calcGanancia(o);
-    const solumOp = o.agente==='propia' ? o.comision*0.20 : o.comision*(1-(COMISIONES[o.agente]||0.5))-g.equipo;
+    const solumOp = o.agente==='Martina' ? o.comision*0.20 : o.comision*(1-(COMISIONES[o.agente]||0.5))-g.equipo;
     const estadoCls = o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':'cobrar';
     const inputStyle = 'background:transparent;border:none;color:inherit;font-size:inherit;font-weight:inherit;outline:none;width:100%;cursor:pointer;';
     const inputFocus = 'onfocus="this.style.background=\'var(--card2)\';this.style.border=\'1px solid var(--gold3)\';this.style.borderRadius=\'4px\';this.style.padding=\'2px 4px\'"';
@@ -1814,7 +1884,7 @@ function renderOperaciones(){
       <td class="td-main"><input style="${inputStyle}" value="${o.propiedad}" ${inputFocus} ${inputBlur('propiedad', o.id)}></td>
       <td>
         <select style="${inputStyle}" onchange="actualizarOp(${o.id},'agente',this.value)">
-          <option value="propia" ${o.agente==='propia'?'selected':''}>Propia</option>
+          <option value="propia" ${o.agente==='Martina'?'selected':''}>Propia</option>
           <option value="Vicky" ${normAgente(o.agente)==='Vicky'?'selected':''}>Vicky</option>
           <option value="Manu" ${normAgente(o.agente)==='Manu'?'selected':''}>Manu</option>
           <option value="Marce" ${normAgente(o.agente)==='Marce'?'selected':''}>Marce</option>
@@ -2096,7 +2166,11 @@ function renderSeguimiento(){
   try{
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   segVendedorActivo = vendedor;
-  const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
+  // Objetivo por mes específico
+  const getObj = (m, key) => {
+    return segObjetivos?.[vendedor]?.[m]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
+  };
+  const obj = segObjetivos?.[vendedor]?.[1] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
 
   // Merge datos reales + manuales + de operaciones cargadas
@@ -2125,7 +2199,7 @@ function renderSeguimiento(){
     // Calcular % acumulado solo de meses ya procesados (hasta hoy)
     const mesesProcesados = Array.from({length:mesActualNum},(_,mi)=>mi+1);
     const totalReal = mesesProcesados.reduce((s,m)=>{const d=getMd(m);return s+(d[key]??0);},0);
-    const totalObj = objV * mesActualNum;
+    const totalObj = mesesProcesados.reduce((s,m)=>s+getObj(m,key),0);
     const pctAcum = totalObj>0 ? Math.round(totalReal/totalObj*100) : 0;
     const pctColor = pctAcum>=100?'var(--green)':pctAcum>=70?'var(--amber)':'var(--red)';
     const pctBg = pctAcum>=100?'rgba(39,196,122,0.12)':pctAcum>=70?'rgba(240,165,0,0.10)':'rgba(224,85,85,0.10)';
@@ -2217,7 +2291,10 @@ function renderSeguimiento(){
   // ── Análisis IA ──
   analizarConversion(vendedor, getMd, allM, obj);
   loadFoda(vendedor);
-  if(allM.length > 0) generarFODA();
+  // Solo regenerar FODA si no hay uno guardado para este vendedor
+  if(allM.length > 0 && (!fodaData[vendedor] || !fodaData[vendedor].f)) {
+    generarFODA();
+  }
 
 
   // ── Selector de vendedores ──
@@ -2356,9 +2433,20 @@ function renderCalendarioSemanal(){
   let html = '';
   semanas.forEach((sem, i) => {
     const semVals = semData[i]?.vals || {};
+    
+    // Detectar si la semana está partida entre dos meses
+    const lunesParts = sem.lunes.split('/');
+    const viernesParts = sem.viernes.split('/');
+    const lunesDate = new Date(anio, parseInt(lunesParts[1])-1, parseInt(lunesParts[0]));
+    const viernesDate = new Date(anio, parseInt(viernesParts[1])-1, parseInt(viernesParts[0]));
+    const esPartida = lunesDate.getMonth() !== viernesDate.getMonth();
+    
+    const partidaLabel = esPartida ? 
+      `<span style="font-size:10px;color:var(--amber);margin-left:8px">⚠️ Semana partida — se prorrateará</span>` : '';
+    
     html += `<div class="cal-week">
       <div class="cal-week-header">
-        <div class="cal-week-date">Semana ${i+1}</div>
+        <div class="cal-week-date">Semana ${i+1} ${partidaLabel}</div>
         <div class="cal-week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
       </div>
       <div class="cal-week-body">`;
@@ -2371,14 +2459,52 @@ function renderCalendarioSemanal(){
           <input class="cal-metric-input ${cls}" value="${v}" placeholder="0"
             onchange="setSemana('${vendedor}',${mes},${i},'${key}',this.value);
               this.className='cal-metric-input '+(this.value!==''?(parseInt(this.value)>=${o}?'cal-met':'cal-unmet'):'');
-              renderSeguimiento()">
+              actualizarMensualDesdeSemanal('${vendedor}',${mes},${anio});">
         </div>
       </div>`;
     });
     html += '</div></div>';
+    
+    // Si partida, también impactar en el mes siguiente
+    if(esPartida) {
+      const mesSig = viernesDate.getMonth()+1;
+      const anioSig = viernesDate.getFullYear();
+      actualizarMensualDesdeSemanal(vendedor, mesSig, anioSig);
+    }
   });
 
   document.getElementById('seg-calendario-wrap').innerHTML = html || '<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sin semanas calculadas</div></div>';
+}
+
+function diasHabilesEnMes(lunes, viernes, mes, anio) {
+  // Cuenta cuántos días hábiles de la semana [lunes-viernes] caen en el mes dado
+  let count = 0;
+  let d = new Date(lunes);
+  while(d <= viernes) {
+    const dow = d.getDay(); // 0=dom, 6=sab
+    if(dow >= 1 && dow <= 5 && d.getMonth()+1 === mes && d.getFullYear() === anio) count++;
+    d.setDate(d.getDate()+1);
+  }
+  return count;
+}
+
+function prorratearSemana(vals, lunes, viernes, mesDestino, anioDestino) {
+  // Calcula la proporción de días hábiles que corresponden al mesDestino
+  let totalHabiles = 0;
+  let d = new Date(lunes);
+  while(d <= viernes) {
+    if(d.getDay() >= 1 && d.getDay() <= 5) totalHabiles++;
+    d.setDate(d.getDate()+1);
+  }
+  const diasEnMes = diasHabilesEnMes(lunes, viernes, mesDestino, anioDestino);
+  if(totalHabiles === 0) return {};
+  const factor = diasEnMes / totalHabiles;
+  
+  const result = {};
+  for(const [key, val] of Object.entries(vals)) {
+    result[key] = Math.round((val || 0) * factor);
+  }
+  return result;
 }
 
 function getSemanasMes(anio, mes){
@@ -2399,6 +2525,44 @@ function getSemanasMes(anio, mes){
     dia.setDate(dia.getDate()+7);
   }
   return semanas;
+}
+
+function actualizarMensualDesdeSemanal(vendedor, mes, anio) {
+  // Suma todas las semanas del mes prorrateando las partidas
+  const semanas = getSemanasMes(anio, mes);
+  const semData = getSemanas(vendedor, mes);
+  const keys = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
+  const totales = {};
+  keys.forEach(k => totales[k] = 0);
+  
+  semanas.forEach((sem, i) => {
+    const vals = semData[i]?.vals || {};
+    const lunesParts = sem.lunes.split('/');
+    const viernesParts = sem.viernes.split('/');
+    const lunesDate = new Date(anio, parseInt(lunesParts[1])-1, parseInt(lunesParts[0]));
+    const viernesDate = new Date(anio, parseInt(viernesParts[1])-1, parseInt(viernesParts[0]));
+    
+    const esPartida = lunesDate.getMonth() !== viernesDate.getMonth();
+    
+    if(esPartida) {
+      // Prorratear según días hábiles en este mes
+      const parcial = prorratearSemana(vals, lunesDate, viernesDate, mes, anio);
+      keys.forEach(k => totales[k] += parcial[k] || 0);
+    } else {
+      // Semana completa en este mes
+      keys.forEach(k => totales[k] += parseInt(vals[k] || 0));
+    }
+  });
+  
+  // Actualizar segData con los totales calculados
+  if(!segData[vendedor]) segData[vendedor] = {};
+  if(!segData[vendedor][mes]) segData[vendedor][mes] = {};
+  keys.forEach(k => {
+    if(totales[k] > 0) {
+      segData[vendedor][mes][k] = totales[k];
+      dbGuardar('seguimiento', [Date.now(), vendedor, mes, k, totales[k]]);
+    }
+  });
 }
 
 function guardarSeguimiento(){
@@ -2798,7 +2962,7 @@ function procesarAccion(accion){
 
     // Calcular ganancia si no viene en el JSON
     const pctMartina = COMISIONES[d.agente]===0.80 ? 0.80 :
-                       d.agente==='propia' ? 0.80 :
+                       d.agente==='Martina' ? 0.80 :
                        d.agente==='Kito'||d.agente==='Esteban' ? 0.10 : 0.20;
     const comision = parseFloat(d.comision) || parseFloat(d.precio||0)*0.03;
     const ganancia_martina = parseFloat(d.ganancia_martina) || comision*pctMartina;
@@ -2807,7 +2971,15 @@ function procesarAccion(accion){
     const newOp = {
       id: d.id || operaciones.length+1,
       propiedad: d.propiedad||'Sin nombre',
-      agente: d.agente||'propia',
+      agente: (()=>{
+        const a = String(d.agente||'Martina').trim();
+        const m = {'Martina Marinelli':'Martina','Propia':'Martina','propia':'Martina','':'Martina',
+          'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','Manuela':'Manu',
+          'Manuela Pellegrini':'Manu','Marcela':'Marce','Marcela Corsalini':'Marce',
+          'Esteban':'Kito','Esteban Romero':'Kito','Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
+          'Cecilia':'Ceci','Cecilia Bruno':'Ceci'};
+        return m[a] || a;
+      })(),
       punta: d.punta||'Vendedor',
       precio: parseFloat(d.precio)||0,
       comision,
@@ -2823,7 +2995,7 @@ function procesarAccion(accion){
 
     // Acumular en buffer para guardar en lote
     if(!window._opBuffer) window._opBuffer = [];
-    window._opBuffer.push([newOp.id, newOp.propiedad, newOp.agente, newOp.punta,
+    window._opBuffer.push([newOp.id, newOp.propiedad, newOp.agente==='propia'?'Martina':newOp.agente, newOp.punta,
       newOp.precio, newOp.comision, newOp.ganancia_martina, newOp.ganancia_solum,
       newOp.fechaEsc, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
 
