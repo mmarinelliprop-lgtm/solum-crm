@@ -982,30 +982,13 @@ async function cargarDatosDB() {
     }
 
     // Reconstruir seguimiento desde operaciones cargadas
+    // NOTA: v y f se calculan siempre en getSegMes, no se guardan en segData
+    // NOTA: r viene del Sheet (histórico) — no se reconstruye desde operaciones
+    // Solo reconstruimos captaciones para el seguimiento de propiedades
     operaciones.forEach(op => {
       const agSeg = (op.agente==='Martina'||op.agente==='propia') ? 'Martina' : normAgente(op.agente);
       if(!segData[agSeg]) segData[agSeg]={};
       if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
-      const d = segData[agSeg][op.mes];
-      if(op.estado==='Por cobrar'){
-        // Reserva → en el mes de la reserva (op.mes)
-        d.r = (d.r||0)+1;
-      } else if(op.estado==='Cobrada'){
-        // Venta → en el mes de escritura
-        // fechaEsc puede ser "MM/YYYY" o fecha completa
-        let mesEsc = op.mes, anioEsc = op.anio;
-        if(op.fechaEsc) {
-          const parts = String(op.fechaEsc).split('/');
-          if(parts.length >= 2) {
-            mesEsc = parseInt(parts[parts.length>=3?1:0]) || op.mes;
-            anioEsc = parseInt(parts[parts.length>=3?2:1]) || op.anio;
-          }
-        }
-        if(!segData[agSeg][mesEsc]) segData[agSeg][mesEsc]={};
-        segData[agSeg][mesEsc].v = (segData[agSeg][mesEsc].v||0)+1;
-        segData[agSeg][mesEsc].f = (segData[agSeg][mesEsc].f||0)+op.comision;
-        return; // ya procesamos, no seguir
-      }
     });
 
   } catch(e) {
@@ -1266,22 +1249,18 @@ function normAgente(a){
 let alertasActivas = [];
 
 function getSegMes(vendedor, mes) {
-  const real = SEG_DATA_REAL[vendedor]?.[mes] || {};
   const manual = segData?.[vendedor]?.[mes] || {};
-  const merged = {...real, ...manual};
+  const merged = {...manual};
 
-  // Operaciones es la fuente de verdad para v, r, f cuando existen operaciones de este vendedor/mes
+  // v y f siempre desde operaciones (fuente de verdad)
   const anio = 2026;
-  const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&(
-    normAgente(o.agente)===vendedor ||
-    (vendedor==='Martina' && (o.agente==='Martina'||o.agente==='Martina Marinelli'))
-  ));
-  if(opsDelMes.length > 0) {
-    merged.v = opsDelMes.filter(o=>o.estado==='Cobrada').length;
-    // Reservas = TODAS las que se tomaron ese mes (Por cobrar + Cobrada + Caída), nunca se restan
-    merged.r = opsDelMes.length;
-    merged.f = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
-  }
+  const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&
+    (normAgente(o.agente)===vendedor || (vendedor==='Martina'&&o.agente==='Martina'))
+  );
+  merged.v = opsDelMes.filter(o=>o.estado==='Cobrada').length;
+  merged.f = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  // r viene del segData (Sheet) — no se pisa
+
   return merged;
 }
 
@@ -3250,11 +3229,11 @@ function procesarAccion(accion){
     if(!segData[agSeg]) segData[agSeg]={};
     if(!segData[agSeg][newOp.mes]) segData[agSeg][newOp.mes]={};
     if(estado==='Por cobrar'){
+      // Nueva reserva → sumar +1 a r y guardar en Sheet
       segData[agSeg][newOp.mes].r = (segData[agSeg][newOp.mes].r||0)+1;
+      dbGuardar('seguimiento', [Date.now(), agSeg, newOp.mes, 'r', segData[agSeg][newOp.mes].r]);
     } else if(estado==='Cobrada'){
-      segData[agSeg][newOp.mes].v = (segData[agSeg][newOp.mes].v||0)+1;
-      segData[agSeg][newOp.mes].f = (segData[agSeg][newOp.mes].f||0)+newOp.comision;
-      // Cruzar con finanzas
+      // v y f se calculan en getSegMes desde operaciones — no guardar en segData
       if(!historicoIngresos[newOp.anio]) historicoIngresos[newOp.anio]={};
       historicoIngresos[newOp.anio][newOp.mes] = (historicoIngresos[newOp.anio][newOp.mes]||0)+newOp.ganancia_martina;
     }
