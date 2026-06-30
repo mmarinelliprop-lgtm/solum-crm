@@ -879,10 +879,11 @@ async function cargarDatosDB() {
         return {
           id: r[0], propiedad: r[1], agente, punta: r[3],
           precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
-          ganancia_martina: parseFloat(r[6])||0, ganancia_solum: parseFloat(r[7])||0,
-          fechaEsc: r[8], estado: r[9],
-          mes: parseInt(r[10])||0, anio: parseInt(r[11])||0,
-          planillaGenerada: r[12]==='true'||r[12]===true
+          comision_vendedor: parseFloat(r[6])||0,
+          ganancia_martina: parseFloat(r[7])||0, ganancia_solum: parseFloat(r[8])||0,
+          fechaEsc: r[9], estado: r[10],
+          mes: parseInt(r[11])||0, anio: parseInt(r[12])||0,
+          planillaGenerada: r[13]==='true'||r[13]===true
         };
       });
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
@@ -1358,7 +1359,7 @@ function actualizarOp(id, campo, valor){
     op[campo]=valor;
   }
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
-    op.precio,op.comision,op.ganancia_martina,op.ganancia_solum,
+    op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.estado,op.mes,op.anio,op.planillaGenerada||false]);
   detectarIncongruencias();
   renderDashboard();
@@ -1926,7 +1927,7 @@ function renderOperaciones(){
       <td>
         <input style="${inputStyle};color:var(--blue)" type="number" value="${o.ganancia_solum||Math.max(0,solumOp)}" ${inputFocus} ${inputBlur('ganancia_solum', o.id)}>
       </td>
-      <td style="color:var(--text2);font-size:12px">${o.agente==='Martina'?'—':fmtUSD(o.comision - (o.ganancia_martina||g.total) - (o.ganancia_solum||Math.max(0,solumOp)))}</td>
+      <td style="color:var(--text2);font-size:12px">${o.agente==='Martina'?'—':fmtUSD(o.comision_vendedor||0)}</td>
       <td><input style="${inputStyle}" value="${fmtFecha(o.fechaEsc)}" placeholder="—" ${inputFocus} ${inputBlur('fechaEsc', o.id)}></td>
       <td>
         <select style="${inputStyle}" onchange="actualizarOp(${o.id},'estado',this.value)">
@@ -3218,7 +3219,7 @@ function procesarAccion(accion){
     // Acumular en buffer para guardar en lote
     if(!window._opBuffer) window._opBuffer = [];
     window._opBuffer.push([newOp.id, newOp.propiedad, newOp.agente==='propia'?'Martina':newOp.agente, newOp.punta,
-      newOp.precio, newOp.comision, newOp.ganancia_martina, newOp.ganancia_solum,
+      newOp.precio, newOp.comision, newOp.comision_vendedor||0, newOp.ganancia_martina, newOp.ganancia_solum,
       newOp.fechaEsc, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
 
     // Cruzar con seguimiento del agente
