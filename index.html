@@ -160,6 +160,23 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .p-kpi .kpi-value{color:var(--p-text);}
 .p-chart-card{background:var(--p-card);border-color:rgba(255,255,255,0.05);}
 .p-table-wrap{background:var(--p-card);}
+.fin-subtab{padding:9px 14px;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s;white-space:nowrap;}
+.fin-subtab:hover{color:var(--text2);}
+.fin-subtab.active{color:var(--gold2);border-bottom-color:var(--gold2);}
+.hist-check-label{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px;border:1px solid var(--border);}
+.hist-check-label input{cursor:pointer;}
+.fin-item-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.fin-item-row:last-child{border-bottom:none;}
+.fin-item-label{font-size:12px;color:var(--text2);}
+.fin-item-input{background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:right;width:90px;outline:none;padding:2px 4px;border-radius:4px;}
+.fin-item-input:focus{background:var(--card2);}
+.proyecto-fin{background:var(--card2);border-radius:14px;padding:16px;margin-bottom:12px;border:1px solid var(--border);}
+.proy-fin-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;}
+.proy-fin-dato{background:var(--card);border-radius:8px;padding:10px 12px;}
+.proy-fin-label{font-size:10px;color:var(--text3);margin-bottom:3px;}
+.proy-fin-val{font-size:14px;font-weight:700;font-family:'DM Mono',monospace;}
+.patrimonio-fin-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.patrimonio-fin-item:last-child{border-bottom:none;}
 .p-table-wrap th{background:var(--p-card2);color:var(--p-text3);}
 .p-table-wrap td{color:var(--p-text2);}
 .gap-indicator{background:var(--p-redbg);border:1px solid rgba(239,154,154,0.25);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--p-red);margin-top:8px;}
@@ -513,68 +530,247 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 </div>
 
 <!-- ══════════════════════════════════════════════
-     TAB 5: FINANZAS PERSONALES
+     TAB 5: FINANZAS
 ══════════════════════════════════════════════ -->
-<div class="tab-content personal-section" id="tab-finanzas-content">
+<div class="tab-content" id="tab-finanzas-content">
   <div class="section-header">
-    <div><div class="section-title" style="color:var(--p-text)">Finanzas Personales</div>
-    <div class="section-sub" style="color:var(--p-text3)">Ingresos · Exchange · Ahorro · Gastos</div></div>
-    <div class="filters">
-      <select class="filter-select" id="fin-anio" onchange="renderFinanzas()" style="background:var(--p-card2)">
+    <div><div class="section-title">Finanzas</div>
+    <div class="section-sub">Personal · Negocio · Reciclaje · Patrimonio</div></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <select class="filter-select" id="fin-anio" onchange="renderFinanzas()">
         <option value="2026">2026</option><option value="2025">2025</option>
         <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
-        <option value="all">Histórico</option>
-      </select>
-      <select class="filter-select" id="fin-mes" onchange="renderFinanzas()" style="background:var(--p-card2)">
-        <option value="all">Año completo</option>
-        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-        <option value="4">Abril</option><option value="5">Mayo</option><option value="6" selected>Junio</option>
-        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-        <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
       </select>
     </div>
   </div>
 
-  <div class="kpi-grid" id="fin-kpis"></div>
+  <!-- Sub-tabs -->
+  <div style="display:flex;gap:2px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.07);padding-bottom:0">
+    <div class="fin-subtab active" onclick="showFinTab('resumen',this)">📊 Resumen</div>
+    <div class="fin-subtab" onclick="showFinTab('personal',this)">🏠 Personal</div>
+    <div class="fin-subtab" onclick="showFinTab('negocio',this)">🏢 Negocio</div>
+    <div class="fin-subtab" onclick="showFinTab('enhe',this)">👗 Enhe</div>
+    <div class="fin-subtab" onclick="showFinTab('reciclaje',this)">🏗️ Reciclaje</div>
+    <div class="fin-subtab" onclick="showFinTab('patrimonio',this)">💎 Patrimonio</div>
+    <div class="fin-subtab" onclick="showFinTab('historico',this)">📈 Histórico</div>
+  </div>
 
-  <div class="chart-grid">
-    <div class="chart-card p-chart-card">
-      <div class="chart-title" style="color:var(--p-text2)">Ingresos vs Exchange USD por mes</div>
-      <div class="chart-wrap"><canvas id="chartFinanzas"></canvas></div>
+  <!-- RESUMEN -->
+  <div id="fintab-resumen">
+    <div class="kpi-grid" id="fin-kpis-resumen"></div>
+    <!-- Sueldo Martina -->
+    <div id="fin-sueldo-card" style="background:linear-gradient(135deg,rgba(201,169,110,0.1),rgba(201,169,110,0.04));border:1px solid rgba(201,169,110,0.25);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:10px">💼 Sueldo Martina (separado del negocio)</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Sueldo mensual</div>
+          <input id="sueldo-martina" type="number" value="2000" style="background:var(--card);border:1px solid var(--border);color:var(--gold2);font-family:'DM Mono',monospace;font-size:16px;font-weight:700;text-align:center;border-radius:8px;padding:6px;width:120px;outline:none" oninput="renderFinanzas()">
+        </div>
+        <div style="text-align:center" id="sueldo-ytd-wrap">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Pagado YTD</div>
+          <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--gold2)" id="sueldo-ytd">$0</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Capital SOLUM extra</div>
+          <div style="font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green)" id="sueldo-extra">$0</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:10px">💡 El extra de SOLUM es capital del negocio — no lo mezcles con lo personal</div>
     </div>
-    <div class="chart-card p-chart-card">
-      <div class="chart-title" style="color:var(--p-text2)">Capital acumulado (USD)</div>
-      <div class="chart-wrap"><canvas id="chartCapital"></canvas></div>
+    <!-- Alertas -->
+    <div id="fin-alertas"></div>
+    <!-- Resultado por fuente -->
+    <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Resultado por fuente</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="fin-fuentes"></div>
+    <!-- Gráfico -->
+    <div class="chart-card">
+      <div class="chart-title">Flujo mensual — Ingresos vs Egresos (USD)</div>
+      <div class="chart-wrap"><canvas id="chartFinFlujo"></canvas></div>
     </div>
   </div>
 
-  <div class="section-header mt16">
-    <div class="section-title" style="color:var(--p-text)">Histórico mensual</div>
-    <button class="btn btn-outline btn-sm" onclick="openAddExchange()">+ Cargar exchange</button>
-  </div>
-  <div class="table-wrap p-table-wrap" style="background:var(--p-card);border-color:rgba(46,204,113,0.08)">
-    <table>
-      <thead><tr>
-        <th>Mes</th><th>Ingresos USD</th><th>USD Cambiados</th>
-        <th>Cotización</th><th>Total en $</th><th>Capital Acumulado</th><th>Resultado</th><th>Alerta</th>
-      </tr></thead>
-      <tbody id="fin-tabla"></tbody>
-    </table>
+  <!-- PERSONAL -->
+  <div id="fintab-personal" class="hidden">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="fin-mes-personal"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="chart-card">
+        <div class="chart-title">🏠 Gastos fijos</div>
+        <div id="gastos-fijos-wrap"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+          <span style="font-size:12px;color:var(--text3)">Total fijos</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--red)" id="tot-fin-fijos">$0</span>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🛒 Variables recurrentes</div>
+        <div id="gastos-varrec-wrap"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+          <span style="font-size:12px;color:var(--text3)">Total recurrentes</span>
+          <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--red)" id="tot-fin-varrec">$0</span>
+        </div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-title">✨ Variables ocasionales</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 20px" id="gastos-varoc-wrap"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">
+        <span style="font-size:12px;color:var(--text3)">Total ocasionales</span>
+        <span style="font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--red)" id="tot-fin-varoc">$0</span>
+      </div>
+    </div>
+    <div class="chart-card" style="border-color:rgba(201,169,110,0.2);background:rgba(201,169,110,0.03)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;font-weight:600;color:var(--gold)">Total personal del mes</span>
+        <span style="font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--gold2)" id="tot-fin-personal">$0</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Con $1.000–1.500/mes vivís cómoda. Esto valida que la libertad financiera es alcanzable.</div>
+    </div>
   </div>
 
-  <div class="divider"></div>
-  <div class="section-header">
-    <div class="section-title" style="color:var(--p-text)">Gastos en pesos</div>
-    <button class="btn btn-outline btn-sm" onclick="openAddGasto()">+ Cargar gasto</button>
+  <!-- NEGOCIO -->
+  <div id="fintab-negocio" class="hidden">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="fin-mes-negocio"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="chart-card">
+        <div class="chart-title">📥 Ingresos SOLUM <span style="font-size:9px;color:var(--green);background:rgba(39,196,122,0.12);padding:1px 5px;border-radius:8px;margin-left:4px">AUTO</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <span style="font-size:12px;color:var(--text2)">Solumitos (equipo)</span>
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green)" id="ing-solumitos">$0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <span style="font-size:12px;color:var(--text2)">Solum (propias)</span>
+          <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green)" id="ing-solum">$0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0">
+          <span style="font-size:12px;color:var(--text2)">Extras</span>
+          <input type="number" value="0" style="background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:right;width:80px;outline:none" id="ing-extras-negocio">
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📤 Egresos SOLUM</div>
+        <div id="gastos-solum-wrap"></div>
+      </div>
+    </div>
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-title">🚗 Auto (100% negocio — uso 90% laboral)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 20px" id="gastos-auto-wrap"></div>
+    </div>
   </div>
-  <div class="table-wrap p-table-wrap" style="background:var(--p-card);border-color:rgba(46,204,113,0.08)">
-    <table>
-      <thead><tr>
-        <th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Importe $</th><th>USD equiv.</th>
-      </tr></thead>
-      <tbody id="gastos-tabla"></tbody>
-    </table>
+
+  <!-- ENHE -->
+  <div id="fintab-enhe" class="hidden">
+    <div style="background:rgba(240,165,0,0.07);border:1px solid rgba(240,165,0,0.18);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#d4a017">
+      ⚠️ Enhe genera margen muy bajo. Cada mes adicional abierto consume tiempo que podría ir al reciclaje de propiedades.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="chart-card">
+        <div class="chart-title">📥 Ingresos Enhe</div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+          <span style="font-size:12px;color:var(--text2)">Ventas del local</span>
+          <input type="number" id="enhe-ventas" value="0" style="background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:right;width:80px;outline:none" oninput="calcEnhe()">
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0">
+          <span style="font-size:12px;color:var(--text2)">Otros</span>
+          <input type="number" id="enhe-otros" value="0" style="background:transparent;border:none;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:right;width:80px;outline:none" oninput="calcEnhe()">
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">📤 Egresos Enhe</div>
+        <div id="gastos-enhe-wrap"></div>
+      </div>
+    </div>
+    <div class="chart-card" style="border-color:rgba(240,165,0,0.2)">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Ingresos</div><div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--green)" id="enhe-tot-ing">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Egresos</div><div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--red)" id="enhe-tot-eg">$0</div></div>
+        <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Ganancia neta</div><div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--amber)" id="enhe-neto">$0</div></div>
+      </div>
+    </div>
   </div>
+
+  <!-- RECICLAJE -->
+  <div id="fintab-reciclaje" class="hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--text2)">Proyectos de inversión inmobiliaria</div>
+      <button class="btn btn-gold btn-sm" onclick="nuevoProyectoFin()">+ Nuevo proyecto</button>
+    </div>
+    <div id="proyectos-fin-lista"></div>
+    <div class="chart-card">
+      <div class="chart-title">📊 Resumen histórico</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px" id="reciclaje-resumen"></div>
+    </div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div id="fintab-historico" class="hidden">
+    <!-- Filtros -->
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Años</div>
+        <div style="display:flex;gap:4px" id="hist-year-checks">
+          <label class="hist-check-label"><input type="checkbox" value="2022" onchange="renderHistorico()"> 2022</label>
+          <label class="hist-check-label"><input type="checkbox" value="2023" onchange="renderHistorico()"> 2023</label>
+          <label class="hist-check-label"><input type="checkbox" value="2024" onchange="renderHistorico()"> 2024</label>
+          <label class="hist-check-label"><input type="checkbox" value="2025" onchange="renderHistorico()"> 2025</label>
+          <label class="hist-check-label active"><input type="checkbox" value="2026" checked onchange="renderHistorico()"> 2026</label>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Granularidad</div>
+        <div style="display:flex;gap:4px">
+          <div class="mes-tab active" id="hist-gran-mes" onclick="setHistGran('mes',this)">Mensual</div>
+          <div class="mes-tab" id="hist-gran-anio" onclick="setHistGran('anio',this)">Anual</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Series</div>
+        <div style="display:flex;gap:4px">
+          <label class="hist-check-label active"><input type="checkbox" value="ing" checked onchange="renderHistorico()"> Ingresos</label>
+          <label class="hist-check-label" style="color:var(--red)"><input type="checkbox" value="eg" checked onchange="renderHistorico()"> Egresos</label>
+          <label class="hist-check-label" style="color:var(--amber)"><input type="checkbox" value="ahorro" checked onchange="renderHistorico()"> Ahorro acum.</label>
+          <label class="hist-check-label" style="color:var(--purple)"><input type="checkbox" value="patrimonio" onchange="renderHistorico()"> Patrimonio</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs históricos -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px" id="hist-kpis"></div>
+
+    <!-- Gráfico -->
+    <div class="chart-card" style="margin-bottom:16px">
+      <div class="chart-title" id="hist-chart-title">Evolución histórica — Ingresos · Egresos · Ahorro acumulado</div>
+      <div style="height:280px;position:relative"><canvas id="chartHistorico"></canvas></div>
+    </div>
+
+    <!-- Tabla resumen por año -->
+    <div class="chart-card">
+      <div class="chart-title">Resumen anual</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px" id="hist-tabla">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Período</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Ingresos</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Egresos</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Flujo neto</th>
+            <th style="text-align:right;padding:8px 12px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Ahorro acum.</th>
+          </tr></thead>
+          <tbody id="hist-tabla-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- PATRIMONIO -->
+  <div id="fintab-patrimonio" class="hidden">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px" id="patrimonio-kpis"></div>
+    <div class="chart-card">
+      <div class="chart-title">Bienes registrados</div>
+      <div id="patrimonio-lista"></div>
+      <button style="background:transparent;border:1px dashed rgba(255,255,255,0.1);color:var(--text3);padding:7px 14px;border-radius:7px;cursor:pointer;font-size:11px;width:100%;margin-top:10px" onclick="agregarBienFin()">+ Agregar bien</button>
+    </div>
+    <div style="background:rgba(74,158,255,0.07);border:1px solid rgba(74,158,255,0.18);border-radius:10px;padding:12px 16px;margin-top:12px;font-size:11px;color:#7ab3e0" id="patrimonio-meta"></div>
+  </div>
+
 </div>
 
 <!-- ══════════════════════════════════════════════
@@ -967,6 +1163,32 @@ async function cargarDatosDB() {
           fecha: last[0]
         };
       } catch(e){}
+    }
+
+    // Cargar finanzas históricas
+    const finHistRows = await dbLeer('finanzas_historico');
+    if(finHistRows && finHistRows.length > 0) {
+      finHistRows.forEach(r => {
+        if(!r || r.length < 5) return;
+        const anio = parseInt(r[1]);
+        const mes = parseInt(r[2]);
+        const tipo = r[3];
+        if(!anio || !mes || !tipo) return;
+
+        if(tipo === 'ingreso') {
+          if(!historicoFinanzas[anio]) historicoFinanzas[anio]={};
+          if(!historicoFinanzas[anio][mes]) historicoFinanzas[anio][mes]={ingresos:[],exchange:[],gastos:[]};
+          historicoFinanzas[anio][mes].ingresos.push({concepto:r[4], monto:parseFloat(r[5])||0, moneda:r[6]||'USD'});
+        } else if(tipo === 'exchange') {
+          if(!historicoFinanzas[anio]) historicoFinanzas[anio]={};
+          if(!historicoFinanzas[anio][mes]) historicoFinanzas[anio][mes]={ingresos:[],exchange:[],gastos:[]};
+          historicoFinanzas[anio][mes].exchange.push({fecha:r[4], usd:parseFloat(r[5])||0, cotizacion:parseFloat(r[6])||0, pesos:parseFloat(r[7])||0, destino:r[8]||'Gastos varios'});
+        } else if(tipo === 'gasto') {
+          if(!historicoFinanzas[anio]) historicoFinanzas[anio]={};
+          if(!historicoFinanzas[anio][mes]) historicoFinanzas[anio][mes]={ingresos:[],exchange:[],gastos:[]};
+          historicoFinanzas[anio][mes].gastos.push({categoria:r[4], monto:parseFloat(r[5])||0, moneda:r[6]||'ARS'});
+        }
+      });
     }
 
     // Cargar seguimiento semanal guardado
@@ -2076,102 +2298,503 @@ function renderOperaciones(){
 // ═══════════════════════════════════════════════
 // TAB 5: FINANZAS
 // ═══════════════════════════════════════════════
-function renderFinanzas(){
-  const anio = document.getElementById('fin-anio').value;
-  const mes = document.getElementById('fin-mes').value;
-  const anios = anio==='all'?[2022,2023,2024,2025,2026]:[parseInt(anio)];
 
-  // Calcular ingresos de operaciones para 2026
-  anios.forEach(a=>{
-    if(a===2026){
-      MESES_NOMBRES.slice(1).forEach((_,i)=>{
-        const m=i+1;
-        const ingOps = operaciones.filter(o=>o.anio===2026&&o.mes===m&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
-        historicoIngresos[2026][m] = ingOps;
-      });
-    }
-  });
+// ── Datos de finanzas ──
+let gastosFinanzas = {}; // {anio: {mes: {categoria: monto}}}
+let proyectosReciclaje = [
+  {
+    id:1, nombre:'Monoambiente — Alberdi 555', ciudad:'Cañada de Gómez',
+    fechaCompra:'15/01/2026', estado:'reciclaje',
+    precioCompra:17000, presupuestoReciclaje:6000, precioVentaEst:30000,
+    gastos:[
+      {fecha:'15/01/2026',rubro:'Mano de obra',desc:'Albanilería — demolición',monto:800},
+      {fecha:'02/02/2026',rubro:'Materiales',desc:'Cerámicos, adhesivo y fragüe',monto:1200},
+      {fecha:'20/03/2026',rubro:'Materiales',desc:'Pintura y accesorios',monto:600},
+      {fecha:'10/04/2026',rubro:'Mano de obra',desc:'Plomería — instalación sanitaria',monto:600},
+    ]
+  }
+];
+let patrimonioBienes = [
+  {id:1,nombre:'Monoambiente Alberdi 555',tipo:'Inmueble · En reciclaje',icono:'🏠',valor:23000},
+  {id:2,nombre:'Vehículo',tipo:'Bien mueble · Uso laboral 90%',icono:'🚗',valor:10000},
+  {id:3,nombre:'Efectivo en USD',tipo:'Activo líquido',icono:'💵',valor:7000},
+];
 
-  // Rows para tabla
-  let rows = [];
-  anios.forEach(a=>{
-    const meses = mes==='all'?Array.from({length:12},(_,i)=>i+1):[parseInt(mes)];
-    meses.forEach(m=>{
-      const ing = historicoIngresos[a]?.[m]||0;
-      const exc = historicoExchange[a]?.[m]||{usd:0,cotiz:0};
-      const totalPesos = exc.usd*(exc.cotiz||0);
-      const resultado = ing - exc.usd;
-      const capAnt = m>1?(historicoIngresos[a]?.[m-1]||0):0;
-      rows.push({a,m,ing,excUsd:exc.usd,cotiz:exc.cotiz||0,totalPesos,resultado,label:`${MESES_NOMBRES[m]} ${a}`});
+const GASTOS_CATEGORIAS = {
+  fijos: ['Alquiler 1 de Mayo 1374','Expensas depto','Servicios (gas/EPE)','Teléfono/Claro','Limpieza','Seguros personales','Multas'],
+  varrec: ['Supermercado','Gastronomía','Salud','Mascotas'],
+  varoc: ['Vestimenta','Hogar','Tecnología','Educación','Regalos','Entretenimiento/Ocio','Beauty','Vacaciones','Uber/Remis'],
+  solum: ['Asistente','Marketing','Pauta digital','Monotributo','Matrícula'],
+  auto: ['Combustible','Seguro auto','Patente','Mantenimiento vehículo'],
+  enhe: ['Alquiler Alberdi 555','Encargada','Servicios Enhe','Gastos varios Enhe'],
+};
+
+function showFinTab(id, el) {
+  document.querySelectorAll('[id^="fintab-"]').forEach(t=>t.classList.add('hidden'));
+  document.getElementById('fintab-'+id).classList.remove('hidden');
+  document.querySelectorAll('.fin-subtab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(id==='personal') renderGastosInputs();
+  if(id==='reciclaje') renderProyectos();
+  if(id==='patrimonio') renderPatrimonio();
+  if(id==='historico') renderHistorico();
+}
+
+function getGastoVal(anio, mes, cat) {
+  return gastosFinanzas?.[anio]?.[mes]?.[cat] || 0;
+}
+function setGastoVal(anio, mes, cat, val) {
+  if(!gastosFinanzas[anio]) gastosFinanzas[anio]={};
+  if(!gastosFinanzas[anio][mes]) gastosFinanzas[anio][mes]={};
+  gastosFinanzas[anio][mes][cat] = parseFloat(val)||0;
+  dbGuardar('gastos', [Date.now(), anio, mes, cat, parseFloat(val)||0]);
+  renderFinanzas();
+}
+
+function mkInput(anio, mes, cat) {
+  const v = getGastoVal(anio, mes, cat);
+  return `<div class="fin-item-row">
+    <div class="fin-item-label">${cat}</div>
+    <input class="fin-item-input" type="number" value="${v||''}" placeholder="0"
+      onblur="setGastoVal(${anio},${mes},'${cat}',this.value)">
+  </div>`;
+}
+
+function sumCats(anio, mes, cats) {
+  return cats.reduce((s,c)=>s+(getGastoVal(anio,mes,c)||0),0);
+}
+
+function renderGastosInputs() {
+  const anio = parseInt(document.getElementById('fin-anio').value)||2026;
+  // Mes tabs
+  ['fin-mes-personal','fin-mes-negocio'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el||el.children.length>0) return;
+    MESES_NOMBRES.slice(1).forEach((m,i)=>{
+      const tab = document.createElement('div');
+      tab.className = 'mes-tab'+(i===5?' active':'');
+      tab.textContent = m.slice(0,3);
+      tab.onclick = () => {
+        el.querySelectorAll('.mes-tab').forEach(t=>t.classList.remove('active'));
+        tab.classList.add('active');
+        renderGastosInputs();
+      };
+      el.appendChild(tab);
     });
   });
 
-  // KPIs
-  const totIng = rows.reduce((s,r)=>s+r.ing,0);
-  const totExc = rows.reduce((s,r)=>s+r.excUsd,0);
-  const ahorro = totIng - totExc;
-  const conGap = rows.filter(r=>r.excUsd>r.ing&&r.ing>0).length;
+  const mesEl = document.querySelector('#fin-mes-personal .mes-tab.active');
+  const mes = mesEl ? Array.from(document.getElementById('fin-mes-personal').children).indexOf(mesEl)+1 : 6;
 
-  document.getElementById('fin-kpis').innerHTML = `
-    <div class="kpi p-kpi"><div class="kpi-label">Ingresos totales USD</div><div class="kpi-value" style="color:var(--p-verde)">${fmtUSD(totIng)}</div><div class="kpi-sub" style="color:var(--p-text3)">Solumitos + propios</div></div>
-    <div class="kpi p-kpi"><div class="kpi-label">USD cambiados</div><div class="kpi-value" style="color:var(--p-celeste)">${fmtUSD(totExc)}</div><div class="kpi-sub" style="color:var(--p-text3)">Exchange del período</div></div>
-    <div class="kpi p-kpi"><div class="kpi-label">Ahorro estimado USD</div><div class="kpi-value" style="color:${ahorro>=0?'var(--p-amarillo)':'var(--p-red)'}">${fmtUSD(Math.abs(ahorro))}</div><span class="kpi-badge" style="background:${ahorro>=0?'var(--p-amarillobg)':'var(--p-redbg)'};color:${ahorro>=0?'var(--p-amarillo)':'var(--p-red)'}">${ahorro>=0?'▲ Ahorro':'▼ Déficit'}</span></div>
-    <div class="kpi p-kpi"><div class="kpi-label">Meses con brecha</div><div class="kpi-value" style="color:${conGap>0?'var(--p-rosa)':'var(--p-verde)'}">${conGap}</div><div class="kpi-sub" style="color:var(--p-text3)">Exchange > Ingreso</div></div>
-  `;
+  // Fijos
+  document.getElementById('gastos-fijos-wrap').innerHTML = GASTOS_CATEGORIAS.fijos.map(c=>mkInput(anio,mes,c)).join('');
+  // Var rec
+  document.getElementById('gastos-varrec-wrap').innerHTML = GASTOS_CATEGORIAS.varrec.map(c=>mkInput(anio,mes,c)).join('');
+  // Var oc
+  document.getElementById('gastos-varoc-wrap').innerHTML = GASTOS_CATEGORIAS.varoc.map(c=>mkInput(anio,mes,c)).join('');
+  // Solum
+  document.getElementById('gastos-solum-wrap').innerHTML = GASTOS_CATEGORIAS.solum.map(c=>mkInput(anio,mes,c)).join('');
+  // Auto
+  document.getElementById('gastos-auto-wrap').innerHTML = GASTOS_CATEGORIAS.auto.map(c=>mkInput(anio,mes,c)).join('');
+  // Enhe
+  document.getElementById('gastos-enhe-wrap').innerHTML = GASTOS_CATEGORIAS.enhe.map(c=>mkInput(anio,mes,c)).join('');
 
-  // Charts
-  destroyChart('chartFinanzas');
-  charts['chartFinanzas'] = new Chart(document.getElementById('chartFinanzas'),{
-    type:'bar',data:{labels:rows.map(r=>r.label),datasets:[
-      {label:'Ingresos USD',data:rows.map(r=>r.ing),backgroundColor:'rgba(165,214,167,0.75)',borderColor:'rgba(165,214,167,0.9)',borderWidth:1,borderRadius:3},
-      {label:'Exchange USD',data:rows.map(r=>r.excUsd),backgroundColor:'rgba(128,222,234,0.65)',borderColor:'rgba(128,222,234,0.85)',borderWidth:1,borderRadius:3}
-    ]},options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#c9c0d8',font:{size:11}}}},
-      scales:{x:{ticks:{color:'#7a7090',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.03)'}},
-              y:{ticks:{color:'#7a7090',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}
-  });
+  const totF = sumCats(anio,mes,GASTOS_CATEGORIAS.fijos);
+  const totR = sumCats(anio,mes,GASTOS_CATEGORIAS.varrec);
+  const totO = sumCats(anio,mes,GASTOS_CATEGORIAS.varoc);
+  document.getElementById('tot-fin-fijos').textContent = fmtUSD(totF);
+  document.getElementById('tot-fin-varrec').textContent = fmtUSD(totR);
+  document.getElementById('tot-fin-varoc').textContent = fmtUSD(totO);
+  document.getElementById('tot-fin-personal').textContent = fmtUSD(totF+totR+totO);
 
-  destroyChart('chartCapital');
-  let capAcum = 0;
-  const capData = rows.map(r=>{capAcum+=r.resultado; return capAcum;});
-  charts['chartCapital'] = new Chart(document.getElementById('chartCapital'),{
-    type:'line',data:{labels:rows.map(r=>r.label),datasets:[{label:'Capital USD',data:capData,
-      borderColor:'rgba(206,147,216,0.9)',backgroundColor:'rgba(206,147,216,0.08)',
-      tension:0.3,fill:true,pointRadius:3,pointBackgroundColor:'rgba(206,147,216,1)'}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#c9c0d8',font:{size:11}}}},
-      scales:{x:{ticks:{color:'#7a7090',font:{size:9},maxRotation:45},grid:{color:'rgba(255,255,255,0.03)'}},
-              y:{ticks:{color:'#7a7090',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}}}}
-  });
-
-  // Tabla histórico
-  document.getElementById('fin-tabla').innerHTML = rows.map(r=>{
-    const gap = r.excUsd>0 && r.excUsd>r.ing;
-    return`<tr>
-      <td class="td-main" style="color:var(--p-text)">${r.label}</td>
-      <td style="color:var(--p-verde)">${fmtUSD(r.ing)}</td>
-      <td style="color:var(--p-celeste)">${fmtUSD(r.excUsd)}</td>
-      <td style="color:var(--p-text3)">${r.cotiz?'$'+r.cotiz.toLocaleString():'—'}</td>
-      <td style="color:var(--p-lila)">${fmtPesos(r.totalPesos)}</td>
-      <td style="color:${r.resultado>=0?'var(--p-amarillo)':'var(--p-red)'}">${fmtUSD(Math.abs(r.resultado))} ${r.resultado>=0?'▲':'▼'}</td>
-      <td style="color:var(--p-text2)">${fmtUSD(r.resultado)}</td>
-      <td>${gap?'<span style="color:var(--p-rosa);font-size:16px" title="Cambió más de lo que ingresó ese mes">⚠️</span>':''}</td>
-    </tr>`;
-  }).join('');
-
-  // Gastos pesos
-  const filtGastos = gastosPesos.filter(g=>anio==='all'||new Date(g.fecha).getFullYear()===parseInt(anio));
-  document.getElementById('gastos-tabla').innerHTML = filtGastos.length
-    ? filtGastos.map(g=>`<tr>
-        <td style="color:var(--p-text)">${g.fecha}</td>
-        <td style="color:var(--p-text)">${g.concepto}</td>
-        <td><span class="tag">${g.categoria}</span></td>
-        <td style="color:var(--p-red)">${fmtPesos(g.importe)}</td>
-        <td style="color:var(--p-text3)">${g.cotiz?fmtUSD(g.importe/g.cotiz):'—'}</td>
-      </tr>`).join('')
-    : '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--p-text3)">Sin gastos cargados. Usá el chat o el botón + para agregar.</td></tr>';
+  // Ingresos negocio (auto desde operaciones)
+  const ingSolumitos = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  const ingSolum = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&normAgente(o.agente)==='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  if(document.getElementById('ing-solumitos')) document.getElementById('ing-solumitos').textContent = fmtUSD(ingSolumitos);
+  if(document.getElementById('ing-solum')) document.getElementById('ing-solum').textContent = fmtUSD(ingSolum);
 }
 
+function calcEnhe() {
+  const v = parseFloat(document.getElementById('enhe-ventas')?.value)||0;
+  const o = parseFloat(document.getElementById('enhe-otros')?.value)||0;
+  const ing = v+o;
+  const eg = sumCats(parseInt(document.getElementById('fin-anio').value)||2026, 6, GASTOS_CATEGORIAS.enhe);
+  if(document.getElementById('enhe-tot-ing')) document.getElementById('enhe-tot-ing').textContent = fmtUSD(ing);
+  if(document.getElementById('enhe-tot-eg')) document.getElementById('enhe-tot-eg').textContent = fmtUSD(eg);
+  if(document.getElementById('enhe-neto')) { const neto=ing-eg; document.getElementById('enhe-neto').textContent=fmtUSD(neto); document.getElementById('enhe-neto').style.color=neto>=0?'var(--green)':'var(--red)'; }
+}
+
+function renderProyectos() {
+  const lista = document.getElementById('proyectos-fin-lista');
+  if(!lista) return;
+  lista.innerHTML = proyectosReciclaje.map(p=>{
+    const totalGastado = p.gastos.reduce((s,g)=>s+g.monto,0);
+    const pct = Math.round(totalGastado/p.presupuestoReciclaje*100);
+    const costoTotal = p.precioCompra + p.presupuestoReciclaje;
+    const ganProyect = p.precioVentaEst - costoTotal;
+    const roi = Math.round(ganProyect/costoTotal*100);
+    const estadoCls = p.estado==='reciclaje'?'rgba(240,165,0,0.15);color:var(--amber)':p.estado==='venta'?'rgba(74,158,255,0.15);color:var(--blue)':'rgba(39,196,122,0.15);color:var(--green)';
+    const estadoLabel = p.estado==='reciclaje'?'En reciclaje':p.estado==='venta'?'En venta':'Vendido';
+    return `<div class="proyecto-fin" style="border-color:rgba(240,165,0,0.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:700">${p.nombre}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Comprado: ${p.fechaCompra} · ${p.ciudad}</div>
+        </div>
+        <span style="font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600;background:${estadoCls}">${estadoLabel}</span>
+      </div>
+      <div class="proy-fin-grid">
+        <div class="proy-fin-dato"><div class="proy-fin-label">Precio compra</div><div class="proy-fin-val gold">${fmtUSD(p.precioCompra)}</div></div>
+        <div class="proy-fin-dato"><div class="proy-fin-label">Presupuesto reciclaje</div><div class="proy-fin-val amber">${fmtUSD(p.presupuestoReciclaje)}</div></div>
+        <div class="proy-fin-dato"><div class="proy-fin-label">Gastado hasta hoy</div><div class="proy-fin-val red">${fmtUSD(totalGastado)}</div></div>
+        <div class="proy-fin-dato"><div class="proy-fin-label">Precio venta est.</div><div class="proy-fin-val green">${fmtUSD(p.precioVentaEst)}</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-bottom:4px">
+        <span>Progreso del reciclaje</span><span>${fmtUSD(totalGastado)} / ${fmtUSD(p.presupuestoReciclaje)} (${pct}%)</span>
+      </div>
+      <div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px">
+        <div style="height:100%;border-radius:4px;background:var(--amber);width:${Math.min(pct,100)}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(39,196,122,0.06);border-radius:8px;border:1px solid rgba(39,196,122,0.15);margin-bottom:12px">
+        <div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Costo total</div><div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--amber)">${fmtUSD(costoTotal)}</div></div>
+        <div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Ganancia proyectada</div><div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--green)">+${fmtUSD(ganProyect)}</div></div>
+        <div style="text-align:center"><div style="font-size:10px;color:var(--text3)">ROI estimado</div><div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--green)">${roi}%</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Gastos realizados</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr>
+          <th style="text-align:left;padding:5px 8px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Fecha</th>
+          <th style="text-align:left;padding:5px 8px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Rubro</th>
+          <th style="text-align:left;padding:5px 8px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Descripción</th>
+          <th style="text-align:right;padding:5px 8px;color:var(--text3);font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--border)">Monto</th>
+        </tr></thead>
+        <tbody>
+          ${p.gastos.map(g=>`<tr>
+            <td style="padding:6px 8px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.03)">${g.fecha}</td>
+            <td style="padding:6px 8px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.03)">${g.rubro}</td>
+            <td style="padding:6px 8px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.03)">${g.desc}</td>
+            <td style="padding:6px 8px;color:var(--text);font-family:'DM Mono',monospace;text-align:right;border-bottom:1px solid rgba(255,255,255,0.03)">${fmtUSD(g.monto)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <button style="background:transparent;border:1px dashed var(--border);color:var(--text3);padding:6px;border-radius:6px;cursor:pointer;font-size:11px;width:100%;margin-top:8px" onclick="agregarGastoProyecto(${p.id})">+ Agregar gasto</button>
+    </div>`;
+  }).join('');
+
+  // Resumen
+  const totalInv = proyectosReciclaje.reduce((s,p)=>s+p.precioCompra+p.presupuestoReciclaje,0);
+  const totalGanProyect = proyectosReciclaje.filter(p=>p.estado!=='vendido').reduce((s,p)=>s+(p.precioVentaEst-p.precioCompra-p.presupuestoReciclaje),0);
+  const totalGanReal = proyectosReciclaje.filter(p=>p.estado==='vendido').reduce((s,p)=>s+(p.precioVentaEst-p.precioCompra-p.presupuestoReciclaje),0);
+  document.getElementById('reciclaje-resumen').innerHTML = `
+    <div><div class="kpi-label">Proyectos</div><div style="font-size:20px;font-weight:700">${proyectosReciclaje.length}</div></div>
+    <div><div class="kpi-label">Capital invertido</div><div style="font-size:20px;font-weight:700;color:var(--amber)">${fmtUSD(totalInv)}</div></div>
+    <div><div class="kpi-label">Ganancia realizada</div><div style="font-size:20px;font-weight:700;color:var(--text3)">${fmtUSD(totalGanReal)}</div></div>
+    <div><div class="kpi-label">Ganancia proyectada</div><div style="font-size:20px;font-weight:700;color:var(--green)">${fmtUSD(totalGanProyect)}</div></div>`;
+}
+
+function agregarGastoProyecto(proyId) {
+  const p = proyectosReciclaje.find(x=>x.id===proyId);
+  if(!p) return;
+  const fecha = prompt('Fecha (DD/MM/AAAA):', new Date().toLocaleDateString('es-AR'));
+  const rubro = prompt('Rubro (Mano de obra / Materiales / Honorarios / Gastos varios):','Materiales');
+  const desc = prompt('Descripción:','');
+  const monto = parseFloat(prompt('Monto USD:','0'))||0;
+  if(desc && monto) {
+    p.gastos.push({fecha,rubro,desc,monto});
+    dbGuardar('reciclaje_gastos',[Date.now(),proyId,fecha,rubro,desc,monto]);
+    renderProyectos();
+  }
+}
+
+function nuevoProyectoFin() {
+  showToast('Funcionalidad disponible próximamente — usá el chat para cargar nuevos proyectos');
+}
+
+function renderPatrimonio() {
+  const lista = document.getElementById('patrimonio-lista');
+  if(!lista) return;
+  lista.innerHTML = patrimonioBienes.map(b=>`
+    <div class="patrimonio-fin-item">
+      <div style="width:32px;height:32px;border-radius:7px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${b.icono}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:600">${b.nombre}</div>
+        <div style="font-size:10px;color:var(--text3)">${b.tipo}</div>
+      </div>
+      <input type="number" value="${b.valor}" style="background:transparent;border:none;color:var(--gold2);font-family:'DM Mono',monospace;font-size:14px;font-weight:700;text-align:right;width:100px;outline:none"
+        onblur="b.valor=parseFloat(this.value)||0;renderPatrimonio()">
+    </div>`).join('');
+
+  const totalPatrimonio = patrimonioBienes.reduce((s,b)=>s+b.valor,0);
+  const metaMensual = 1500;
+  const metaCapital = metaMensual * 12 / 0.06; // capital necesario al 6% anual
+  const pctMeta = Math.round(totalPatrimonio/metaCapital*100);
+
+  document.getElementById('patrimonio-kpis').innerHTML = `
+    <div class="kpi" style="border-color:rgba(167,139,250,0.25);background:rgba(167,139,250,0.04)">
+      <div class="kpi-label">Patrimonio total</div>
+      <div class="kpi-value purple">${fmtUSD(totalPatrimonio)}</div>
+      <div class="kpi-sub">${patrimonioBienes.length} bienes registrados</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Meta libertad financiera</div>
+      <div class="kpi-value gold">${fmtUSD(metaCapital)}</div>
+      <div class="kpi-sub">Para rentar $${metaMensual.toLocaleString()}/mes al 6%</div>
+    </div>
+    <div class="kpi" style="border-color:rgba(39,196,122,0.2)">
+      <div class="kpi-label">Progreso</div>
+      <div class="kpi-value green">${pctMeta}%</div>
+      <div class="kpi-sub">${fmtUSD(metaCapital-totalPatrimonio)} para la meta</div>
+    </div>`;
+
+  document.getElementById('patrimonio-meta').textContent =
+    `💡 Con $${metaMensual.toLocaleString()}/mes de gastos y libertad financiera como objetivo, necesitás ~${fmtUSD(metaCapital)} en activos que generen renta del 6% anual. Estás en el ${pctMeta}% del camino con ${fmtUSD(totalPatrimonio)} de patrimonio actual. A un ritmo de $7.000/ciclo de reciclaje, cada propiedad te acerca un ${Math.round(7000/metaCapital*100)}% más a la meta.`;
+}
+
+function agregarBienFin() {
+  const nombre = prompt('Nombre del bien:','');
+  const tipo = prompt('Tipo/descripción:','');
+  const valor = parseFloat(prompt('Valor estimado USD:','0'))||0;
+  if(nombre) {
+    patrimonioBienes.push({id:Date.now(),nombre,tipo,icono:'📦',valor});
+    renderPatrimonio();
+  }
+}
+
+let histGran = 'mes';
+let historicoFinanzas = {}; // {anio: {mes: {ingresos:[], exchange:[], gastos:[]}}} // 'mes' o 'anio'
+
+function setHistGran(gran, el) {
+  histGran = gran;
+  document.querySelectorAll('#fintab-historico .mes-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderHistorico();
+}
+
+function renderHistorico() {
+  // Años seleccionados
+  const aniosCheck = Array.from(document.querySelectorAll('#hist-year-checks input:checked')).map(c=>parseInt(c.value));
+  if(aniosCheck.length === 0) return;
+
+  // Series seleccionadas
+  const seriesCheck = Array.from(document.querySelectorAll('#fintab-historico input[type="checkbox"]:checked')).map(c=>c.value).filter(v=>['ing','eg','ahorro','patrimonio'].includes(v));
+
+  const allCats = [...GASTOS_CATEGORIAS.fijos,...GASTOS_CATEGORIAS.varrec,...GASTOS_CATEGORIAS.varoc,...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto,...GASTOS_CATEGORIAS.enhe];
+
+  let labels = [], ingData = [], egData = [], ahorroData = [], patrimonioData = [];
+  let ahorroAcum = 0;
+
+  if(histGran === 'mes') {
+    aniosCheck.sort().forEach(anio => {
+      MESES_NOMBRES.slice(1).forEach((m, i) => {
+        const mes = i+1;
+        // Ingresos: desde operaciones (2026) o desde histórico
+        let ing = 0;
+        if(anio === 2026) {
+          ing = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
+        } else {
+          ing = (historicoFinanzas[anio]?.[mes]?.ingresos||[]).reduce((s,r)=>s+r.monto,0);
+        }
+        // Exchange
+        const exchUSD = (historicoFinanzas[anio]?.[mes]?.exchange||[]).reduce((s,r)=>s+r.usd,0);
+        // Egresos: gastos del Sheet o de gastosFinanzas (2026)
+        let eg = 0;
+        if(anio === 2026) {
+          eg = sumCats(anio, mes, allCats);
+        } else {
+          eg = (historicoFinanzas[anio]?.[mes]?.gastos||[]).reduce((s,r)=>s+r.monto,0);
+          // Convertir gastos ARS a USD usando cotización promedio del mes
+          const cots = historicoFinanzas[anio]?.[mes]?.exchange||[];
+          const cotProm = cots.length>0 ? cots.reduce((s,r)=>s+r.cotizacion,0)/cots.length : 300;
+          if(cotProm > 0) eg = eg / cotProm;
+        }
+        ahorroAcum += (ing - eg);
+        labels.push(m.slice(0,3)+' '+anio);
+        ingData.push(Math.round(ing));
+        egData.push(Math.round(eg));
+        ahorroData.push(Math.round(ahorroAcum));
+        patrimonioData.push(patrimonioBienes.reduce((s,b)=>s+b.valor,0));
+      });
+    });
+  } else {
+    aniosCheck.sort().forEach(anio => {
+      let ing = 0, eg = 0;
+      if(anio === 2026) {
+        ing = operaciones.filter(o=>o.anio===anio&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
+        eg = Array.from({length:12},(_,i)=>sumCats(anio,i+1,allCats)).reduce((s,v)=>s+v,0);
+      } else {
+        // Sumar todos los meses del histórico
+        for(let mes=1; mes<=12; mes++) {
+          ing += (historicoFinanzas[anio]?.[mes]?.ingresos||[]).reduce((s,r)=>s+r.monto,0);
+          const gstos = (historicoFinanzas[anio]?.[mes]?.gastos||[]).reduce((s,r)=>s+r.monto,0);
+          const cots = historicoFinanzas[anio]?.[mes]?.exchange||[];
+          const cotProm = cots.length>0 ? cots.reduce((s,r)=>s+r.cotizacion,0)/cots.length : 300;
+          eg += cotProm>0 ? gstos/cotProm : 0;
+        }
+      }
+      ahorroAcum += (ing - eg);
+      labels.push(String(anio));
+      ingData.push(Math.round(ing));
+      egData.push(Math.round(eg));
+      ahorroData.push(Math.round(ahorroAcum));
+      patrimonioData.push(patrimonioBienes.reduce((s,b)=>s+b.valor,0));
+    });
+  }
+
+  // KPIs
+  const totIng = ingData.reduce((s,v)=>s+v,0);
+  const totEg = egData.reduce((s,v)=>s+v,0);
+  const mejorMes = Math.max(...ingData);
+  const mejorLabel = labels[ingData.indexOf(mejorMes)];
+  document.getElementById('hist-kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Ingresos totales</div><div class="kpi-value green">${fmtUSD(totIng)}</div><div class="kpi-sub">Período seleccionado</div></div>
+    <div class="kpi"><div class="kpi-label">Egresos totales</div><div class="kpi-value red">${fmtUSD(totEg)}</div><div class="kpi-sub">Período seleccionado</div></div>
+    <div class="kpi"><div class="kpi-label">Ahorro acumulado</div><div class="kpi-value ${ahorroAcum>=0?'amber':'red'}">${fmtUSD(ahorroAcum)}</div><div class="kpi-sub">Flujo neto del período</div></div>
+    <div class="kpi"><div class="kpi-label">Mejor mes</div><div class="kpi-value gold">${fmtUSD(mejorMes)}</div><div class="kpi-sub">${mejorLabel}</div></div>`;
+
+  // Gráfico
+  destroyChart('chartHistorico');
+  const datasets = [];
+  if(seriesCheck.includes('ing')) datasets.push({label:'Ingresos',data:ingData,borderColor:'rgba(39,196,122,0.9)',backgroundColor:'rgba(39,196,122,0.08)',tension:0.3,fill:false,pointRadius:3});
+  if(seriesCheck.includes('eg')) datasets.push({label:'Egresos',data:egData,borderColor:'rgba(224,85,85,0.8)',backgroundColor:'rgba(224,85,85,0.08)',tension:0.3,fill:false,pointRadius:3});
+  if(seriesCheck.includes('ahorro')) datasets.push({label:'Ahorro acum.',data:ahorroData,borderColor:'rgba(240,165,0,0.9)',backgroundColor:'rgba(240,165,0,0.08)',tension:0.3,fill:true,pointRadius:3});
+  if(seriesCheck.includes('patrimonio')) datasets.push({label:'Patrimonio',data:patrimonioData,borderColor:'rgba(167,139,250,0.9)',backgroundColor:'rgba(167,139,250,0.08)',tension:0.3,fill:false,pointRadius:3,borderDash:[5,3]});
+
+  const c = document.getElementById('chartHistorico');
+  if(c) charts['chartHistorico'] = new Chart(c,{
+    type:'line',
+    data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11},boxWidth:10}}},
+      scales:{
+        x:{ticks:{color:'#6a6460',font:{size:histGran==='mes'?8:11},maxRotation:45},grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{ticks:{color:'#6a6460',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.04)'}}
+      }}
+  });
+
+  // Tabla por año
+  const resumenAnual = aniosCheck.sort().map(anio => {
+    const ing = operaciones.filter(o=>o.anio===anio&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
+    const eg = Array.from({length:12},(_,i)=>sumCats(anio,i+1,allCats)).reduce((s,v)=>s+v,0);
+    return {anio,ing,eg,neto:ing-eg};
+  });
+  let acum = 0;
+  document.getElementById('hist-tabla-body').innerHTML = resumenAnual.map(r=>{
+    acum += r.neto;
+    return `<tr>
+      <td style="padding:8px 12px;font-weight:600;color:var(--text)">${r.anio}</td>
+      <td style="padding:8px 12px;text-align:right;color:var(--green);font-family:'DM Mono',monospace">${fmtUSD(r.ing)}</td>
+      <td style="padding:8px 12px;text-align:right;color:var(--red);font-family:'DM Mono',monospace">${fmtUSD(r.eg)}</td>
+      <td style="padding:8px 12px;text-align:right;color:${r.neto>=0?'var(--amber)':'var(--red)'};font-family:'DM Mono',monospace">${r.neto>=0?'+':''}${fmtUSD(r.neto)}</td>
+      <td style="padding:8px 12px;text-align:right;color:${acum>=0?'var(--blue)':'var(--red)'};font-family:'DM Mono',monospace">${fmtUSD(acum)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Fin histórico ──
+
+let histGran_placeholder = null; // placeholder to avoid collision
+
+function renderFinanzas(){
+  const anio = parseInt(document.getElementById('fin-anio').value)||2026;
+  const sueldoMartina = parseFloat(document.getElementById('sueldo-martina')?.value)||2000;
+  const mesActual = new Date().getMonth()+1;
+
+  // Ingresos de operaciones por mes
+  const ingPropioMes = MESES_NOMBRES.slice(1).map((_,i)=>
+    operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&normAgente(o.agente)==='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0));
+  const ingEquipoMes = MESES_NOMBRES.slice(1).map((_,i)=>
+    operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0));
+  const ingTotalMes = ingPropioMes.map((v,i)=>v+ingEquipoMes[i]);
+
+  // Egresos por mes (suma de todas las categorías)
+  const egTotalMes = MESES_NOMBRES.slice(1).map((_,i)=>{
+    const m=i+1;
+    const allCats=[...GASTOS_CATEGORIAS.fijos,...GASTOS_CATEGORIAS.varrec,...GASTOS_CATEGORIAS.varoc,...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto,...GASTOS_CATEGORIAS.enhe];
+    return sumCats(anio,m,allCats);
+  });
+
+  const totIng = ingTotalMes.reduce((s,v)=>s+v,0);
+  const totEg = egTotalMes.reduce((s,v)=>s+v,0);
+  const flujoNeto = totIng - totEg;
+  const sueldoYTD = sueldoMartina * mesActual;
+  const extraSolum = totIng - sueldoYTD;
+
+  // Cobertura: ops por cobrar / gasto mensual promedio
+  const opsPorCobrar = operaciones.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).total,0);
+  const gastoMensProm = totEg>0 ? totEg/mesActual : 1500;
+  const cobertura = (opsPorCobrar/gastoMensProm).toFixed(1);
+
+  // KPIs
+  if(document.getElementById('fin-kpis-resumen')) {
+    document.getElementById('fin-kpis-resumen').innerHTML = `
+      <div class="kpi"><div class="kpi-label">Ingresos YTD</div><div class="kpi-value green">${fmtUSD(totIng)}</div><div class="kpi-sub">Ene–${MESES_NOMBRES[mesActual]} ${anio}</div></div>
+      <div class="kpi"><div class="kpi-label">Egresos YTD</div><div class="kpi-value red">${fmtUSD(totEg)}</div><div class="kpi-sub">Personal + Negocio + Enhe</div></div>
+      <div class="kpi"><div class="kpi-label">Flujo neto</div><div class="kpi-value ${flujoNeto>=0?'green':'red'}">${flujoNeto>=0?'+':''}${fmtUSD(flujoNeto)}</div><div class="kpi-sub">Lo que quedó este año</div></div>
+      <div class="kpi" style="border-color:rgba(74,158,255,0.25);background:rgba(74,158,255,0.04)"><div class="kpi-label">Cobertura gastos</div><div class="kpi-value blue">${cobertura} meses</div><div class="kpi-sub">Con ops por cobrar ${fmtUSD(opsPorCobrar)}</div></div>`;
+  }
+
+  // Sueldo Martina
+  if(document.getElementById('sueldo-ytd')) document.getElementById('sueldo-ytd').textContent = fmtUSD(sueldoYTD);
+  if(document.getElementById('sueldo-extra')) { document.getElementById('sueldo-extra').textContent = (extraSolum>=0?'+':'')+fmtUSD(extraSolum); document.getElementById('sueldo-extra').style.color=extraSolum>=0?'var(--green)':'var(--red)'; }
+
+  // Alertas
+  const alertas = [];
+  if(flujoNeto < 0) alertas.push({tipo:'bad',msg:'Tu flujo neto es negativo. Los egresos superan los ingresos en '+fmtUSD(Math.abs(flujoNeto))+'. Revisá los gastos variables.'});
+  if(opsPorCobrar < gastoMensProm*2) alertas.push({tipo:'warn',msg:'Tenés menos de 2 meses de cobertura con las operaciones por cobrar. Activá nuevas operaciones.'});
+  else alertas.push({tipo:'good',msg:'Cobertura de '+cobertura+' meses con operaciones por cobrar. Buena liquidez proyectada.'});
+  alertas.push({tipo:'info',msg:'Tu monoambiente en reciclaje tiene ganancia proyectada de $5.000–7.000. ROI estimado 30%+'});
+
+  if(document.getElementById('fin-alertas')) {
+    document.getElementById('fin-alertas').innerHTML = alertas.map(a=>`
+      <div style="display:flex;gap:8px;padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:11px;align-items:flex-start;line-height:1.5;background:${a.tipo==='bad'?'rgba(224,85,85,0.07)':a.tipo==='warn'?'rgba(240,165,0,0.07)':a.tipo==='good'?'rgba(39,196,122,0.07)':'rgba(74,158,255,0.07)'};border:1px solid ${a.tipo==='bad'?'rgba(224,85,85,0.18)':a.tipo==='warn'?'rgba(240,165,0,0.18)':a.tipo==='good'?'rgba(39,196,122,0.18)':'rgba(74,158,255,0.18)'};color:${a.tipo==='bad'?'#e08080':a.tipo==='warn'?'#d4a017':a.tipo==='good'?'#5dba8a':'#7ab3e0'}">
+        ${a.tipo==='bad'?'⚠️':a.tipo==='warn'?'📦':a.tipo==='good'?'✅':'💡'} <span>${a.msg}</span>
+      </div>`).join('');
+  }
+
+  // Resultado por fuente
+  const solumNeto = totIng - sumCats(anio, new Date().getMonth()+1, [...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto]);
+  const enheIng = proyectosReciclaje.length>0?1751:0;
+  const enheEg = sumCats(anio, new Date().getMonth()+1, GASTOS_CATEGORIAS.enhe)*mesActual||1582;
+  const ganProyect = proyectosReciclaje.reduce((s,p)=>s+(p.precioVentaEst-p.precioCompra-p.presupuestoReciclaje),0);
+  const invTotal = proyectosReciclaje.reduce((s,p)=>s+p.precioCompra+p.presupuestoReciclaje,0);
+
+  if(document.getElementById('fin-fuentes')) {
+    document.getElementById('fin-fuentes').innerHTML = `
+      <div style="background:var(--card2);border-radius:10px;padding:14px;border-left:3px solid var(--green)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--green);margin-bottom:8px">🏢 SOLUM</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px"><span>Ingresos</span><span style="color:var(--green)">${fmtUSD(totIng)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px"><span>Egresos negocio</span><span style="color:var(--red)">${fmtUSD(sumCats(anio, new Date().getMonth()+1, [...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto]))}</span></div>
+        <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;margin-top:8px;color:var(--green)">${flujoNeto>=0?'+':''}${fmtUSD(flujoNeto)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:14px;border-left:3px solid var(--amber)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--amber);margin-bottom:8px">👗 Enhe</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px"><span>Ingresos</span><span style="color:var(--green)">${fmtUSD(enheIng)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px"><span>Egresos</span><span style="color:var(--red)">${fmtUSD(enheEg)}</span></div>
+        <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;margin-top:8px;color:var(--amber)">+${fmtUSD(enheIng-enheEg)}</div>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:14px;border-left:3px solid var(--purple)">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;color:var(--purple);margin-bottom:8px">🏗️ Reciclaje</div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px"><span>Invertido</span><span style="color:var(--amber)">${fmtUSD(invTotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:3px"><span>Ganancia proyectada</span><span style="color:var(--green)">+${fmtUSD(ganProyect)}</span></div>
+        <div style="font-size:17px;font-weight:700;font-family:'DM Mono',monospace;margin-top:8px;color:var(--purple)">${fmtUSD(invTotal+ganProyect)} est.</div>
+      </div>`;
+  }
+
+  // Gráfico
+  destroyChart('chartFinFlujo');
+  const c = document.getElementById('chartFinFlujo');
+  if(c) charts['chartFinFlujo'] = new Chart(c,{
+    type:'bar',
+    data:{labels:MESES_NOMBRES.slice(1),datasets:[
+      {label:'Ingresos',data:ingTotalMes,backgroundColor:'rgba(39,196,122,0.7)',borderRadius:4},
+      {label:'Egresos',data:egTotalMes,backgroundColor:'rgba(224,85,85,0.55)',borderRadius:4},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11},boxWidth:10}}},
+      scales:{x:{ticks:{color:'#6a6460',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},
+              y:{ticks:{color:'#6a6460',font:{size:10},callback:v=>'$'+v.toLocaleString()},grid:{color:'rgba(255,255,255,0.04)'}}}}
+  });
+}
 // ═══════════════════════════════════════════════
 // SEGUIMIENTO — NUEVA LÓGICA
 // ═══════════════════════════════════════════════
