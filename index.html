@@ -783,7 +783,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     <div class="filters">
       <button class="btn btn-outline btn-sm" id="btn-vista-ind" onclick="switchSegVista('tabla')" style="border-color:var(--gold);color:var(--gold2)">Tabla anual</button>
       <button class="btn btn-outline btn-sm" id="btn-vista-cal" onclick="switchSegVista('calendario')">Calendario semanal</button>
-      <select class="filter-select" id="seg-vendedor-sel" onchange="renderSeguimiento()">
+      <select class="filter-select" id="seg-vendedor-sel" onchange="segVendedorActivo=this.value;renderSeguimiento()">
         <option value="Martina">Martina</option>
         <option value="Marce">Marce</option>
         <option value="Kito">Kito</option>
@@ -1331,7 +1331,7 @@ let segData = {};
 let segObjetivos = {};
 VENDEDORES_SEG.forEach(v => { segObjetivos[v] = {...(OBJ_BASE[v]||OBJ_BASE['Martina'])}; });
 
-// segVendedorActivo se obtiene del selector
+let segVendedorActivo = "Martina"; // vendedor activo en seguimiento
 // segVista se declara en las funciones de seguimiento
 
 function getSegVal(vendedor, mes, metKey){
@@ -1471,15 +1471,17 @@ function normAgente(a){
 // Alertas activas: {id, tipo, msg, opId?}
 let alertasActivas = [];
 
-function getSegMes(vendedor, mes) {
+function getSegMes(vendedor, mes, anio) {
+  anio = anio || new Date().getFullYear();
   const manual = segData?.[vendedor]?.[mes] || {};
   const merged = {...manual};
 
   // v y f siempre desde operaciones (fuente de verdad)
-  const anio = 2026;
-  const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&
-    (normAgente(o.agente)===vendedor || (vendedor==='Martina'&&o.agente==='Martina'))
-  );
+  const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&(
+    normAgente(o.agente)===vendedor ||
+    o.agente===vendedor ||
+    (vendedor==='Martina' && (o.agente==='Martina'||o.agente==='propia'||o.agente==='Martina Marinelli'))
+  ));
   merged.v = opsDelMes.filter(o=>o.estado==='Cobrada').length;
   merged.f = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
   // r viene del segData (Sheet) — no se pisa
@@ -2341,13 +2343,30 @@ function showFinTab(id, el) {
 }
 
 function getGastoVal(anio, mes, cat) {
-  return gastosFinanzas?.[anio]?.[mes]?.[cat] || 0;
+  // Primero buscar en gastosFinanzas (ediciones locales de sesión)
+  const local = gastosFinanzas?.[anio]?.[mes]?.[cat];
+  if(local !== undefined) return local;
+  // Si no, buscar en historicoFinanzas (Sheet)
+  const gastos = historicoFinanzas?.[anio]?.[mes]?.gastos || [];
+  const item = gastos.find(g=>g.categoria===cat);
+  if(item) {
+    // Convertir ARS a USD si es necesario
+    if(item.moneda === 'ARS') {
+      const cots = historicoFinanzas?.[anio]?.[mes]?.exchange || [];
+      const cotProm = cots.length>0 ? cots.reduce((s,r)=>s+r.cotizacion,0)/cots.length : 300;
+      return cotProm>0 ? Math.round(item.monto/cotProm) : 0;
+    }
+    return item.monto;
+  }
+  return 0;
 }
 function setGastoVal(anio, mes, cat, val) {
+  // Guardar en memoria local
   if(!gastosFinanzas[anio]) gastosFinanzas[anio]={};
   if(!gastosFinanzas[anio][mes]) gastosFinanzas[anio][mes]={};
   gastosFinanzas[anio][mes][cat] = parseFloat(val)||0;
-  dbGuardar('gastos', [Date.now(), anio, mes, cat, parseFloat(val)||0]);
+  // Guardar en Sheet (formato finanzas_historico)
+  dbGuardar('finanzas_historico', [Date.now(), anio, mes, 'gasto', cat, parseFloat(val)||0, 'USD']);
   renderFinanzas();
 }
 
@@ -2407,9 +2426,16 @@ function renderGastosInputs() {
   document.getElementById('tot-fin-varoc').textContent = fmtUSD(totO);
   document.getElementById('tot-fin-personal').textContent = fmtUSD(totF+totR+totO);
 
-  // Ingresos negocio (auto desde operaciones)
-  const ingSolumitos = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
-  const ingSolum = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&normAgente(o.agente)==='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  // Ingresos negocio (auto desde operaciones 2026, histórico para otros años)
+  let ingSolumitos = 0, ingSolum = 0;
+  if(anio === 2026) {
+    ingSolumitos = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+    ingSolum = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&normAgente(o.agente)==='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  } else {
+    // Años anteriores: todos los ingresos son de Martina directamente
+    const ingHist = (historicoFinanzas?.[anio]?.[mes]?.ingresos||[]).reduce((s,r)=>s+r.monto,0);
+    ingSolum = ingHist;
+  }
   if(document.getElementById('ing-solumitos')) document.getElementById('ing-solumitos').textContent = fmtUSD(ingSolumitos);
   if(document.getElementById('ing-solum')) document.getElementById('ing-solum').textContent = fmtUSD(ingSolum);
 }
@@ -2699,18 +2725,30 @@ function renderFinanzas(){
   const sueldoMartina = parseFloat(document.getElementById('sueldo-martina')?.value)||2000;
   const mesActual = new Date().getMonth()+1;
 
-  // Ingresos de operaciones por mes
-  const ingPropioMes = MESES_NOMBRES.slice(1).map((_,i)=>
-    operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&normAgente(o.agente)==='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0));
-  const ingEquipoMes = MESES_NOMBRES.slice(1).map((_,i)=>
-    operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&normAgente(o.agente)!=='Martina'&&o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0));
-  const ingTotalMes = ingPropioMes.map((v,i)=>v+ingEquipoMes[i]);
+  // Ingresos por mes (operaciones 2026 o histórico)
+  const ingTotalMes = MESES_NOMBRES.slice(1).map((_,i)=>{
+    const mes=i+1;
+    if(anio===2026) {
+      return operaciones.filter(o=>o.anio===anio&&o.mes===mes&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
+    }
+    return (historicoFinanzas?.[anio]?.[mes]?.ingresos||[]).reduce((s,r)=>s+r.monto,0);
+  });
+  const ingPropioMes = ingTotalMes; // alias para compatibilidad
+  const ingEquipoMes = MESES_NOMBRES.slice(1).map(()=>0);
 
   // Egresos por mes (suma de todas las categorías)
+  const allCats2=[...GASTOS_CATEGORIAS.fijos,...GASTOS_CATEGORIAS.varrec,...GASTOS_CATEGORIAS.varoc,...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto,...GASTOS_CATEGORIAS.enhe];
   const egTotalMes = MESES_NOMBRES.slice(1).map((_,i)=>{
     const m=i+1;
-    const allCats=[...GASTOS_CATEGORIAS.fijos,...GASTOS_CATEGORIAS.varrec,...GASTOS_CATEGORIAS.varoc,...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto,...GASTOS_CATEGORIAS.enhe];
-    return sumCats(anio,m,allCats);
+    if(anio===2026) return sumCats(anio,m,allCats2);
+    // Histórico: sumar gastos del Sheet convertidos a USD
+    const gstos = historicoFinanzas?.[anio]?.[m]?.gastos||[];
+    const cots = historicoFinanzas?.[anio]?.[m]?.exchange||[];
+    const cotProm = cots.length>0 ? cots.reduce((s,r)=>s+r.cotizacion,0)/cots.length : 300;
+    return gstos.reduce((s,g)=>{
+      if(g.moneda==='USD') return s+g.monto;
+      return s+(cotProm>0?g.monto/cotProm:0);
+    },0);
   });
 
   const totIng = ingTotalMes.reduce((s,v)=>s+v,0);
@@ -2752,7 +2790,8 @@ function renderFinanzas(){
   }
 
   // Resultado por fuente
-  const solumNeto = totIng - sumCats(anio, new Date().getMonth()+1, [...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto]);
+  const mesHoy = new Date().getMonth()+1;
+  const solumNeto = anio===2026 ? totIng - sumCats(anio, mesHoy, [...GASTOS_CATEGORIAS.solum,...GASTOS_CATEGORIAS.auto]) : totIng*0.7;
   const enheIng = proyectosReciclaje.length>0?1751:0;
   const enheEg = sumCats(anio, new Date().getMonth()+1, GASTOS_CATEGORIAS.enhe)*mesActual||1582;
   const ganProyect = proyectosReciclaje.reduce((s,p)=>s+(p.precioVentaEst-p.precioCompra-p.presupuestoReciclaje),0);
@@ -2812,8 +2851,9 @@ function switchSegVista(vista){
 
 function renderSeguimiento(){
   try{
-  const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
-  segVendedorActivo = vendedor;
+  const vendedor = segVendedorActivo || 'Martina';
+  // Sincronizar select
+  const selEl2 = document.getElementById('seg-vendedor-sel'); if(selEl2) selEl2.value = vendedor;
   // Objetivo por mes específico
   const getObj = (m, key) => {
     return segObjetivos?.[vendedor]?.[m]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
@@ -2822,7 +2862,8 @@ function renderSeguimiento(){
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
 
   // Merge datos reales + manuales + de operaciones cargadas
-  const getMd = m2 => getSegMes(vendedor, m2);
+  const anioSeg = new Date().getFullYear();
+  const getMd = m2 => getSegMes(vendedor, m2, anioSeg);
 
   // ── Tabla anual ──
   const mesesCols = MESES_NOMBRES.slice(1,13);
@@ -2885,10 +2926,8 @@ function renderSeguimiento(){
   if(tablaEl) tablaEl.innerHTML = tableHTML;
 
   // ── Totales anuales ──
-  const allM = [...new Set([
-    ...Object.keys(SEG_DATA_REAL[vendedor]||{}),
-    ...Object.keys(segData[vendedor]||{})
-  ].filter(k=>!isNaN(k)))];
+  const mesActual = new Date().getMonth()+1;
+  const allM = Array.from({length:mesActual},(_,i)=>i+1);
 
   const totCap = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
   const totVen = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
@@ -2896,7 +2935,6 @@ function renderSeguimiento(){
   const mesesConDatos = allM.length||1;
   const promMens = totFac/mesesConDatos;
   const factorEst=[0.8,0.85,1.1,1.2,1.15,1.0,0.75,0.8,1.05,1.1,1.15,0.9];
-  const mesActual=new Date().getMonth()+1;
   let proyAnual=totFac;
   for(let mm=mesActual+1;mm<=12;mm++) proyAnual+=promMens*factorEst[mm-1];
 
@@ -2946,9 +2984,12 @@ function renderSeguimiento(){
   // ── Selector de vendedores ──
   const vtabs = document.getElementById('seg-vendedor-tabs');
   if(vtabs) vtabs.innerHTML = VENDEDORES_SEG.map(v=>`
-    <button onclick="document.getElementById('seg-vendedor-sel').value='${v}';renderSeguimiento()"
+    <button onclick="segVendedorActivo='${v}';renderSeguimiento()"
       class="btn btn-sm" style="${v===vendedor?'background:var(--gold);color:var(--navy3)':'background:var(--card2);color:var(--text2);border:1px solid rgba(255,255,255,0.08)'}">${v}</button>
   `).join('');
+  // Sincronizar select con botón activo
+  const selEl = document.getElementById('seg-vendedor-sel');
+  if(selEl && selEl.value !== vendedor) selEl.value = vendedor;
   }catch(err){
     console.error('renderSeguimiento error:',err);
     const tablaEl = document.getElementById('seg-tabla-anual');
@@ -3017,7 +3058,7 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
   container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3)">⏳ Generando análisis...</div>`;
 
   const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
-  const getMd = m2 => getSegMes(vendedor, m2);
+  const getMd = m2 => getSegMes(vendedor, m2, new Date().getFullYear());
   const mesActual = new Date().getMonth()+1;
   const allM = Array.from({length:mesActual},(_,i)=>i+1);
 
