@@ -1733,7 +1733,7 @@ async function responderPlanilla(key, val) {
   
   // Si es el campo cliente, buscar en la DB
   if(key === 'cliente' && val && val.length > 2) {
-    const clientes = await buscarClienteDB(val);
+    const clientes = await buscarClienteDB(val).catch(()=>[]) || [];
     if(clientes.length === 1) {
       // Match único — completar automáticamente
       const c = clientes[0];
