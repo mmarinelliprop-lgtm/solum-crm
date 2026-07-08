@@ -1807,6 +1807,14 @@ async function ejecutarPlanilla(op, g) {
   op.planillaGenerada = true;
   op.estado = 'Cobrada';
 
+  // Fecha de cobro = hoy (día en que se genera la planilla)
+  const hoy = new Date();
+  const fechaCobro = `${String(hoy.getDate()).padStart(2,'0')}/${String(hoy.getMonth()+1).padStart(2,'0')}/${hoy.getFullYear()}`;
+  op.fechaEsc = fechaCobro;
+  // Recalcular mes y año según la fecha real de cobro
+  op.mes = hoy.getMonth()+1;
+  op.anio = hoy.getFullYear();
+
   // Comisión real (puede ser distinta al 3%)
   const pctComision = planillaRespuestas.pctComision === '3% (estándar)' ? 0.03 : (op.pct_comision || 0.03);
   const tieneIVA = planillaRespuestas.iva === 'Sí paga IVA (5,25%)';
@@ -1816,15 +1824,14 @@ async function ejecutarPlanilla(op, g) {
   const comAgente = Math.round(op.comision * pctAgente);
   const comOficina = op.comision - comAgente;
 
-  // Seguimiento
+  // Seguimiento — venta se computa en el mes de la fecha de cobro (hoy)
   if(planillaRespuestas.sumarVenta === 'Sí'){
     const agSeg = mapAgenteToSeg(op.agente);
+    const mesVenta = op.mes; // ya actualizado al mes de hoy
     if(!segData[agSeg]) segData[agSeg]={};
-    if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
-    segData[agSeg][op.mes].v = (segData[agSeg][op.mes].v||0)+1;
-    segData[agSeg][op.mes].f = (segData[agSeg][op.mes].f||0)+op.comision;
-    dbGuardar('seguimiento',[Date.now(),agSeg,op.mes,'v',segData[agSeg][op.mes].v]);
-    dbGuardar('seguimiento',[Date.now()+1,agSeg,op.mes,'f',segData[agSeg][op.mes].f]);
+    if(!segData[agSeg][mesVenta]) segData[agSeg][mesVenta]={};
+    // v y f se calculan desde operaciones en getSegMes, no hace falta guardar
+    dbGuardar('seguimiento',[Date.now(),agSeg,mesVenta,'v_planilla',1]);
   }
 
   // Finanzas
