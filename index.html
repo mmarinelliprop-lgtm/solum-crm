@@ -2303,34 +2303,38 @@ function renderOperaciones(){
   const totSolumCob = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
   const totSolumPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
 
+  const totCaidasMiGan = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).total),0);
+
   document.getElementById('ops-totales').innerHTML = ops.length ? `
     <tr style="background:var(--bg3);border-top:2px solid rgba(255,255,255,0.08)">
-      <td colspan="10" style="padding:0"></td>
+      <td colspan="12" style="padding:0"></td>
     </tr>
     <tr style="background:var(--bg3);font-size:11px">
-      <td colspan="2" style="padding:10px 14px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;font-weight:700">${ops.length} ops filtradas</td>
-      <td colspan="2" style="padding:10px 14px;color:var(--text3)">Comisión bruta</td>
+      <td colspan="3" style="padding:10px 14px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;font-weight:700">${ops.length} ops filtradas</td>
+      <td></td>
+      <td></td>
       <td style="padding:10px 14px;font-weight:700;color:var(--text)">${fmtUSD(totComision)}</td>
       <td style="padding:10px 14px">
-        <span style="color:var(--green);font-weight:700">${fmtUSD(totMiGanCob)} cobrado</span><br>
-        <span style="color:var(--amber);font-size:10px">${fmtUSD(totMiGanPend)} pendiente</span>
+        <span style="color:var(--green);font-weight:700">${fmtUSD(totMiGanCob)}</span><br>
+        <span style="color:var(--amber);font-size:10px">${fmtUSD(totMiGanPend)} pend.</span>
       </td>
       <td style="padding:10px 14px">
-        <span style="color:var(--blue);font-weight:700">${fmtUSD(totSolumCob)} cobrado</span><br>
-        <span style="color:rgba(74,158,255,0.6);font-size:10px">${fmtUSD(totSolumPend)} pendiente</span>
+        <span style="color:var(--blue);font-weight:700">${fmtUSD(totSolumCob)}</span><br>
+        <span style="color:rgba(74,158,255,0.6);font-size:10px">${fmtUSD(totSolumPend)} pend.</span>
       </td>
-      <td colspan="3" style="padding:10px 14px;color:var(--text3)">
-        Vendedores: <span style="color:var(--text2);font-weight:600">${fmtUSD(totVendedores)}</span><br>
-        <span style="color:var(--red);font-size:10px">Caídas (mi gan.): ${fmtUSD(ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).total),0))}</span>
-      </td>
+      <td style="padding:10px 14px;color:var(--text2);font-weight:600">${fmtUSD(totVendedores)}</td>
+      <td></td>
+      <td style="padding:10px 14px;color:var(--red);font-size:10px">Caídas: ${fmtUSD(totCaidasMiGan)}</td>
+      <td></td>
     </tr>` : '';
 
   // ── Gráficos de ganancia mensual ──
   const anioFiltro = parseInt(document.getElementById('op-anio').value)||2026;
   const mesesLabels = MESES_NOMBRES.slice(1);
 
-  // Mi ganancia cobrada y pendiente por mes (sobre TODAS las ops del año, no solo el filtro)
-  const opsAnio = operaciones.filter(o=>o.anio===anioFiltro);
+  // Mi ganancia cobrada y pendiente por mes (sobre todas las ops del año que matchean el agente filtrado)
+  let opsAnio = operaciones.filter(o=>o.anio===anioFiltro);
+  if(agente!=='all') opsAnio = opsAnio.filter(o=>normAgente(o.agente)===agente||(agente==='Martina'&&o.agente==='Martina'));
   const miGanCobMes = mesesLabels.map((_,i)=>
     opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0));
   const miGanPendMes = mesesLabels.map((_,i)=>
