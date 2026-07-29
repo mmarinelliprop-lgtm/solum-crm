@@ -808,7 +808,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
   <!-- Vista: Tabla anual -->
   <div id="seg-vista-tabla">
     <div class="table-wrap" style="overflow-x:auto;margin-bottom:24px">
-      <table id="seg-tabla-anual" style="min-width:1100px"></table>
+      <table id="seg-tabla-anual" style="white-space:nowrap" style="min-width:1100px"></table>
     </div>
 
     <!-- Totales anuales -->
@@ -2999,9 +2999,9 @@ function renderSeguimiento(){
   const mesActualNum = new Date().getMonth()+1;
   let tableHTML = '<thead>';
   let rowIdx = 0;
-  tableHTML += '<tr><th class="seg-table-header" style="min-width:180px;text-align:left;position:sticky;left:0;z-index:2">Métrica</th>';
-  tableHTML += '<th class="seg-table-header" style="min-width:60px;text-align:center">% Año</th>';
-  mesesCols.forEach(m => tableHTML += `<th class="seg-table-header" colspan="2" style="text-align:center;min-width:80px">${m.slice(0,3)}</th>`);
+  tableHTML += '<tr><th class="seg-table-header" style="text-align:left;position:sticky;left:0;z-index:2;font-size:11px;white-space:nowrap">Métrica</th>';
+  tableHTML += '<th class="seg-table-header" style="width:44px;text-align:center;font-size:9px;white-space:nowrap">%</th>';
+  mesesCols.forEach(m => tableHTML += `<th class="seg-table-header" colspan="2" style="text-align:center;white-space:nowrap">${m.slice(0,3)}</th>`);
   tableHTML += '</tr>';
   tableHTML += '<tr><th style="position:sticky;left:0;background:var(--navy3)"></th><th style="background:var(--bg3);font-size:9px;color:var(--text3);text-align:center">Cumpl.</th>';
   mesesCols.forEach(() => tableHTML += '<th style="font-size:9px;color:var(--text3);padding:3px 6px;text-align:center;background:var(--bg3)">OBJ</th><th style="font-size:9px;color:var(--text3);padding:3px 6px;text-align:center;background:var(--bg3)">REAL</th>');
@@ -3021,7 +3021,7 @@ function renderSeguimiento(){
 
     tableHTML += `<tr>`;
     tableHTML += `<td style="padding:7px 10px;font-size:12px;color:var(--text);font-weight:500;border-bottom:1px solid rgba(255,255,255,0.04);position:sticky;left:0;background:var(--card)">${met}</td>`;
-    tableHTML += `<td class="seg-pct-cell" data-row="${rowIdx}" style="padding:7px 6px;text-align:center;font-size:12px;font-weight:700;color:${pctColor};background:${pctBg};border-bottom:1px solid rgba(255,255,255,0.04)">${pctAcum}%</td>`;
+    tableHTML += `<td class="seg-pct-cell" data-row="${rowIdx}" style="padding:4px;text-align:center;font-size:10px;font-weight:700;color:${pctColor};background:${pctBg};border-bottom:1px solid rgba(255,255,255,0.04);width:44px">${pctAcum}%</td>`;
     for(let m=1; m<=12; m++){
       const d = getMd(m);
       const real = d[key] ?? null;
@@ -3030,11 +3030,11 @@ function renderSeguimiento(){
       const textColor = real===null?'var(--text3)':(cumple?'var(--green)':'var(--red)');
       tableHTML += `<td contenteditable="true"
         class="seg-cell seg-cell-obj" data-row="${rowIdx}" data-col="${m}" data-tipo="obj" data-vendedor="${vendedor}" data-key="${key}"
-        style="width:40px;min-width:40px;max-width:40px;padding:5px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--text3);cursor:text;outline:none"
-        title="Objetivo — click para editar">${objV||''}</td>`;
+        style="width:56px;min-width:56px;max-width:56px;padding:5px 2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--text3);cursor:text;outline:none;white-space:nowrap;overflow:hidden"
+        title="Objetivo — click para editar">${objV !== undefined && objV !== null ? objV : ''}</td>`;
       tableHTML += `<td contenteditable="true"
         class="seg-cell seg-cell-real" data-row="${rowIdx}" data-col="${m}" data-tipo="real" data-vendedor="${vendedor}" data-key="${key}"
-        style="width:40px;min-width:40px;max-width:40px;padding:5px 4px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);background:${bgColor};font-size:12px;font-weight:700;color:${textColor};cursor:text;outline:none">${real !== null && real > 0 ? real : ''}</td>`;
+        style="width:56px;min-width:56px;max-width:56px;padding:5px 2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);background:${bgColor};font-size:12px;font-weight:700;color:${textColor};cursor:text;outline:none;white-space:nowrap;overflow:hidden">${real !== null ? real : ''}</td>`;
     }
     tableHTML += '</tr>';
     rowIdx++;
