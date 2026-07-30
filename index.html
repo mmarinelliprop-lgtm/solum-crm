@@ -438,17 +438,30 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       </select>
     </div>
     <div>
-      <span class="filter-label">Agente</span>
-      <select class="filter-select" id="op-agente" onchange="renderOperaciones()">
-        <option value="all">Todos</option>
-        <option value="Martina">Martina (propia)</option>
-        <option value="Vicky">Vicky</option>
-        <option value="Manu">Manu</option>
-        <option value="Marce">Marce</option>
-        <option value="Kito">Kito</option>
-        <option value="Cris">Cris</option>
-        <option value="Ceci">Ceci</option>
-      </select>
+      <span class="filter-label">Vendedor</span>
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="op-agente-checks">
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Martina" checked onchange="renderOperaciones()" style="cursor:pointer"> Martina
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Vicky" checked onchange="renderOperaciones()" style="cursor:pointer"> Vicky
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Manu" checked onchange="renderOperaciones()" style="cursor:pointer"> Manu
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Marce" checked onchange="renderOperaciones()" style="cursor:pointer"> Marce
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Kito" checked onchange="renderOperaciones()" style="cursor:pointer"> Kito
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Cris" checked onchange="renderOperaciones()" style="cursor:pointer"> Cris
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" value="Ceci" checked onchange="renderOperaciones()" style="cursor:pointer"> Ceci
+        </label>
+      </div>
     </div>
     <div>
       <span class="filter-label">Estado</span>
@@ -1447,6 +1460,16 @@ function calcGanancia(op){
 }
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
+// Ganancia que se lleva el vendedor (o Martina en sus propias operaciones)
+function gananciaVendedor(op){
+  if(op.comision_vendedor!==undefined && op.comision_vendedor!==null && op.comision_vendedor>0) return op.comision_vendedor;
+  const pct = COMISIONES[op.agente] || COMISIONES[normAgente(op.agente)] || 0.50;
+  return op.comision*pct;
+}
+// Estacionalidad del rubro inmobiliario: % de la ganancia anual que se genera por trimestre
+const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32]; // Q1, Q2, Q3, Q4 — suman 1.00
+function pesoMensual(mes){ return PESOS_TRIMESTRE[Math.floor((mes-1)/3)]/3; }
+
 // ═══════════════════════════════════════════════
 // NORMALIZACIÓN DE NOMBRES DE AGENTES (global)
 // ═══════════════════════════════════════════════
@@ -2217,14 +2240,14 @@ function renderGanancia(){
 // ═══════════════════════════════════════════════
 function renderOperaciones(){
   const mes = document.getElementById('op-mes').value;
-  const agente = document.getElementById('op-agente').value;
+  const agentesChecks = Array.from(document.querySelectorAll('#op-agente-checks input:checked')).map(c=>c.value);
   const estadosChecks = Array.from(document.querySelectorAll('#op-estado-checks input:checked')).map(c=>c.value);
   const punta = document.getElementById('op-punta').value;
   const anio = parseInt(document.getElementById('op-anio').value);
 
   let ops = operaciones.filter(o=>o.anio===anio);
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
-  if(agente!=='all') ops = ops.filter(o=>normAgente(o.agente)===agente||(agente==='Martina'&&o.agente==='Martina'));
+  if(agentesChecks.length>0 && agentesChecks.length<7) ops = ops.filter(o=>agentesChecks.includes(normAgente(o.agente)));
   if(estadosChecks.length>0) ops = ops.filter(o=>estadosChecks.includes(o.estado));
   if(punta!=='all') ops = ops.filter(o=>o.punta===punta);
 
@@ -2332,26 +2355,22 @@ function renderOperaciones(){
   const anioFiltro = parseInt(document.getElementById('op-anio').value)||2026;
   const mesesLabels = MESES_NOMBRES.slice(1);
 
-  // Mi ganancia cobrada y pendiente por mes (sobre todas las ops del año que matchean el agente filtrado)
+  // Mi ganancia cobrada y pendiente por mes (sobre todas las ops del año que matchean el/los vendedor/es filtrado/s)
   let opsAnio = operaciones.filter(o=>o.anio===anioFiltro);
-  if(agente!=='all') opsAnio = opsAnio.filter(o=>normAgente(o.agente)===agente||(agente==='Martina'&&o.agente==='Martina'));
-  const miGanCobMes = mesesLabels.map((_,i)=>
-    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0));
-  const miGanPendMes = mesesLabels.map((_,i)=>
-    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).total,0));
-  const solumCobMes = mesesLabels.map((_,i)=>
-    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_solum||calcGanancia(o).solum||o.comision*0.30),0));
-  const solumPendMes = mesesLabels.map((_,i)=>
-    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0));
+  if(agentesChecks.length>0 && agentesChecks.length<7) opsAnio = opsAnio.filter(o=>agentesChecks.includes(normAgente(o.agente)));
+  const vendGanCobMes = mesesLabels.map((_,i)=>
+    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+gananciaVendedor(o),0));
+  const vendGanPendMes = mesesLabels.map((_,i)=>
+    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+gananciaVendedor(o),0));
 
-  // Gráfico unificado Mi Ganancia + SOLUM
+  // Gráfico unificado — ganancia del/de los vendedor/es seleccionado/s
   destroyChart('chartOpsUnificado');
   const cu = document.getElementById('chartOpsUnificado');
   if(cu) charts['chartOpsUnificado'] = new Chart(cu,{
     type:'bar',
     data:{labels:mesesLabels,datasets:[
-      {label:'Mi ganancia cobrada',data:miGanCobMes,backgroundColor:'rgba(39,196,122,0.85)',borderRadius:3},
-      {label:'SOLUM cobrado',data:solumCobMes,backgroundColor:'rgba(74,158,255,0.85)',borderRadius:3},
+      {label:'Ganancia cobrada',data:vendGanCobMes,backgroundColor:'rgba(39,196,122,0.85)',borderRadius:3},
+      {label:'Ganancia pendiente',data:vendGanPendMes,backgroundColor:'rgba(255,165,62,0.75)',borderRadius:3},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#b8b0a4',font:{size:10},boxWidth:10}}},
@@ -2361,62 +2380,58 @@ function renderOperaciones(){
       }}
   });
 
-  // ── Proyección anual ──
-  const totalCobrado = miGanCobMes.reduce((s,v)=>s+v,0);
-  const totalPendiente = miGanPendMes.reduce((s,v)=>s+v,0);
-  const totalCaido = opsAnio.filter(o=>o.estado==='Caída').reduce((s,o)=>s+calcGanancia(o).total,0);
-  const mesActual = new Date().getMonth()+1;
-  const mesesRestantes = 12 - mesActual;
-  // Promedio mensual cobrado, ajustado por tasa de caída
-  const tasaCaida = opsAnio.length>0 ? opsAnio.filter(o=>o.estado==='Caída').length/opsAnio.length : 0;
-  const promMensCob = mesActual>0 ? totalCobrado/mesActual : 0;
-  const promMensPend = mesActual>0 ? totalPendiente/mesActual : 0;
-  // Proyección: cobrado real + pendiente + proyección futura (ajustada por tasa de caída)
-  const proyFutura = promMensCob * mesesRestantes * (1 - tasaCaida);
-  const proyTotal = totalCobrado + totalPendiente + proyFutura;
+  // ── KPIs del/de los vendedor/es seleccionado/s ──
+  const totalGanCobrado = vendGanCobMes.reduce((s,v)=>s+v,0);
+  const totalGanPendiente = vendGanPendMes.reduce((s,v)=>s+v,0);
+  const totalGanCaido = opsAnio.filter(o=>o.estado==='Caída').reduce((s,o)=>s+gananciaVendedor(o),0);
 
-  // Calcular totales SOLUM
-  const totalSolumCob = solumCobMes.reduce((s,v)=>s+v,0);
-  const totalSolumPend = solumPendMes.reduce((s,v)=>s+v,0);
-  const promSolumMens = mesActual>0 ? totalSolumCob/mesActual : 0;
-  const proyTotalSolum = totalSolumCob + totalSolumPend + promSolumMens*mesesRestantes*(1-tasaCaida);
+  const totalFactCobrado = opsAnio.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
+  const totalFactPendiente = opsAnio.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
+  const totalFactCaida = opsAnio.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
+
+  const mesActual = new Date().getMonth()+1;
+  const tasaCaida = opsAnio.length>0 ? opsAnio.filter(o=>o.estado==='Caída').length/opsAnio.length : 0;
+
+  // Proyección estacional: el rubro genera 20% / 22.5% / 25.5% / 32% de la ganancia anual por trimestre
+  let pesoTranscurrido = 0;
+  for(let m=1;m<=mesActual;m++) pesoTranscurrido += pesoMensual(m);
+  const estimadoAnual = pesoTranscurrido>0 ? totalGanCobrado/pesoTranscurrido : 0;
+  let proyFutura = 0;
+  for(let m=mesActual+1;m<=12;m++) proyFutura += estimadoAnual*pesoMensual(m);
+  proyFutura *= (1-tasaCaida);
+  const proyTotal = totalGanCobrado + totalGanPendiente + proyFutura;
 
   document.getElementById('ops-proyeccion-kpis').innerHTML = `
     <div class="kpi" style="flex:1;min-width:120px">
-      <div class="kpi-label">Mi ganancia cobrada</div>
-      <div class="kpi-value green">${fmtUSD(totalCobrado)}</div>
-      <div class="kpi-sub" style="color:var(--amber)">${fmtUSD(totalPendiente)} pend.</div>
+      <div class="kpi-label">Ganancia del vendedor</div>
+      <div class="kpi-value green">${fmtUSD(totalGanCobrado)}</div>
+      <div class="kpi-sub" style="color:var(--amber)">${fmtUSD(totalGanPendiente)} pend.</div>
     </div>
     <div class="kpi" style="flex:1;min-width:120px">
-      <div class="kpi-label">SOLUM cobrado</div>
-      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(totalSolumCob)}</div>
-      <div class="kpi-sub" style="color:rgba(74,158,255,0.7)">${fmtUSD(totalSolumPend)} pend.</div>
+      <div class="kpi-label">Facturación bruta</div>
+      <div class="kpi-value" style="color:var(--text)">${fmtUSD(totalFactCobrado)}</div>
+      <div class="kpi-sub" style="color:var(--text3)">${fmtUSD(totalFactPendiente)} pend.</div>
     </div>
     <div class="kpi" style="flex:1;min-width:120px">
-      <div class="kpi-label">Caídas (mi ganancia perdida)</div>
-      <div class="kpi-value red">${fmtUSD(totalCaido)}</div>
-      <div class="kpi-sub">Tasa de caída: ${Math.round(tasaCaida*100)}%</div>
+      <div class="kpi-label">Facturación bruta caídas</div>
+      <div class="kpi-value red">${fmtUSD(totalFactCaida)}</div>
+      <div class="kpi-sub">Ganancia perdida: ${fmtUSD(totalGanCaido)}</div>
     </div>
     <div class="kpi" style="flex:1;min-width:120px;border:1px solid rgba(39,196,122,0.3);background:rgba(39,196,122,0.06)">
-      <div class="kpi-label">Proy. mi ganancia</div>
+      <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value green">${fmtUSD(Math.round(proyTotal))}</div>
-      <div class="kpi-sub">Ajustada por caídas</div>
-    </div>
-    <div class="kpi" style="flex:1;min-width:120px;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.06)">
-      <div class="kpi-label">Proy. SOLUM</div>
-      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyTotalSolum))}</div>
-      <div class="kpi-sub">Ajustada por caídas</div>
+      <div class="kpi-sub">Estacional por trimestre · caída ${Math.round(tasaCaida*100)}%</div>
     </div>`;
 
-  // Gráfico proyección
+  // Gráfico proyección (estacional por trimestre)
   destroyChart('chartOpsProyeccion');
   const c3 = document.getElementById('chartOpsProyeccion');
   const proyData = mesesLabels.map((_,i)=>{
     const m = i+1;
-    if(m <= mesActual) return miGanCobMes[i];
-    return Math.round(promMensCob * (1-tasaCaida));
+    if(m <= mesActual) return vendGanCobMes[i];
+    return Math.round(estimadoAnual*pesoMensual(m)*(1-tasaCaida));
   });
-  const cobData = mesesLabels.map((_,i)=>i+1<=mesActual?miGanCobMes[i]:0);
+  const cobData = mesesLabels.map((_,i)=>i+1<=mesActual?vendGanCobMes[i]:0);
   if(c3) charts['chartOpsProyeccion'] = new Chart(c3,{
     type:'bar',
     data:{labels:mesesLabels,datasets:[
