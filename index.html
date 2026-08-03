@@ -14,9 +14,9 @@
   --bg:#0a1628;--bg2:#0f1e38;--bg3:#142444;
   --card:#152238;--card2:#1a2d4a;--card3:#1f3455;
   --text:#f0ece4;--text2:#b8b0a4;--text3:#7a7468;
-  --green:#27c47a;--greenbg:rgba(39,196,122,0.12);
-  --amber:#f0a500;--amberbg:rgba(240,165,0,0.12);
-  --red:#e05555;--redbg:rgba(224,85,85,0.12);
+  --green:#2ee6b8;--greenbg:rgba(46,230,184,0.14);
+  --amber:#ffd36e;--amberbg:rgba(255,211,110,0.15);
+  --red:#ff4d97;--redbg:rgba(255,77,151,0.14);
   --blue:#4a9eff;--bluebg:rgba(74,158,255,0.12);
   --radius:10px;--radius2:14px;
   /* Personal section palette — pastel dark (sheet 2026) */
@@ -87,10 +87,10 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .chart-wrap{position:relative;height:200px;}
 
 /* ── FILTERS ── */
-.filters{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+.filters{display:flex;gap:14px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-end;}
 .filter-select{background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none;}
 .filter-select:focus{border-color:var(--gold3);}
-.filter-label{font-size:11px;color:var(--text3);margin-right:2px;}
+.filter-label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
 .btn{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .2s;}
 .btn-gold{background:var(--gold);color:var(--navy3);}
 .btn-gold:hover{background:var(--gold2);}
@@ -136,7 +136,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .msg{max-width:80%;padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.5;}
 .msg-user{background:var(--navy2);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px;}
 .msg-claude{background:var(--card2);color:var(--text2);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid rgba(255,255,255,0.06);}
-.msg-system{background:rgba(39,196,122,0.08);color:var(--green);align-self:center;font-size:11px;padding:6px 14px;border-radius:20px;border:1px solid rgba(39,196,122,0.2);}
+.msg-system{background:rgba(46,230,184,0.08);color:var(--green);align-self:center;font-size:11px;padding:6px 14px;border-radius:20px;border:1px solid rgba(46,230,184,0.2);}
 .chat-input-area{padding:16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:10px;align-items:flex-end;}
 .chat-input{flex:1;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:12px 16px;border-radius:10px;font-size:13px;resize:none;outline:none;min-height:44px;max-height:120px;font-family:inherit;}
 .chat-input:focus{border-color:var(--gold3);}
@@ -221,7 +221,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .planilla-row:last-child{border-bottom:none;font-weight:700;color:var(--gold2);font-size:13px;}
 
 /* ── CAL INTEGRATION ── */
-.cal-status{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--greenbg);border-radius:8px;border:1px solid rgba(39,196,122,0.2);font-size:12px;color:var(--green);margin-bottom:16px;}
+.cal-status{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--greenbg);border-radius:8px;border:1px solid rgba(46,230,184,0.2);font-size:12px;color:var(--green);margin-bottom:16px;}
 .cal-event{background:var(--card2);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;border-left:3px solid var(--gold);margin-bottom:8px;}
 .cal-event-type{font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold2);}
 .cal-event-title{font-size:13px;font-weight:600;color:var(--text);}
@@ -247,8 +247,8 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .hidden{display:none!important;}
 .seg-table-header{background:var(--navy3);color:var(--gold2);font-size:10px;text-transform:uppercase;letter-spacing:.6px;padding:8px 10px;font-weight:700;}
 .seg-obj-cell{color:var(--text3);font-size:11px;}
-.seg-real-green{background:rgba(39,196,122,0.15);color:var(--green);font-weight:700;}
-.seg-real-red{background:rgba(224,85,85,0.13);color:var(--red);font-weight:700;}
+.seg-real-green{background:rgba(46,230,184,0.15);color:var(--green);font-weight:700;}
+.seg-real-red{background:rgba(255,77,151,0.13);color:var(--red);font-weight:700;}
 .seg-real-empty{color:var(--text3);}
 .cal-week{background:var(--card);border-radius:var(--radius);border:1px solid rgba(255,255,255,0.06);margin-bottom:12px;overflow:hidden;}
 .cal-week-header{background:var(--navy3);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}
@@ -260,8 +260,8 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .cal-metric-row{display:flex;align-items:center;gap:6px;}
 .cal-metric-input{width:50px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:4px 6px;border-radius:4px;font-size:13px;font-weight:700;text-align:center;}
 .cal-metric-obj{font-size:10px;color:var(--text3);}
-.cal-met{border-color:rgba(39,196,122,0.4)!important;color:var(--green)!important;}
-.cal-unmet{border-color:rgba(224,85,85,0.3)!important;color:var(--red)!important;}
+.cal-met{border-color:rgba(46,230,184,0.4)!important;color:var(--green)!important;}
+.cal-unmet{border-color:rgba(255,77,151,0.3)!important;color:var(--red)!important;}
 .text-green{color:var(--green);}
 .text-red{color:var(--red);}
 .text-amber{color:var(--amber);}
@@ -441,8 +441,8 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     </div>
     <div style="position:relative">
       <span class="filter-label">Vendedor</span>
-      <button type="button" id="op-agente-btn" onclick="toggleAgenteDropdown()"
-        style="display:flex;align-items:center;gap:6px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);font-size:12px;padding:7px 10px;border-radius:8px;cursor:pointer;min-width:150px;justify-content:space-between">
+      <button type="button" id="op-agente-btn" onclick="toggleAgenteDropdown()" class="filter-select"
+        style="display:flex;align-items:center;gap:6px;min-width:150px;justify-content:space-between">
         <span id="op-agente-btn-label">Todos</span><span style="font-size:9px;opacity:.7">▼</span>
       </button>
       <div id="op-agente-dropdown" class="hidden" style="position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;min-width:190px;padding:8px">
@@ -475,18 +475,28 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         </div>
       </div>
     </div>
-    <div>
+    <div style="position:relative">
       <span class="filter-label">Estado</span>
-      <div style="display:flex;gap:4px;flex-wrap:wrap" id="op-estado-checks">
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Por cobrar" checked onchange="renderOperaciones()" style="cursor:pointer"> Por cobrar
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Cobrada" onchange="renderOperaciones()" style="cursor:pointer"> Cobrada
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Caída" onchange="renderOperaciones()" style="cursor:pointer"> Caída
-        </label>
+      <button type="button" id="op-estado-btn" onclick="toggleEstadoDropdown()" class="filter-select"
+        style="display:flex;align-items:center;gap:6px;min-width:150px;justify-content:space-between">
+        <span id="op-estado-btn-label">Por cobrar</span><span style="font-size:9px;opacity:.7">▼</span>
+      </button>
+      <div id="op-estado-dropdown" class="hidden" style="position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;min-width:170px;padding:8px">
+        <div style="display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08)">
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosEstados(true)">Seleccionar todos</button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosEstados(false)">Deseleccionar</button>
+        </div>
+        <div id="op-estado-checks" style="display:flex;flex-direction:column;gap:2px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Por cobrar" checked onchange="renderOperaciones()" style="cursor:pointer"> Por cobrar
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Cobrada" onchange="renderOperaciones()" style="cursor:pointer"> Cobrada
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Caída" onchange="renderOperaciones()" style="cursor:pointer"> Caída
+          </label>
+        </div>
       </div>
     </div>
     <div>
@@ -661,7 +671,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px" id="fin-mes-negocio"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="chart-card">
-        <div class="chart-title">📥 Ingresos SOLUM <span style="font-size:9px;color:var(--green);background:rgba(39,196,122,0.12);padding:1px 5px;border-radius:8px;margin-left:4px">AUTO</span></div>
+        <div class="chart-title">📥 Ingresos SOLUM <span style="font-size:9px;color:var(--green);background:rgba(46,230,184,0.12);padding:1px 5px;border-radius:8px;margin-left:4px">AUTO</span></div>
         <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
           <span style="font-size:12px;color:var(--text2)">Solumitos (equipo)</span>
           <span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--green)" id="ing-solumitos">$0</span>
@@ -688,7 +698,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 
   <!-- ENHE -->
   <div id="fintab-enhe" class="hidden">
-    <div style="background:rgba(240,165,0,0.07);border:1px solid rgba(240,165,0,0.18);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#d4a017">
+    <div style="background:rgba(255,211,110,0.07);border:1px solid rgba(255,211,110,0.18);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11px;color:#cc9a3d">
       ⚠️ Enhe genera margen muy bajo. Cada mes adicional abierto consume tiempo que podría ir al reciclaje de propiedades.
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
@@ -708,7 +718,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <div id="gastos-enhe-wrap"></div>
       </div>
     </div>
-    <div class="chart-card" style="border-color:rgba(240,165,0,0.2)">
+    <div class="chart-card" style="border-color:rgba(255,211,110,0.2)">
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
         <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Ingresos</div><div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--green)" id="enhe-tot-ing">$0</div></div>
         <div><div style="font-size:10px;color:var(--text3);margin-bottom:3px">Egresos</div><div style="font-family:'DM Mono',monospace;font-size:16px;color:var(--red)" id="enhe-tot-eg">$0</div></div>
@@ -828,8 +838,8 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     </div>
   </div>
 
-  <!-- Tabs de vendedores -->
-  <div id="seg-vendedor-tabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;"></div>
+  <!-- Nivel / objetivo de facturación del vendedor seleccionado -->
+  <div id="seg-nivel-vendedor" style="margin-bottom:20px;"></div>
 
   <!-- Vista: Tabla anual -->
   <div id="seg-vista-tabla">
@@ -1476,8 +1486,64 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 // Ganancia que se lleva el vendedor (o Martina en sus propias operaciones)
 function gananciaVendedor(op){
   if(op.comision_vendedor!==undefined && op.comision_vendedor!==null && op.comision_vendedor>0) return op.comision_vendedor;
+  if(op.anio>=2026 && normAgente(op.agente)!=='Martina' && normAgente(op.agente)!=='Kito'){
+    return op.comision * pctVigenteNivel(op.agente, op.anio, op);
+  }
   const pct = COMISIONES[op.agente] || COMISIONES[normAgente(op.agente)] || 0.50;
   return op.comision*pct;
+}
+
+// ── Sistema de niveles por facturación acumulada (vigente desde 2026) ──
+// Vendedores del equipo (sin Martina, sin Kito): 50% hasta $40.000 → 60% hasta $50.000 → 70% en adelante
+// Kito: % fijo (60%), objetivo propio distinto
+const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000 }; // resto: 30000
+const OBJETIVO_EQUIPO_ANUAL = 180000; // suma facturación bruta de todo el equipo, sin Martina
+const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000 }; // resto (sistema del 50%): 34000
+
+function objetivoBaseVendedor(agente){
+  const n = normAgente(agente);
+  return OBJETIVOS_VENDEDOR_BASE[n] !== undefined ? OBJETIVOS_VENDEDOR_BASE[n] : 30000;
+}
+function viajeUmbralVendedor(agente){
+  const n = normAgente(agente);
+  return VIAJE_UMBRAL_ESPECIAL[n] !== undefined ? VIAJE_UMBRAL_ESPECIAL[n] : 34000;
+}
+// Facturación bruta (comisión) cobrada por el vendedor ANTES que la operación actual (mismo año), para saber qué % le tocaba en ese momento
+function facturacionAcumuladaPrevia(agente, anio, operacionActual){
+  const n = normAgente(agente);
+  return operaciones
+    .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada' && o.id!==operacionActual.id)
+    .filter(o=>(o.mes<operacionActual.mes) || (o.mes===operacionActual.mes && (o.id||0)<(operacionActual.id||0)))
+    .reduce((s,o)=>s+(o.comision||0),0);
+}
+function pctVigenteNivel(agente, anio, operacionActual){
+  const previo = facturacionAcumuladaPrevia(agente, anio, operacionActual);
+  if(previo>=50000) return 0.70;
+  if(previo>=40000) return 0.60;
+  return 0.50;
+}
+// Estado actual de nivel/objetivo/viaje de un vendedor en un año (para mostrar en Seguimiento)
+function estadoNivelVendedor(agente, anio){
+  const n = normAgente(agente);
+  const facturacion = operaciones
+    .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada')
+    .reduce((s,o)=>s+(o.comision||0),0);
+  let objetivoActual, pctActual, siguienteNivel;
+  if(n==='Martina'){
+    objetivoActual = 75000; pctActual = COMISIONES['Martina']||0.80; siguienteNivel = null;
+  } else if(n==='Kito'){
+    pctActual = COMISIONES['Kito']||0.60;
+    objetivoActual = facturacion<40000 ? 40000 : null;
+    siguienteNivel = null;
+  } else {
+    if(facturacion>=50000){ objetivoActual=null; pctActual=0.70; siguienteNivel=null; }
+    else if(facturacion>=40000){ objetivoActual=50000; pctActual=0.60; siguienteNivel=0.70; }
+    else if(facturacion>=30000){ objetivoActual=40000; pctActual=0.50; siguienteNivel=0.60; }
+    else { objetivoActual=30000; pctActual=0.50; siguienteNivel=0.60; }
+  }
+  const umbralViaje = viajeUmbralVendedor(n);
+  const viajeGanado = n!=='Martina' && facturacion>=umbralViaje;
+  return {facturacion, objetivoActual, pctActual, siguienteNivel, umbralViaje, viajeGanado};
 }
 // Estacionalidad del rubro inmobiliario: % de la ganancia anual que se genera por trimestre
 const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32]; // Q1, Q2, Q3, Q4 — suman 1.00
@@ -1669,7 +1735,7 @@ function actualizarPctSeg(vendedor, key, rowIdx){
   const totalObj = mesesP.reduce((s,m)=>s+getObj(m,key),0);
   const pct = totalObj>0?Math.min(Math.round(totalReal/totalObj*100),999):0;
   const pctColor = pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
-  const pctBg = pct>=100?'rgba(39,196,122,0.12)':pct>=70?'rgba(240,165,0,0.1)':'rgba(224,85,85,0.1)';
+  const pctBg = pct>=100?'rgba(46,230,184,0.12)':pct>=70?'rgba(255,211,110,0.1)':'rgba(255,77,151,0.1)';
   const cell = document.querySelector('.seg-pct-cell[data-row="'+rowIdx+'"]');
   if(cell){ cell.textContent=pct+'%'; cell.style.color=pctColor; cell.style.background=pctBg; }
 
@@ -1777,7 +1843,7 @@ function renderPanelAlertas() {
       <div style="font-size:11px;color:var(--amber);text-transform:uppercase;margin-bottom:4px">${a.tipo}</div>
       <div style="font-size:12px;color:var(--text2)">${a.msg}</div>
       <div style="display:flex;gap:8px;margin-top:8px">
-        ${a.valorCorrecto!==undefined ? `<button onclick="corregirIncongruencia('${a.id}')" style="font-size:10px;padding:3px 10px;background:rgba(39,196,122,0.15);border:1px solid rgba(39,196,122,0.3);color:var(--green);border-radius:4px;cursor:pointer">✓ Sí, corregir</button>` : ''}
+        ${a.valorCorrecto!==undefined ? `<button onclick="corregirIncongruencia('${a.id}')" style="font-size:10px;padding:3px 10px;background:rgba(46,230,184,0.15);border:1px solid rgba(46,230,184,0.3);color:var(--green);border-radius:4px;cursor:pointer">✓ Sí, corregir</button>` : ''}
         <button onclick="resolverAlerta('${a.id}')" style="font-size:10px;padding:3px 10px;background:var(--card2);border:1px solid rgba(255,255,255,0.1);color:var(--text3);border-radius:4px;cursor:pointer">Ignorar</button>
       </div>
     </div>`).join('');
@@ -2105,12 +2171,25 @@ function renderDashboard(){
   const cantCaidas = ops.filter(o=>o.estado==='Caída').length;
   const montoCaidas = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
 
+  // Objetivo de equipo (facturación bruta anual, sin Martina) — sistema vigente desde 2026
+  const anioObjEquipo = 2026;
+  const factEquipoAnual = operaciones.filter(o=>o.anio===anioObjEquipo && o.estado==='Cobrada' && normAgente(o.agente)!=='Martina').reduce((s,o)=>s+(o.comision||0),0);
+  const pctEquipo = Math.min(100, Math.round(factEquipoAnual/OBJETIVO_EQUIPO_ANUAL*100));
+
   document.getElementById('dash-kpis').innerHTML = `
     <div class="kpi"><div class="kpi-label">Facturado / Cobrado</div><div class="kpi-value gold">${fmtUSD(cobradas)}</div><div class="kpi-sub">${ops.filter(o=>o.estado==='Cobrada').length} operaciones cobradas</div></div>
     <div class="kpi"><div class="kpi-label">Reservas pendientes</div><div class="kpi-value amber">${reservasPendientes}</div><div class="kpi-sub">Ops por cobrar</div></div>
     <div class="kpi"><div class="kpi-label">Captaciones publicadas</div><div class="kpi-value" style="color:var(--blue)">${segCaptTot}</div><div class="kpi-sub">Del seguimiento</div></div>
     <div class="kpi"><div class="kpi-label">Por cobrar</div><div class="kpi-value amber">${fmtUSD(montoPorCobrar)}</div><div class="kpi-sub">${pendientes} operaciones pendientes</div></div>
     <div class="kpi"><div class="kpi-label">Caídas</div><div class="kpi-value red">${cantCaidas}</div><div class="kpi-sub" style="color:var(--red)">${fmtUSD(montoCaidas)} com. bruta perdida</div></div>
+    <div class="kpi" style="border:1px solid rgba(182,162,132,0.3)">
+      <div class="kpi-label">Objetivo equipo ${anioObjEquipo} (sin Martina)</div>
+      <div class="kpi-value gold">${fmtUSD(factEquipoAnual)} <span style="font-size:11px;color:var(--text3)">/ ${fmtUSD(OBJETIVO_EQUIPO_ANUAL)}</span></div>
+      <div style="background:rgba(255,255,255,0.06);border-radius:8px;height:6px;margin-top:6px;overflow:hidden">
+        <div style="height:100%;width:${pctEquipo}%;background:var(--gold)"></div>
+      </div>
+      <div class="kpi-sub" style="margin-top:4px">${pctEquipo}% del objetivo anual</div>
+    </div>
   `;
 
   // Chart facturación mensual
@@ -2122,9 +2201,9 @@ function renderDashboard(){
   charts['chartFacturacion'] = new Chart(document.getElementById('chartFacturacion'),{
     type:'bar',
     data:{labels:mesesLabel,datasets:[
-      {label:'Cobrada',data:factCobrada,backgroundColor:'rgba(39,196,122,0.8)',borderRadius:4},
-      {label:'Por cobrar',data:factPendiente,backgroundColor:'rgba(240,165,0,0.7)',borderRadius:4},
-      {label:'Caída',data:factCaida,backgroundColor:'rgba(224,85,85,0.6)',borderRadius:4}
+      {label:'Cobrada',data:factCobrada,backgroundColor:'rgba(46,230,184,0.8)',borderRadius:4},
+      {label:'Por cobrar',data:factPendiente,backgroundColor:'rgba(255,211,110,0.7)',borderRadius:4},
+      {label:'Caída',data:factCaida,backgroundColor:'rgba(255,77,151,0.6)',borderRadius:4}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11},boxWidth:10}}},
@@ -2138,7 +2217,7 @@ function renderDashboard(){
   destroyChart('chartEstados');
   const cnt = {cobrada:ops.filter(o=>o.estado==='Cobrada').length, cobrar:ops.filter(o=>o.estado==='Por cobrar').length, caida:ops.filter(o=>o.estado==='Caída').length};
   charts['chartEstados'] = new Chart(document.getElementById('chartEstados'),{
-    type:'doughnut', data:{labels:['Cobrada','Por cobrar','Caída'],datasets:[{data:[cnt.cobrada,cnt.cobrar,cnt.caida],backgroundColor:['rgba(39,196,122,0.8)','rgba(240,165,0,0.8)','rgba(224,85,85,0.8)'],borderWidth:0}]},
+    type:'doughnut', data:{labels:['Cobrada','Por cobrar','Caída'],datasets:[{data:[cnt.cobrada,cnt.cobrar,cnt.caida],backgroundColor:['rgba(46,230,184,0.8)','rgba(255,211,110,0.8)','rgba(255,77,151,0.8)'],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#b8b0a4',font:{size:11},padding:12}}}}
   });
 
@@ -2254,18 +2333,33 @@ function renderGanancia(){
 function toggleAgenteDropdown(){
   const dd = document.getElementById('op-agente-dropdown');
   if(!dd) return;
+  document.getElementById('op-estado-dropdown')?.classList.add('hidden');
+  dd.classList.toggle('hidden');
+}
+function toggleEstadoDropdown(){
+  const dd = document.getElementById('op-estado-dropdown');
+  if(!dd) return;
+  document.getElementById('op-agente-dropdown')?.classList.add('hidden');
   dd.classList.toggle('hidden');
 }
 document.addEventListener('click', function(e){
   const dd = document.getElementById('op-agente-dropdown');
   const btn = document.getElementById('op-agente-btn');
-  if(!dd || dd.classList.contains('hidden')) return;
-  if(!dd.contains(e.target) && e.target!==btn && !btn?.contains(e.target)){
+  if(dd && !dd.classList.contains('hidden') && !dd.contains(e.target) && e.target!==btn && !btn?.contains(e.target)){
     dd.classList.add('hidden');
+  }
+  const dd2 = document.getElementById('op-estado-dropdown');
+  const btn2 = document.getElementById('op-estado-btn');
+  if(dd2 && !dd2.classList.contains('hidden') && !dd2.contains(e.target) && e.target!==btn2 && !btn2?.contains(e.target)){
+    dd2.classList.add('hidden');
   }
 });
 function marcarTodosAgentes(val){
   document.querySelectorAll('#op-agente-checks input[type="checkbox"]').forEach(c=>c.checked=val);
+  renderOperaciones();
+}
+function marcarTodosEstados(val){
+  document.querySelectorAll('#op-estado-checks input[type="checkbox"]').forEach(c=>c.checked=val);
   renderOperaciones();
 }
 function actualizarLabelAgentes(seleccionados, total){
@@ -2276,13 +2370,22 @@ function actualizarLabelAgentes(seleccionados, total){
   else if(seleccionados.length===1) lbl.textContent = seleccionados[0];
   else lbl.textContent = `${seleccionados.length} seleccionados`;
 }
+function actualizarLabelEstados(seleccionados, total){
+  const lbl = document.getElementById('op-estado-btn-label');
+  if(!lbl) return;
+  if(seleccionados.length===0) lbl.textContent = 'Ninguno';
+  else if(seleccionados.length===total) lbl.textContent = 'Todos';
+  else lbl.textContent = seleccionados.join(', ');
+}
 
 function renderOperaciones(){
   const mes = document.getElementById('op-mes').value;
   const agenteCheckboxes = document.querySelectorAll('#op-agente-checks input[type="checkbox"]');
   const agentesChecks = Array.from(agenteCheckboxes).filter(c=>c.checked).map(c=>c.value);
   actualizarLabelAgentes(agentesChecks, agenteCheckboxes.length);
-  const estadosChecks = Array.from(document.querySelectorAll('#op-estado-checks input:checked')).map(c=>c.value);
+  const estadoCheckboxes = document.querySelectorAll('#op-estado-checks input[type="checkbox"]');
+  const estadosChecks = Array.from(estadoCheckboxes).filter(c=>c.checked).map(c=>c.value);
+  actualizarLabelEstados(estadosChecks, estadoCheckboxes.length);
   const punta = document.getElementById('op-punta').value;
   const anio = parseInt(document.getElementById('op-anio').value);
 
@@ -2412,8 +2515,8 @@ function renderOperaciones(){
   if(cu) charts['chartOpsUnificado'] = new Chart(cu,{
     type:'bar',
     data:{labels:mesesLabels,datasets:[
-      {label:'Ganancia cobrada',data:vendGanCobMes,backgroundColor:'rgba(39,196,122,0.85)',borderRadius:3},
-      {label:'Ganancia pendiente',data:vendGanPendMes,backgroundColor:'rgba(255,165,62,0.75)',borderRadius:3},
+      {label:'Ganancia cobrada',data:vendGanCobMes,backgroundColor:'rgba(46,230,184,0.85)',borderRadius:3},
+      {label:'Ganancia pendiente',data:vendGanPendMes,backgroundColor:'rgba(255,211,110,0.75)',borderRadius:3},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#b8b0a4',font:{size:10},boxWidth:10}}},
@@ -2460,7 +2563,7 @@ function renderOperaciones(){
       <div class="kpi-value red">${fmtUSD(totalFactCaida)}</div>
       <div class="kpi-sub">Ganancia perdida: ${fmtUSD(totalGanCaido)}</div>
     </div>
-    <div class="kpi" style="flex:1;min-width:120px;border:1px solid rgba(39,196,122,0.3);background:rgba(39,196,122,0.06)">
+    <div class="kpi" style="flex:1;min-width:120px;border:1px solid rgba(46,230,184,0.3);background:rgba(46,230,184,0.06)">
       <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value green">${fmtUSD(Math.round(proyTotal))}</div>
       <div class="kpi-sub">Estacional por trimestre · caída ${Math.round(tasaCaida*100)}%</div>
@@ -2478,7 +2581,7 @@ function renderOperaciones(){
   if(c3) charts['chartOpsProyeccion'] = new Chart(c3,{
     type:'bar',
     data:{labels:mesesLabels,datasets:[
-      {label:'Cobrado real',data:cobData,backgroundColor:'rgba(39,196,122,0.8)',borderRadius:3},
+      {label:'Cobrado real',data:cobData,backgroundColor:'rgba(46,230,184,0.8)',borderRadius:3},
       {label:'Proyección',data:proyData.map((v,i)=>i+1>mesActual?v:0),backgroundColor:'#c9a8d8',borderRadius:3,borderDash:[5,5]}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -2650,9 +2753,9 @@ function renderProyectos() {
     const costoTotal = p.precioCompra + p.presupuestoReciclaje;
     const ganProyect = p.precioVentaEst - costoTotal;
     const roi = Math.round(ganProyect/costoTotal*100);
-    const estadoCls = p.estado==='reciclaje'?'rgba(240,165,0,0.15);color:var(--amber)':p.estado==='venta'?'rgba(74,158,255,0.15);color:var(--blue)':'rgba(39,196,122,0.15);color:var(--green)';
+    const estadoCls = p.estado==='reciclaje'?'rgba(255,211,110,0.15);color:var(--amber)':p.estado==='venta'?'rgba(74,158,255,0.15);color:var(--blue)':'rgba(46,230,184,0.15);color:var(--green)';
     const estadoLabel = p.estado==='reciclaje'?'En reciclaje':p.estado==='venta'?'En venta':'Vendido';
-    return `<div class="proyecto-fin" style="border-color:rgba(240,165,0,0.2)">
+    return `<div class="proyecto-fin" style="border-color:rgba(255,211,110,0.2)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div>
           <div style="font-size:14px;font-weight:700">${p.nombre}</div>
@@ -2672,7 +2775,7 @@ function renderProyectos() {
       <div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden;margin-bottom:12px">
         <div style="height:100%;border-radius:4px;background:var(--amber);width:${Math.min(pct,100)}%"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(39,196,122,0.06);border-radius:8px;border:1px solid rgba(39,196,122,0.15);margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;padding:10px;background:rgba(46,230,184,0.06);border-radius:8px;border:1px solid rgba(46,230,184,0.15);margin-bottom:12px">
         <div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Costo total</div><div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--amber)">${fmtUSD(costoTotal)}</div></div>
         <div style="text-align:center"><div style="font-size:10px;color:var(--text3)">Ganancia proyectada</div><div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--green)">+${fmtUSD(ganProyect)}</div></div>
         <div style="text-align:center"><div style="font-size:10px;color:var(--text3)">ROI estimado</div><div style="font-family:'DM Mono',monospace;font-weight:700;color:var(--green)">${roi}%</div></div>
@@ -2757,7 +2860,7 @@ function renderPatrimonio() {
       <div class="kpi-value gold">${fmtUSD(metaCapital)}</div>
       <div class="kpi-sub">Para rentar $${metaMensual.toLocaleString()}/mes al 6%</div>
     </div>
-    <div class="kpi" style="border-color:rgba(39,196,122,0.2)">
+    <div class="kpi" style="border-color:rgba(46,230,184,0.2)">
       <div class="kpi-label">Progreso</div>
       <div class="kpi-value green">${pctMeta}%</div>
       <div class="kpi-sub">${fmtUSD(metaCapital-totalPatrimonio)} para la meta</div>
@@ -2871,8 +2974,8 @@ function renderHistorico() {
   // Gráfico
   destroyChart('chartHistorico');
   const datasets = [];
-  if(seriesCheck.includes('ing')) datasets.push({label:'Ingresos',data:ingData,borderColor:'rgba(39,196,122,0.9)',backgroundColor:'rgba(39,196,122,0.08)',tension:0.3,fill:false,pointRadius:3});
-  if(seriesCheck.includes('eg')) datasets.push({label:'Egresos',data:egData,borderColor:'rgba(224,85,85,0.8)',backgroundColor:'rgba(224,85,85,0.08)',tension:0.3,fill:false,pointRadius:3});
+  if(seriesCheck.includes('ing')) datasets.push({label:'Ingresos',data:ingData,borderColor:'rgba(46,230,184,0.9)',backgroundColor:'rgba(46,230,184,0.08)',tension:0.3,fill:false,pointRadius:3});
+  if(seriesCheck.includes('eg')) datasets.push({label:'Egresos',data:egData,borderColor:'rgba(255,77,151,0.8)',backgroundColor:'rgba(255,77,151,0.08)',tension:0.3,fill:false,pointRadius:3});
   if(seriesCheck.includes('ahorro')) datasets.push({label:'Ahorro acum.',data:ahorroData,borderColor:'#f0a0c0',backgroundColor:'rgba(240,160,192,0.08)',tension:0.3,fill:true,pointRadius:3});
   if(seriesCheck.includes('patrimonio')) datasets.push({label:'Patrimonio',data:patrimonioData,borderColor:'#c9a8d8',backgroundColor:'rgba(201,168,216,0.08)',tension:0.3,fill:false,pointRadius:3,borderDash:[5,3]});
 
@@ -2975,7 +3078,7 @@ function renderFinanzas(){
 
   if(document.getElementById('fin-alertas')) {
     document.getElementById('fin-alertas').innerHTML = alertas.map(a=>`
-      <div style="display:flex;gap:8px;padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:11px;align-items:flex-start;line-height:1.5;background:${a.tipo==='bad'?'rgba(224,85,85,0.07)':a.tipo==='warn'?'rgba(240,165,0,0.07)':a.tipo==='good'?'rgba(39,196,122,0.07)':'rgba(74,158,255,0.07)'};border:1px solid ${a.tipo==='bad'?'rgba(224,85,85,0.18)':a.tipo==='warn'?'rgba(240,165,0,0.18)':a.tipo==='good'?'rgba(39,196,122,0.18)':'rgba(74,158,255,0.18)'};color:${a.tipo==='bad'?'#e08080':a.tipo==='warn'?'#d4a017':a.tipo==='good'?'#5dba8a':'#7ab3e0'}">
+      <div style="display:flex;gap:8px;padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:11px;align-items:flex-start;line-height:1.5;background:${a.tipo==='bad'?'rgba(255,77,151,0.07)':a.tipo==='warn'?'rgba(255,211,110,0.07)':a.tipo==='good'?'rgba(46,230,184,0.07)':'rgba(74,158,255,0.07)'};border:1px solid ${a.tipo==='bad'?'rgba(255,77,151,0.18)':a.tipo==='warn'?'rgba(255,211,110,0.18)':a.tipo==='good'?'rgba(46,230,184,0.18)':'rgba(74,158,255,0.18)'};color:${a.tipo==='bad'?'#ff6fa8':a.tipo==='warn'?'#cc9a3d':a.tipo==='good'?'#38d9b9':'#7ab3e0'}">
         ${a.tipo==='bad'?'⚠️':a.tipo==='warn'?'📦':a.tipo==='good'?'✅':'💡'} <span>${a.msg}</span>
       </div>`).join('');
   }
@@ -3016,8 +3119,8 @@ function renderFinanzas(){
   if(c) charts['chartFinFlujo'] = new Chart(c,{
     type:'bar',
     data:{labels:MESES_NOMBRES.slice(1),datasets:[
-      {label:'Ingresos',data:ingTotalMes,backgroundColor:'rgba(39,196,122,0.7)',borderRadius:4},
-      {label:'Egresos',data:egTotalMes,backgroundColor:'rgba(224,85,85,0.55)',borderRadius:4},
+      {label:'Ingresos',data:ingTotalMes,backgroundColor:'rgba(46,230,184,0.7)',borderRadius:4},
+      {label:'Egresos',data:egTotalMes,backgroundColor:'rgba(255,77,151,0.55)',borderRadius:4},
     ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#b8b0a4',font:{size:11},boxWidth:10}}},
@@ -3051,9 +3154,50 @@ function renderSeguimiento(){
   };
   const obj = segObjetivos?.[vendedor]?.[1] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
+  const anioSeg = new Date().getFullYear();
+
+  // ── Tarjeta de nivel / objetivo de facturación (sistema vigente desde 2026) ──
+  const nivelCont = document.getElementById('seg-nivel-vendedor');
+  if(nivelCont){
+    const est = estadoNivelVendedor(vendedor, anioSeg);
+    const pctFact = est.objetivoActual ? Math.min(100, Math.round(est.facturacion/est.objetivoActual*100)) : 100;
+    nivelCont.innerHTML = `
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="kpi" style="flex:1;min-width:160px">
+          <div class="kpi-label">Facturación bruta ${anioSeg}</div>
+          <div class="kpi-value" style="color:var(--text)">${fmtUSD(est.facturacion)}</div>
+          <div class="kpi-sub">Comisión vigente: <b style="color:var(--gold2)">${Math.round(est.pctActual*100)}%</b></div>
+        </div>
+        <div class="kpi" style="flex:1;min-width:160px">
+          <div class="kpi-label">Próximo objetivo</div>
+          <div class="kpi-value green">${est.objetivoActual ? fmtUSD(est.objetivoActual) : '¡Nivel máximo!'}</div>
+          <div class="kpi-sub">${est.objetivoActual ? `Faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))} · pasaría a ${Math.round((est.siguienteNivel||est.pctActual)*100)}%` : 'Cobrando el % más alto del sistema'}</div>
+        </div>
+        ${vendedor!=='Martina' ? `
+        <div class="kpi" style="flex:1;min-width:160px;border:1px solid ${est.viajeGanado?'rgba(46,230,184,0.35)':'rgba(255,255,255,0.08)'};background:${est.viajeGanado?'rgba(46,230,184,0.08)':'transparent'}">
+          <div class="kpi-label" style="display:flex;align-items:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.85;flex-shrink:0">
+              <path d="M10.5 3.5 3 12l3 1 2-1.5 1 3.5-1.5 1.5 3 .8L12 21l2-4.2 3-.8-1.5-1.5 1-3.5 2 1.5 3-1-7.5-8.5-1.5-4.5a1 1 0 0 0-1.9 0z" stroke-linejoin="round"/>
+            </svg>
+            Viaje
+          </div>
+          <div class="kpi-value" style="color:${est.viajeGanado?'var(--green)':'var(--text3)'}">${est.viajeGanado?'¡Ganado! 🎉':fmtUSD(est.umbralViaje)}</div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:8px;height:6px;margin-top:8px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100,Math.round(est.facturacion/est.umbralViaje*100))}%;background:var(--green);border-radius:8px"></div>
+          </div>
+          <div class="kpi-sub" style="margin-top:6px">${est.viajeGanado?'Ya superó el umbral':'Faltan '+fmtUSD(Math.max(0,est.umbralViaje-est.facturacion))}</div>
+        </div>` : ''}
+        <div class="kpi" style="flex:1;min-width:160px">
+          <div class="kpi-label">Progreso al objetivo</div>
+          <div style="background:rgba(255,255,255,0.06);border-radius:8px;height:8px;margin-top:8px;overflow:hidden">
+            <div style="height:100%;width:${pctFact}%;background:var(--gold);border-radius:8px"></div>
+          </div>
+          <div class="kpi-sub" style="margin-top:6px">${pctFact}%</div>
+        </div>
+      </div>`;
+  }
 
   // Merge datos reales + manuales + de operaciones cargadas
-  const anioSeg = new Date().getFullYear();
   const getMd = m2 => getSegMes(vendedor, m2, anioSeg);
 
   // ── Tabla anual ──
@@ -3079,7 +3223,7 @@ function renderSeguimiento(){
     const totalObj = mesesProcesados.reduce((s,m)=>s+getObj(m,key),0);
     const pctAcum = totalObj>0 ? Math.round(totalReal/totalObj*100) : 0;
     const pctColor = pctAcum>=100?'var(--green)':pctAcum>=70?'var(--amber)':'var(--red)';
-    const pctBg = pctAcum>=100?'rgba(39,196,122,0.12)':pctAcum>=70?'rgba(240,165,0,0.10)':'rgba(224,85,85,0.10)';
+    const pctBg = pctAcum>=100?'rgba(46,230,184,0.12)':pctAcum>=70?'rgba(255,211,110,0.10)':'rgba(255,77,151,0.10)';
 
     tableHTML += `<tr>`;
     tableHTML += `<td style="padding:7px 10px;font-size:12px;color:var(--text);font-weight:500;border-bottom:1px solid rgba(255,255,255,0.04);position:sticky;left:0;background:var(--card)">${met}</td>`;
@@ -3089,7 +3233,7 @@ function renderSeguimiento(){
       const real = d[key] ?? null;
       const objVm = getObj(m,key);
       const cumple = real !== null && objVm > 0 && real >= objVm;
-      const bgColor = real===null?'transparent':(cumple?'rgba(39,196,122,0.15)':'rgba(224,85,85,0.13)');
+      const bgColor = real===null?'transparent':(cumple?'rgba(46,230,184,0.15)':'rgba(255,77,151,0.13)');
       const textColor = real===null?'var(--text3)':(cumple?'var(--green)':'var(--red)');
       tableHTML += `<td contenteditable="true"
         class="seg-cell seg-cell-obj" data-row="${rowIdx}" data-col="${m}" data-tipo="obj" data-vendedor="${vendedor}" data-key="${key}"
@@ -3114,21 +3258,23 @@ function renderSeguimiento(){
   const totCap = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
   const totVen = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
   const totFac = allM.reduce((s,m)=>s+(getMd(m).f||0),0);
-  const mesesConDatos = allM.length||1;
-  const promMens = totFac/mesesConDatos;
-  const factorEst=[0.8,0.85,1.1,1.2,1.15,1.0,0.75,0.8,1.05,1.1,1.15,0.9];
-  let proyAnual=totFac;
-  for(let mm=mesActual+1;mm<=12;mm++) proyAnual+=promMens*factorEst[mm-1];
+  // Proyección de FACTURACIÓN BRUTA del vendedor seleccionado (no ganancia de Martina) — misma estacionalidad trimestral que Operaciones
+  let pesoTranscurridoSeg = 0;
+  for(let mm=1; mm<=mesActual; mm++) pesoTranscurridoSeg += pesoMensual(mm);
+  const estimadoAnualFact = pesoTranscurridoSeg>0 ? totFac/pesoTranscurridoSeg : 0;
+  let proyFuturaFact = 0;
+  for(let mm=mesActual+1; mm<=12; mm++) proyFuturaFact += estimadoAnualFact*pesoMensual(mm);
+  const proyAnual = totFac + proyFuturaFact;
 
   const totalesEl = document.getElementById('seg-totales');
   if(totalesEl) totalesEl.innerHTML = `
     <div class="kpi" style="flex:1"><div class="kpi-label">Captaciones año</div><div class="kpi-value gold">${totCap}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ventas año</div><div class="kpi-value green">${totVen}</div></div>
-    <div class="kpi" style="flex:1"><div class="kpi-label">Facturación año</div><div class="kpi-value amber">${fmtUSD(totFac)}</div></div>
+    <div class="kpi" style="flex:1"><div class="kpi-label">Facturación bruta año</div><div class="kpi-value amber">${fmtUSD(totFac)}</div></div>
     <div class="kpi" style="flex:1;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
       <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
-      <div class="kpi-sub">Est. estacionalidad inmob.</div>
+      <div class="kpi-sub">Estacional por trimestre (20/22,5/25,5/32%)</div>
     </div>`;
 
   // ── Gráfico embudo ──
@@ -3167,13 +3313,7 @@ function renderSeguimiento(){
   loadFoda(vendedor);
 
 
-  // ── Selector de vendedores ──
-  const vtabs = document.getElementById('seg-vendedor-tabs');
-  if(vtabs) vtabs.innerHTML = VENDEDORES_SEG.map(v=>`
-    <button onclick="verificarPendientesAntesDe(()=>{segVendedorActivo='${v}';renderSeguimiento()})"
-      class="btn btn-sm" style="${v===vendedor?'background:var(--gold);color:var(--navy3)':'background:var(--card2);color:var(--text2);border:1px solid rgba(255,255,255,0.08)'}">${v}</button>
-  `).join('');
-  // Sincronizar select con botón activo
+  // ── Sincronizar select con vendedor activo ──
   const selEl = document.getElementById('seg-vendedor-sel');
   if(selEl && selEl.value !== vendedor) selEl.value = vendedor;
   }catch(err){
@@ -3298,15 +3438,15 @@ function renderAnalisisVendedor(vendedor, analisis){
         <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📊 Diagnóstico</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.diagnostico||'').replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.22);border-radius:var(--radius2);padding:16px">
+      <div style="background:rgba(255,211,110,0.08);border:1px solid rgba(255,211,110,0.22);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🔍 Causa raíz</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.causa||'').replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="background:rgba(39,196,122,0.08);border:1px solid rgba(39,196,122,0.25);border-radius:var(--radius2);padding:16px">
+      <div style="background:rgba(46,230,184,0.08);border:1px solid rgba(46,230,184,0.25);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">✅ Acción inmediata</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.accion||'').replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.22);border-radius:var(--radius2);padding:16px">
+      <div style="background:rgba(255,77,151,0.08);border:1px solid rgba(255,77,151,0.22);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">⚠️ Señal de alerta</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.alerta||'').replace(/\n/g,'<br>')}</div>
       </div>
@@ -3443,15 +3583,15 @@ function renderAnalisisEquipo(analisis){
         <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">📊 Estado general</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.estado||'').replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="background:rgba(39,196,122,0.08);border:1px solid rgba(39,196,122,0.25);border-radius:var(--radius2);padding:16px">
+      <div style="background:rgba(46,230,184,0.08);border:1px solid rgba(46,230,184,0.25);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">✅ Seguir haciendo</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.seguir||'').replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="background:rgba(240,165,0,0.08);border:1px solid rgba(240,165,0,0.22);border-radius:var(--radius2);padding:16px">
+      <div style="background:rgba(255,211,110,0.08);border:1px solid rgba(255,211,110,0.22);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🔄 Cambiar</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.cambiar||'').replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="background:rgba(224,85,85,0.08);border:1px solid rgba(224,85,85,0.22);border-radius:var(--radius2);padding:16px">
+      <div style="background:rgba(255,77,151,0.08);border:1px solid rgba(255,77,151,0.22);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">👤 Por vendedor</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.porVendedor||'').replace(/\n/g,'<br>')}</div>
       </div>
@@ -4242,7 +4382,7 @@ function showToast(msg, type='green'){
   t.textContent = msg;
   t.style.cssText = `position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;
     background:${type==='amber'?'var(--amberbg)':'var(--greenbg)'};
-    border:1px solid ${type==='amber'?'rgba(240,165,0,0.3)':'rgba(39,196,122,0.3)'};
+    border:1px solid ${type==='amber'?'rgba(255,211,110,0.3)':'rgba(46,230,184,0.3)'};
     color:${type==='amber'?'var(--amber)':'var(--green)'};
     font-size:13px;font-weight:600;z-index:9999;transition:opacity .3s;`;
   document.body.appendChild(t);
