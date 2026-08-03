@@ -102,6 +102,11 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 
 /* ── TABLE ── */
 .table-wrap{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+*{scrollbar-width:thin;scrollbar-color:var(--gold3) var(--bg2);}
+*::-webkit-scrollbar{height:9px;width:9px;}
+*::-webkit-scrollbar-track{background:var(--bg2);border-radius:6px;}
+*::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:6px;}
+*::-webkit-scrollbar-thumb:hover{background:var(--gold);}
 table{width:100%;border-collapse:collapse;}
 th{background:var(--bg3);padding:11px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid rgba(255,255,255,0.06);}
 td{padding:11px 14px;font-size:13px;color:var(--text2);border-bottom:1px solid rgba(255,255,255,0.04);}
@@ -3161,17 +3166,18 @@ function renderSeguimiento(){
   if(nivelCont){
     const est = estadoNivelVendedor(vendedor, anioSeg);
     const pctFact = est.objetivoActual ? Math.min(100, Math.round(est.facturacion/est.objetivoActual*100)) : 100;
+    const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
     nivelCont.innerHTML = `
       <div style="display:flex;gap:12px;flex-wrap:wrap">
         <div class="kpi" style="flex:1;min-width:160px">
           <div class="kpi-label">Facturación bruta ${anioSeg}</div>
           <div class="kpi-value" style="color:var(--text)">${fmtUSD(est.facturacion)}</div>
-          <div class="kpi-sub">Comisión vigente: <b style="color:var(--gold2)">${Math.round(est.pctActual*100)}%</b></div>
+          <div class="kpi-sub">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
         </div>
         <div class="kpi" style="flex:1;min-width:160px">
           <div class="kpi-label">Próximo objetivo</div>
           <div class="kpi-value green">${est.objetivoActual ? fmtUSD(est.objetivoActual) : '¡Nivel máximo!'}</div>
-          <div class="kpi-sub">${est.objetivoActual ? `Faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))} · pasaría a ${Math.round((est.siguienteNivel||est.pctActual)*100)}%` : 'Cobrando el % más alto del sistema'}</div>
+          <div class="kpi-sub">${est.objetivoActual ? `Faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}` : 'Nivel máximo alcanzado'}</div>
         </div>
         ${vendedor!=='Martina' ? `
         <div class="kpi" style="flex:1;min-width:160px;border:1px solid ${est.viajeGanado?'rgba(46,230,184,0.35)':'rgba(255,255,255,0.08)'};background:${est.viajeGanado?'rgba(46,230,184,0.08)':'transparent'}">
@@ -3258,6 +3264,7 @@ function renderSeguimiento(){
   const totCap = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
   const totVen = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
   const totFac = allM.reduce((s,m)=>s+(getMd(m).f||0),0);
+  const totGananciaVendedor = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Cobrada').reduce((s,o)=>s+gananciaVendedor(o),0);
   // Proyección de FACTURACIÓN BRUTA del vendedor seleccionado (no ganancia de Martina) — misma estacionalidad trimestral que Operaciones
   let pesoTranscurridoSeg = 0;
   for(let mm=1; mm<=mesActual; mm++) pesoTranscurridoSeg += pesoMensual(mm);
@@ -3270,42 +3277,70 @@ function renderSeguimiento(){
   if(totalesEl) totalesEl.innerHTML = `
     <div class="kpi" style="flex:1"><div class="kpi-label">Captaciones año</div><div class="kpi-value gold">${totCap}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ventas año</div><div class="kpi-value green">${totVen}</div></div>
-    <div class="kpi" style="flex:1"><div class="kpi-label">Facturación bruta año</div><div class="kpi-value amber">${fmtUSD(totFac)}</div></div>
+    <div class="kpi" style="flex:1"><div class="kpi-label">Ganancia del vendedor</div><div class="kpi-value amber">${fmtUSD(totGananciaVendedor)}</div></div>
     <div class="kpi" style="flex:1;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
       <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
       <div class="kpi-sub">Estacional por trimestre (20/22,5/25,5/32%)</div>
     </div>`;
 
-  // ── Gráfico embudo ──
-  // ── Embudo visual ──
-  const embudoKeys = ['p','ec','acm','cp','m','r','v'];
-  const embudoLabels = ['Prospección','Entrevistas captación','ACM','Captaciones','Muestras','Reservas','Ventas'];
-  const embudoColors = ['#f9e04b','#f9b8a0','#f0a0c0','#c9a8d8','#a0c4e8','#80d4e0','#4cc9b0'];
-  const embudoVals = embudoKeys.map(k=>allM.reduce((s,m)=>s+(getMd(m)[k]||0),0));
-  const maxVal = embudoVals[0] || 1;
+  // ── Gráficos de embudo (forma real, dos embudos lado a lado) ──
+  function renderFunnelSVG(labels, values, colors, width, segH){
+    const maxVal = Math.max(values[0]||1, 1);
+    const n = values.length;
+    const height = n*segH;
+    const widthFor = v => Math.max(width*0.22, width * Math.min(1, v/maxVal));
+    let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" style="display:block;margin:0 auto">`;
+    for(let i=0;i<n;i++){
+      const topW = widthFor(values[i]);
+      const botW = i<n-1 ? widthFor(values[i+1]) : widthFor(values[i])*0.82;
+      const y0 = i*segH, y1 = y0+segH-5;
+      const xTop0 = (width-topW)/2, xTop1 = xTop0+topW;
+      const xBot0 = (width-botW)/2, xBot1 = xBot0+botW;
+      svg += `<polygon points="${xTop0},${y0} ${xTop1},${y0} ${xBot1},${y1} ${xBot0},${y1}" fill="${colors[i]}" opacity="0.93"/>`;
+      svg += `<text x="${width/2}" y="${(y0+y1)/2-3}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1a1a1a">${labels[i]}</text>`;
+      svg += `<text x="${width/2}" y="${(y0+y1)/2+11}" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">${values[i]}</text>`;
+    }
+    svg += `</svg>`;
+    return svg;
+  }
+  function renderConversiones(labels, values){
+    let html = '';
+    for(let i=1;i<values.length;i++){
+      const conv = values[i-1]>0 ? Math.round(values[i]/values[i-1]*100) : null;
+      html += `<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);padding:2px 6px">
+        <span>${labels[i-1]} → ${labels[i]}</span>
+        <span style="color:${conv===null?'var(--text3)':conv>=50?'var(--green)':conv>=25?'var(--amber)':'var(--red)'};font-weight:700">${conv===null?'—':conv+'%'}</span>
+      </div>`;
+    }
+    return html;
+  }
+
+  const funnel1Keys = ['p','ec','acm','cp'];
+  const funnel1Labels = ['Prospección','Entrevista','ACM','Captación'];
+  const funnel1Colors = ['#f9e04b','#f9b8a0','#f0a0c0','#c9a8d8'];
+  const funnel1Vals = funnel1Keys.map(k=>allM.reduce((s,m)=>s+(getMd(m)[k]||0),0));
+
+  const funnel2Keys = ['m','r','v'];
+  const funnel2Labels = ['Muestras','Reservas','Ventas'];
+  const funnel2Colors = ['#a0c4e8','#80d4e0','#4cc9b0'];
+  const funnel2Vals = funnel2Keys.map(k=>allM.reduce((s,m)=>s+(getMd(m)[k]||0),0));
 
   const funnelEl = document.getElementById('embudo-funnel');
-  if(funnelEl) {
-    funnelEl.innerHTML = embudoVals.map((val,i)=>{
-      const pct = Math.round(val/maxVal*100);
-      const conv = i>0 && embudoVals[i-1]>0 ? Math.round(val/embudoVals[i-1]*100) : null;
-      const barW = Math.max(pct, 8);
-      return `
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <div style="width:120px;font-size:11px;color:var(--text2);text-align:right;flex-shrink:0">${embudoLabels[i]}</div>
-          <div style="flex:1;position:relative">
-            <div style="height:28px;background:var(--bg3);border-radius:4px;overflow:hidden">
-              <div style="height:100%;width:${barW}%;background:${embudoColors[i]};border-radius:4px;display:flex;align-items:center;padding-left:8px;transition:width .4s">
-                <span style="font-size:12px;font-weight:700;color:#1a1a1a;white-space:nowrap">${val}</span>
-              </div>
-            </div>
-          </div>
-          <div style="width:60px;font-size:10px;flex-shrink:0;text-align:right">
-            ${conv!==null ? `<span style="color:${conv>=50?'var(--green)':conv>=25?'var(--amber)':'var(--red)'}">${conv}% conv.</span>` : '<span style="color:var(--text3)">—</span>'}
-          </div>
-        </div>`;
-    }).join('');
+  if(funnelEl){
+    funnelEl.innerHTML = `
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="flex:1;min-width:220px;max-width:280px">
+          <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Prospección → Captación</div>
+          ${renderFunnelSVG(funnel1Labels, funnel1Vals, funnel1Colors, 260, 54)}
+          <div style="margin-top:10px">${renderConversiones(funnel1Labels, funnel1Vals)}</div>
+        </div>
+        <div style="flex:1;min-width:220px;max-width:280px">
+          <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Muestras → Ventas</div>
+          ${renderFunnelSVG(funnel2Labels, funnel2Vals, funnel2Colors, 260, 54)}
+          <div style="margin-top:10px">${renderConversiones(funnel2Labels, funnel2Vals)}</div>
+        </div>
+      </div>`;
   }
 
   // ── Análisis IA ──
