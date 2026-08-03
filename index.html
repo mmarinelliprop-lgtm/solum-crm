@@ -856,16 +856,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap" id="seg-totales"></div>
 
     <!-- Gráfico embudo -->
-    <div class="chart-card" style="margin-bottom:20px">
-      <div class="chart-title">Embudo de conversión anual</div>
-      <div id="embudo-funnel" style="padding:12px 0"></div>
-    </div>
-
-    <!-- Análisis IA -->
-    <div id="seg-analisis" style="background:var(--card2);border-radius:var(--radius2);padding:20px;border:1px solid rgba(255,255,255,0.06);margin-bottom:24px">
-      <div style="font-size:13px;font-weight:600;color:var(--gold2);margin-bottom:10px">📊 Análisis de conversión</div>
-      <div id="seg-analisis-texto" style="font-size:12px;color:var(--text2);line-height:1.7"></div>
-    </div>
+    <div id="embudo-funnel" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px"></div>
 
     <!-- Análisis de Inteligencia Empresarial -->
     <div style="margin-bottom:24px">
@@ -3328,23 +3319,26 @@ function renderSeguimiento(){
 
   const funnelEl = document.getElementById('embudo-funnel');
   if(funnelEl){
-    funnelEl.innerHTML = `
-      <div style="display:flex;gap:24px;flex-wrap:wrap">
-        <div style="flex:1;min-width:220px;max-width:280px">
-          <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Prospección → Captación</div>
-          ${renderFunnelSVG(funnel1Labels, funnel1Vals, funnel1Colors, 260, 54)}
-          <div style="margin-top:10px">${renderConversiones(funnel1Labels, funnel1Vals)}</div>
-        </div>
-        <div style="flex:1;min-width:220px;max-width:280px">
-          <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px">Muestras → Ventas</div>
-          ${renderFunnelSVG(funnel2Labels, funnel2Vals, funnel2Colors, 260, 54)}
-          <div style="margin-top:10px">${renderConversiones(funnel2Labels, funnel2Vals)}</div>
+    const card1 = `
+      <div class="chart-card" style="flex:1;min-width:340px">
+        <div class="chart-title">Prospección → Captación</div>
+        <div style="display:flex;align-items:center">
+          <div style="flex:1;text-align:center">${renderFunnelSVG(funnel1Labels, funnel1Vals, funnel1Colors, 210, 58)}</div>
+          <div style="width:150px;flex-shrink:0">${renderConversiones(funnel1Labels, funnel1Vals)}</div>
         </div>
       </div>`;
+    const card2 = `
+      <div class="chart-card" style="flex:1;min-width:340px">
+        <div class="chart-title">Muestras → Ventas</div>
+        <div style="display:flex;align-items:center">
+          <div style="flex:1;text-align:center">${renderFunnelSVG(funnel2Labels, funnel2Vals, funnel2Colors, 210, 58)}</div>
+          <div style="width:150px;flex-shrink:0">${renderConversiones(funnel2Labels, funnel2Vals)}</div>
+        </div>
+      </div>`;
+    funnelEl.innerHTML = card1 + card2;
   }
 
   // ── Análisis IA ──
-  analizarConversion(vendedor, getMd, allM, obj);
   loadFoda(vendedor);
 
 
