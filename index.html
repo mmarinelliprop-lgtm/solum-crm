@@ -332,6 +332,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       </select>
       <select class="filter-select" id="dash-anio" onchange="renderDashboard()">
         <option value="2026" selected>2026</option><option value="2025">2025</option>
+        <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
     </div>
   </div>
@@ -374,6 +375,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       </select>
       <select class="filter-select" id="gan-anio" onchange="renderGanancia()">
         <option value="2026" selected>2026</option><option value="2025">2025</option>
+        <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
       <select class="filter-select" id="gan-agente" onchange="renderGanancia()">
         <option value="all">Todos los agentes</option>
@@ -437,30 +439,40 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dic</option>
       </select>
     </div>
-    <div>
+    <div style="position:relative">
       <span class="filter-label">Vendedor</span>
-      <div style="display:flex;gap:4px;flex-wrap:wrap" id="op-agente-checks">
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Martina" checked onchange="renderOperaciones()" style="cursor:pointer"> Martina
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Vicky" checked onchange="renderOperaciones()" style="cursor:pointer"> Vicky
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Manu" checked onchange="renderOperaciones()" style="cursor:pointer"> Manu
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Marce" checked onchange="renderOperaciones()" style="cursor:pointer"> Marce
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Kito" checked onchange="renderOperaciones()" style="cursor:pointer"> Kito
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Cris" checked onchange="renderOperaciones()" style="cursor:pointer"> Cris
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2);cursor:pointer;background:var(--card2);padding:4px 8px;border-radius:6px">
-          <input type="checkbox" value="Ceci" checked onchange="renderOperaciones()" style="cursor:pointer"> Ceci
-        </label>
+      <button type="button" id="op-agente-btn" onclick="toggleAgenteDropdown()"
+        style="display:flex;align-items:center;gap:6px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);font-size:12px;padding:7px 10px;border-radius:8px;cursor:pointer;min-width:150px;justify-content:space-between">
+        <span id="op-agente-btn-label">Todos</span><span style="font-size:9px;opacity:.7">▼</span>
+      </button>
+      <div id="op-agente-dropdown" class="hidden" style="position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;min-width:190px;padding:8px">
+        <div style="display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08)">
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosAgentes(true)">Seleccionar todos</button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosAgentes(false)">Deseleccionar</button>
+        </div>
+        <div id="op-agente-checks" style="display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Martina" checked onchange="renderOperaciones()" style="cursor:pointer"> Martina
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Vicky" checked onchange="renderOperaciones()" style="cursor:pointer"> Vicky
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Manu" checked onchange="renderOperaciones()" style="cursor:pointer"> Manu
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Marce" checked onchange="renderOperaciones()" style="cursor:pointer"> Marce
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Kito" checked onchange="renderOperaciones()" style="cursor:pointer"> Kito
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Cris" checked onchange="renderOperaciones()" style="cursor:pointer"> Cris
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Ceci" checked onchange="renderOperaciones()" style="cursor:pointer"> Ceci
+          </label>
+        </div>
       </div>
     </div>
     <div>
@@ -489,6 +501,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
       <span class="filter-label">Año</span>
       <select class="filter-select" id="op-anio" onchange="renderOperaciones()">
         <option value="2026">2026</option><option value="2025">2025</option>
+        <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
     </div>
   </div>
@@ -2238,16 +2251,45 @@ function renderGanancia(){
 // ═══════════════════════════════════════════════
 // TAB 3: OPERACIONES
 // ═══════════════════════════════════════════════
+function toggleAgenteDropdown(){
+  const dd = document.getElementById('op-agente-dropdown');
+  if(!dd) return;
+  dd.classList.toggle('hidden');
+}
+document.addEventListener('click', function(e){
+  const dd = document.getElementById('op-agente-dropdown');
+  const btn = document.getElementById('op-agente-btn');
+  if(!dd || dd.classList.contains('hidden')) return;
+  if(!dd.contains(e.target) && e.target!==btn && !btn?.contains(e.target)){
+    dd.classList.add('hidden');
+  }
+});
+function marcarTodosAgentes(val){
+  document.querySelectorAll('#op-agente-checks input[type="checkbox"]').forEach(c=>c.checked=val);
+  renderOperaciones();
+}
+function actualizarLabelAgentes(seleccionados, total){
+  const lbl = document.getElementById('op-agente-btn-label');
+  if(!lbl) return;
+  if(seleccionados.length===0) lbl.textContent = 'Ninguno';
+  else if(seleccionados.length===total) lbl.textContent = 'Todos';
+  else if(seleccionados.length===1) lbl.textContent = seleccionados[0];
+  else lbl.textContent = `${seleccionados.length} seleccionados`;
+}
+
 function renderOperaciones(){
   const mes = document.getElementById('op-mes').value;
-  const agentesChecks = Array.from(document.querySelectorAll('#op-agente-checks input:checked')).map(c=>c.value);
+  const agenteCheckboxes = document.querySelectorAll('#op-agente-checks input[type="checkbox"]');
+  const agentesChecks = Array.from(agenteCheckboxes).filter(c=>c.checked).map(c=>c.value);
+  actualizarLabelAgentes(agentesChecks, agenteCheckboxes.length);
   const estadosChecks = Array.from(document.querySelectorAll('#op-estado-checks input:checked')).map(c=>c.value);
   const punta = document.getElementById('op-punta').value;
   const anio = parseInt(document.getElementById('op-anio').value);
 
   let ops = operaciones.filter(o=>o.anio===anio);
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
-  if(agentesChecks.length>0 && agentesChecks.length<7) ops = ops.filter(o=>agentesChecks.includes(normAgente(o.agente)));
+  if(agentesChecks.length>0 && agentesChecks.length<agenteCheckboxes.length) ops = ops.filter(o=>agentesChecks.includes(normAgente(o.agente)));
+  else if(agentesChecks.length===0) ops = [];
   if(estadosChecks.length>0) ops = ops.filter(o=>estadosChecks.includes(o.estado));
   if(punta!=='all') ops = ops.filter(o=>o.punta===punta);
 
@@ -2357,7 +2399,8 @@ function renderOperaciones(){
 
   // Mi ganancia cobrada y pendiente por mes (sobre todas las ops del año que matchean el/los vendedor/es filtrado/s)
   let opsAnio = operaciones.filter(o=>o.anio===anioFiltro);
-  if(agentesChecks.length>0 && agentesChecks.length<7) opsAnio = opsAnio.filter(o=>agentesChecks.includes(normAgente(o.agente)));
+  if(agentesChecks.length>0 && agentesChecks.length<agenteCheckboxes.length) opsAnio = opsAnio.filter(o=>agentesChecks.includes(normAgente(o.agente)));
+  else if(agentesChecks.length===0) opsAnio = [];
   const vendGanCobMes = mesesLabels.map((_,i)=>
     opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+gananciaVendedor(o),0));
   const vendGanPendMes = mesesLabels.map((_,i)=>
