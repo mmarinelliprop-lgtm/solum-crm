@@ -3044,13 +3044,14 @@ function renderSeguimiento(){
     for(let m=1; m<=12; m++){
       const d = getMd(m);
       const real = d[key] ?? null;
-      const cumple = real !== null && objV > 0 && real >= objV;
+      const objVm = getObj(m,key);
+      const cumple = real !== null && objVm > 0 && real >= objVm;
       const bgColor = real===null?'transparent':(cumple?'rgba(39,196,122,0.15)':'rgba(224,85,85,0.13)');
       const textColor = real===null?'var(--text3)':(cumple?'var(--green)':'var(--red)');
       tableHTML += `<td contenteditable="true"
         class="seg-cell seg-cell-obj" data-row="${rowIdx}" data-col="${m}" data-tipo="obj" data-vendedor="${vendedor}" data-key="${key}"
         style="width:56px;min-width:56px;max-width:56px;padding:5px 2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--text3);cursor:text;outline:none;white-space:nowrap;overflow:hidden"
-        title="Objetivo — click para editar">${objV !== undefined && objV !== null ? objV : ''}</td>`;
+        title="Objetivo — click para editar">${objVm !== undefined && objVm !== null ? objVm : ''}</td>`;
       tableHTML += `<td contenteditable="true"
         class="seg-cell seg-cell-real" data-row="${rowIdx}" data-col="${m}" data-tipo="real" data-vendedor="${vendedor}" data-key="${key}"
         style="width:56px;min-width:56px;max-width:56px;padding:5px 2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);background:${bgColor};font-size:12px;font-weight:700;color:${textColor};cursor:text;outline:none;white-space:nowrap;overflow:hidden">${real !== null ? real : ''}</td>`;
