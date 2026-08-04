@@ -1,4 +1,4 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzk0b6PbEpncIzixJLm_0bHxUrF7DrwdtGpTSV37RzY-vx65oCw6cwj6ZitC3pXRCRd/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWaMzBlijjEp43oe6zqc630x-S-uX9aXdpNWEHZRNef8tZ4x_MSVHPOwSJaE2jMeU8lw/exec';
 
 exports.handler = async function(event) {
   const headers = {
@@ -16,6 +16,15 @@ exports.handler = async function(event) {
 
     if (body.accion === 'calendar') {
       url += '?accion=calendar';
+    } else if (body.accion === 'planilla' || body.accion === 'guardar_lote' || body.accion === 'guardar' || body.accion === 'actualizar') {
+      // Escrituras van por POST directo
+      const response = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+      const text = await response.text();
+      return { statusCode: 200, headers, body: text };
     } else if (body.accion === 'leer') {
       url += `?tipo=${encodeURIComponent(body.tipo)}&accion=leer`;
     } else {
