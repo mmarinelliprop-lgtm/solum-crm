@@ -1,19 +1,21 @@
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWaMzBlijjEp43oe6zqc630x-S-uX9aXdpNWEHZRNef8tZ4x_MSVHPOwSJaE2jMeU8lw/exec';
 
+Sheets · JS
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyWaMzBlijjEp43oe6zqc630x-S-uX9aXdpNWEHZRNef8tZ4x_MSVHPOwSJaE2jMeU8lw/exec';
+ 
 exports.handler = async function(event) {
   const headers = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*'
   };
-
+ 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
-
+ 
   try {
     const body = JSON.parse(event.body || '{}');
     let url = APPS_SCRIPT_URL;
-
+ 
     if (body.accion === 'calendar') {
       url += '?accion=calendar';
     } else if (body.accion === 'planilla' || body.accion === 'guardar_lote' || body.accion === 'guardar' || body.accion === 'actualizar') {
@@ -30,12 +32,12 @@ exports.handler = async function(event) {
     } else {
       url += `?tipo=${encodeURIComponent(body.tipo)}&accion=${encodeURIComponent(body.accion)}&data=${encodeURIComponent(JSON.stringify(body))}`;
     }
-
+ 
     const response = await fetch(url);
     const text = await response.text();
-
+ 
     return { statusCode: 200, headers, body: text };
-
+ 
   } catch (err) {
     return {
       statusCode: 500,
@@ -44,3 +46,4 @@ exports.handler = async function(event) {
     };
   }
 };
+ 
