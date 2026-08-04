@@ -1234,7 +1234,10 @@ async function cargarDatosDB() {
         const vendedor=r[1], mes=parseInt(r[2]), semIdx=parseInt(r[3]), key=r[4], val=parseFloat(r[5])||0;
         if(!segData[vendedor]) segData[vendedor]={};
         if(!segData[vendedor][mes]) segData[vendedor][mes]={};
-        if(!segData[vendedor][mes].semanas) segData[vendedor][mes].semanas=[{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}}];
+        if(!segData[vendedor][mes].semanas) segData[vendedor][mes].semanas=[];
+        while(segData[vendedor][mes].semanas.length <= semIdx){
+          segData[vendedor][mes].semanas.push({fecha:'',vals:{}});
+        }
         if(key==='fecha') segData[vendedor][mes].semanas[semIdx].fecha = val;
         else segData[vendedor][mes].semanas[semIdx].vals[key] = val;
       });
@@ -1381,12 +1384,16 @@ function setSegVal(vendedor, mes, metKey, val){
   segData[vendedor][mes][metKey] = val;
 }
 function getSemanas(vendedor, mes){
-  return segData?.[vendedor]?.[mes]?.semanas || [{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}}];
+  return segData?.[vendedor]?.[mes]?.semanas || [{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}}];
 }
 function setSemana(vendedor, mes, idx, key, val){
   if(!segData[vendedor]) segData[vendedor]={};
   if(!segData[vendedor][mes]) segData[vendedor][mes]={};
-  if(!segData[vendedor][mes].semanas) segData[vendedor][mes].semanas=[{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}},{fecha:'',vals:{}}];
+  if(!segData[vendedor][mes].semanas) segData[vendedor][mes].semanas=[];
+  // Extender el array a la cantidad de semanas que haga falta (algunos meses tienen 5, no solo 4)
+  while(segData[vendedor][mes].semanas.length <= idx){
+    segData[vendedor][mes].semanas.push({fecha:'',vals:{}});
+  }
   if(key==='fecha'){
     segData[vendedor][mes].semanas[idx].fecha=val;
     // Si la fecha indica un mes diferente, advertir
@@ -3437,6 +3444,7 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
         model:'claude-sonnet-4-6',
         max_tokens:1200,
         system:`Sos un consultor experto en inteligencia comercial y generación de cartera para inmobiliarias del mercado argentino (Rosario/Cañada de Gómez). Analizás el desempeño de un asesor inmobiliario combinando datos duros (métricas de actividad) con las respuestas cualitativas del propio vendedor y de su jefa.
+Criterio importante: la prospección no siempre tiene una relación directa con la captación. Parte de la prospección es indirecta — busca instalar al vendedor en el "top of mind" de la gente (redes, contacto recurrente, presencia) — y no necesariamente se traduce en una captación o venta inmediata. No trates una prospección alta con captación baja como automáticamente "ineficaz"; consideralo un resultado esperable de la prospección indirecta, salvo que el patrón se sostenga muchos meses sin ningún resultado.
 Generá un diagnóstico profesional, directo y accionable. Estructura en 4 bloques cortos (2-4 líneas cada uno), sin markdown ni bullets, texto plano con saltos de línea:
 1. DIAGNÓSTICO: cómo viene realmente el vendedor combinando números + percepción
 2. CAUSA RAÍZ: por qué está pasando esto (no solo qué)
@@ -3581,6 +3589,7 @@ async function generarAnalisisEquipoFinal(preguntas, respuestas, resumenEquipo){
         model:'claude-sonnet-4-6',
         max_tokens:1500,
         system:`Sos consultor experto en RRHH, administración de empresas e inteligencia comercial para inmobiliarias argentinas. Analizás el desempeño de un equipo de ventas combinando datos duros con la visión de la dueña.
+Criterio importante: la prospección no siempre tiene una relación directa con la captación. Parte es indirecta — instala al vendedor en el "top of mind" de la gente — y no necesariamente termina en captación o venta inmediata. No juzgues a un vendedor como ineficaz solo por tener prospección alta y captación baja en el corto plazo.
 Generá un análisis profesional con 4 bloques (texto plano, sin markdown, 3-5 líneas cada uno):
 1. ESTADO GENERAL: cómo viene el equipo en conjunto
 2. SEGUIR HACIENDO: qué prácticas están funcionando y hay que sostener
