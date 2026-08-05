@@ -3432,6 +3432,10 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
     return `${met}: real=${real} obj=${objV*mesActual} cumpl=${pct}%`;
   }).join('\n');
 
+  const est = estadoNivelVendedor(vendedor, new Date().getFullYear());
+  const mesesRestantes = 12 - mesActual;
+  const infoFacturacion = `Facturación bruta acumulada: ${est.facturacion} · Próximo hito de nivel: ${est.objetivoActual ?? 'nivel máximo alcanzado'} · % comisión vigente: ${Math.round(est.pctActual*100)}% · Meses restantes en el año: ${mesesRestantes}`;
+
   const qa = PREGUNTAS_VENDEDOR.map((q,i)=>`P: ${q}\nR: ${respuestas.vendedor[i]||'(sin responder)'}`).join('\n\n')
     + '\n\n--- Visión de Martina ---\n\n'
     + PREGUNTAS_MARTINA_VENDEDOR.map((q,i)=>`P: ${q}\nR: ${respuestas.martina[i]||'(sin responder)'}`).join('\n\n');
@@ -3445,13 +3449,14 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
         max_tokens:1200,
         system:`Sos un consultor experto en inteligencia comercial y generación de cartera para inmobiliarias del mercado argentino (Rosario/Cañada de Gómez). Analizás el desempeño de un asesor inmobiliario combinando datos duros (métricas de actividad) con las respuestas cualitativas del propio vendedor y de su jefa.
 Criterio importante: la prospección no siempre tiene una relación directa con la captación. Parte de la prospección es indirecta — busca instalar al vendedor en el "top of mind" de la gente (redes, contacto recurrente, presencia) — y no necesariamente se traduce en una captación o venta inmediata. No trates una prospección alta con captación baja como automáticamente "ineficaz"; consideralo un resultado esperable de la prospección indirecta, salvo que el patrón se sostenga muchos meses sin ningún resultado.
-Generá un diagnóstico profesional, directo y accionable. Estructura en 4 bloques cortos (2-4 líneas cada uno), sin markdown ni bullets, texto plano con saltos de línea:
+Generá un diagnóstico profesional, directo y accionable. Estructura en 5 bloques cortos (2-4 líneas cada uno), sin markdown ni bullets, texto plano con saltos de línea:
 1. DIAGNÓSTICO: cómo viene realmente el vendedor combinando números + percepción
 2. CAUSA RAÍZ: por qué está pasando esto (no solo qué)
 3. ACCIÓN INMEDIATA: 2-3 acciones concretas para las próximas 2 semanas
 4. SEÑAL DE ALERTA: si hay algo preocupante en la actitud o consistencia que Martina debería vigilar (si no hay, decir que no hay señales de alerta)
-Respondé en JSON: {"diagnostico":"...","causa":"...","accion":"...","alerta":"..."}`,
-        messages:[{role:'user',content:`Vendedor: ${vendedor}\n\nMétricas del año (hasta mes ${mesActual}):\n${resumen}\n\nRespuestas:\n${qa}`}]
+5. PLAN AL OBJETIVO: qué tiene que hacer concretamente el vendedor para llegar a su objetivo de facturación de acá a fin de año (actividades a sostener/aumentar, no solo el número), y cómo recomendás repartir el objetivo restante mes a mes considerando la estacionalidad del rubro inmobiliario (los últimos meses del año concentran más cierre de operaciones que el arranque)
+Respondé en JSON: {"diagnostico":"...","causa":"...","accion":"...","alerta":"...","planObjetivo":"..."}`,
+        messages:[{role:'user',content:`Vendedor: ${vendedor}\n\nMétricas del año (hasta mes ${mesActual}):\n${resumen}\n\n${infoFacturacion}\n\nRespuestas:\n${qa}`}]
       })
     });
     const data = await resp.json();
@@ -3486,6 +3491,10 @@ function renderAnalisisVendedor(vendedor, analisis){
       <div style="background:rgba(255,77,151,0.08);border:1px solid rgba(255,77,151,0.22);border-radius:var(--radius2);padding:16px">
         <div style="font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">⚠️ Señal de alerta</div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.alerta||'').replace(/\n/g,'<br>')}</div>
+      </div>
+      <div style="background:rgba(182,162,132,0.08);border:1px solid rgba(182,162,132,0.25);border-radius:var(--radius2);padding:16px;grid-column:1 / -1">
+        <div style="font-size:11px;font-weight:700;color:var(--gold2);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">🎯 Plan al objetivo</div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6">${(analisis.planObjetivo||'').replace(/\n/g,'<br>')}</div>
       </div>
     </div>
     <button class="btn btn-outline btn-sm" style="margin-top:12px" onclick="iniciarAnalisisVendedor()">🔄 Regenerar análisis</button>`;
