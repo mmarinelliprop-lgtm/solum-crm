@@ -155,14 +155,10 @@
   .ritmo-tag.mal { background:var(--magenta); color:#2c0518; }
   .effectiveness-badge { font-size:10.5px; font-weight:700; color:var(--muted); }
   .cap-toggle { font-size:11.5px; color:var(--verde); font-weight:700; cursor:pointer; margin-top:4px; }
-  .cap-item { background:var(--card-2); border-radius:12px; padding:11px 12px; margin-top:8px; font-size:12px; }
-  .cap-item .dir { font-weight:700; margin-bottom:3px; }
-  .cap-item .meta { color:var(--muted); font-size:10.5px; }
-  .cap-item .btn-nopub { margin-top:8px; background:none; border:1px solid var(--magenta); color:var(--magenta); border-radius:8px; padding:5px 10px; font-size:10.5px; cursor:pointer; }
   .mes-filtro-wrap { background:var(--card); border-radius:12px; padding:10px 12px; margin-bottom:12px; }
   .mes-filtro-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
   .mes-chip { font-size:10.5px; padding:5px 9px; border-radius:8px; background:var(--card-2); color:var(--muted); cursor:pointer; }
-  .mes-chip.active { background:var(--verde); color:#062b23; font-weight:700; }
+  .mes-chip.active { background:var(--verde); color:#062b23; }
   .prospeccion-card { background:var(--card); border-radius:16px; padding:14px; margin-bottom:10px; }
   .prospeccion-card .nombre { font-weight:800; font-size:13.5px; }
   .prospeccion-card .idea { font-size:11.5px; color:var(--naranja); margin:6px 0; font-style:italic; }
@@ -171,9 +167,35 @@
   .usuario-selector { display:flex; gap:6px; padding:0 18px 10px; position:sticky; top:0; z-index:5; background:var(--bg); }
   .usuario-btn { flex:1; text-align:center; padding:8px 0; font-size:12px; font-weight:700; border-radius:10px; background:var(--card); color:var(--muted); cursor:pointer; border:1.5px solid transparent; }
   .usuario-btn.active { background:var(--verde); color:#062b23; border-color:var(--verde); }
-  .cap-progress-track { height:6px; background:var(--card-2); border-radius:4px; overflow:hidden; margin-top:8px; }
-  .cap-progress-fill { height:100%; background:var(--verde); border-radius:4px; transition:width .2s; }
-  .cap-progress-lbl { font-size:9.5px; color:var(--muted); margin-top:3px; text-align:right; }
+
+  /* Tarjeta de propiedad (Captación) — diseño ancho tipo mobile-card */
+  .cap-item { background:linear-gradient(160deg, var(--card) 0%, #1a1d2b 100%); border:1px solid var(--line); border-radius:14px; padding:14px 14px 12px; margin-top:10px; width:100%; box-shadow:0 6px 18px rgba(0,0,0,.2); }
+  .cap-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .cap-titulos { min-width:0; }
+  .cap-dir { font-size:16px; font-weight:800; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cap-sub { font-size:10.5px; font-weight:700; color:var(--muted); letter-spacing:.4px; margin-top:3px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .cap-sub .dot { color:var(--magenta); margin:0 5px; }
+  .cap-sub .prop { color:var(--magenta); }
+  .cap-precio-wrap { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+  .cap-precio { border:1.5px solid var(--verde); color:var(--verde); font-weight:800; font-size:12.5px; padding:6px 10px; border-radius:10px; background:rgba(47,214,184,.08); white-space:nowrap; }
+  .cap-edit-btn { width:28px; height:28px; border-radius:9px; background:var(--card-2); border:1px solid var(--line); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; }
+  .cap-edit-btn svg { width:13px; height:13px; color:var(--muted); }
+  .cap-pills { display:flex; flex-wrap:nowrap; gap:6px; margin-top:12px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none; }
+  .cap-pills::-webkit-scrollbar { display:none; }
+  .pill { font-size:9.5px; font-weight:800; letter-spacing:.2px; padding:6px 10px; border-radius:20px; border:1.5px solid var(--line); color:var(--muted); background:transparent; cursor:pointer; user-select:none; white-space:nowrap; flex-shrink:0; }
+  .pill.on { color:#062b23; border-color:transparent; background:var(--verde); }
+  .pill.baja { color:#ff4d5e; border-color:#ff4d5e; background:rgba(255,77,94,.08); }
+  .pill.baja.on { background:#ff4d5e; color:#2c0006; }
+  .cap-progreso-wrap { margin-top:13px; }
+  .cap-progreso-track { height:7px; width:100%; background:var(--card-2); border-radius:6px; overflow:hidden; }
+  .cap-progreso-fill { height:100%; border-radius:6px; background:linear-gradient(90deg, var(--magenta), var(--verde)); }
+  .cap-progreso-footer { display:flex; justify-content:space-between; align-items:center; margin-top:6px; }
+  .cap-fecha { font-size:10px; color:var(--muted); font-weight:600; }
+  .cap-fecha b { color:var(--text); font-weight:800; }
+  .cap-progreso-pct { font-size:10px; color:var(--text); font-weight:800; }
+  .cap-extra { font-size:10.5px; color:var(--muted); margin-top:8px; }
+  .cap-extra-title { font-size:9px; color:var(--muted); font-weight:700; letter-spacing:.5px; text-transform:uppercase; margin-top:10px; cursor:pointer; }
+  .btn-nopub { border:1px solid var(--magenta); color:var(--magenta); background:none; border-radius:8px; padding:5px 10px; font-size:10.5px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -1674,31 +1696,52 @@ function toggleSeccionCap(key) {
   renderizarCaptaciones(agruparCaptaciones(cacheVistas.captacionesCrudo));
 }
 const CHECKLIST_CAPTACION = [
-  { key: 'prospeccion', label: 'Prospección' },
-  { key: 'entrevista', label: 'Entrevista' },
-  { key: 'acm', label: 'ACM presentado' },
-  { key: 'publicada', label: 'Publicada' }
+  { key: 'prelisting', label: 'PRELISTING' },
+  { key: 'acm', label: 'ACM' },
+  { key: 'documentacion', label: 'DOCUMENTACIÓN' },
+  { key: 'fotos', label: 'FOTOS' },
+  { key: 'publicada', label: 'PUBLICADA' }
 ];
 function captacionCardHtml(i) {
   const completadas = i.etapasCompletadas || [];
-  const pct = Math.round((completadas.length / CHECKLIST_CAPTACION.length) * 100);
+  const completadosPipeline = completadas.filter(k => CHECKLIST_CAPTACION.some(p => p.key === k));
+  const pct = Math.round((completadosPipeline.length / CHECKLIST_CAPTACION.length) * 100);
+  const precio = i.valorEstimado ? (('' + i.valorEstimado).indexOf('$') !== -1 ? i.valorEstimado : '$' + i.valorEstimado) : 'Sin precio';
+  const idExtra = 'extra-' + i.fila;
   return `<div class="cap-item">
-    <div class="dir">${i.direccion || '(sin dirección)'}</div>
-    <div class="cap-progress-track"><div class="cap-progress-fill" style="width:${pct}%"></div></div>
-    <div class="cap-progress-lbl">${completadas.length}/${CHECKLIST_CAPTACION.length} pasos · ${pct}%</div>
-    <div class="mes-filtro-row" style="margin-top:8px">
-      ${CHECKLIST_CAPTACION.map(e => `<span class="mes-chip ${completadas.includes(e.key)?'active':''}" onclick="toggleChecklistCaptacion(${i.fila},'${e.key}')">${completadas.includes(e.key)?'✓ ':''}${e.label}</span>`).join('')}
+    <div class="cap-top">
+      <div class="cap-titulos">
+        <div class="cap-dir">${i.direccion || '(sin dirección)'}</div>
+        <div class="cap-sub">${i.tipo || '-'}<span class="dot">•</span>${i.lugar || '-'}${i.propietario ? `<span class="dot">•</span><span class="prop">${i.propietario}</span>` : ''}</div>
+      </div>
+      <div class="cap-precio-wrap">
+        <div class="cap-precio">${precio}</div>
+        <div class="cap-edit-btn" onclick="abrirEditarCaptacion(${i.fila})" title="Editar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+      </div>
     </div>
-    <div class="meta" style="margin-top:8px">Tipo: ${i.tipo || '-'} · Lugar: ${i.lugar || '-'}</div>
-    <div class="meta">Etapa pipeline: ${i.etapa || '-'} · Estado: ${i.estado || '-'}</div>
-    <div class="meta">Propietario: ${i.propietario || '-'} · Agente: ${i.agente || '-'}</div>
-    <div class="meta">Valor estimado: ${i.valorEstimado || '-'}</div>
-    <div class="meta">Fecha de inicio: ${i.fechaInicio || '-'} · Fecha de alta: ${i.fechaAlta || '-'}</div>
-    <div class="meta">Fotos: ${i.fotos || '-'}</div>
-    <div class="meta">Autorización: ${i.autorizacion || '-'} · Escritura: ${i.escritura || '-'} · Impuestos: ${i.impuestos || '-'}</div>
-    ${i.observacion ? `<div class="meta">Obs.: ${i.observacion}</div>` : ''}
-    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-      <button class="btn-nopub" style="border-color:var(--muted);color:var(--muted)" onclick="abrirEditarCaptacion(${i.fila})">✎ Editar</button>
+    <div class="cap-pills">
+      ${CHECKLIST_CAPTACION.map(e => `<span class="pill ${completadas.includes(e.key)?'on':''}" onclick="toggleChecklistCaptacion(${i.fila},'${e.key}')">${e.label}</span>`).join('')}
+      <span class="pill baja ${i.noPublicar?'on':''}" onclick="toggleBajaCaptacion(${i.fila}, ${i.noPublicar ? 'false' : 'true'})">BAJA</span>
+    </div>
+    <div class="cap-progreso-wrap">
+      <div class="cap-progreso-track"><div class="cap-progreso-fill" style="width:${pct}%;${i.noPublicar ? 'background:linear-gradient(90deg,#ff4d5e,var(--naranja))' : ''}"></div></div>
+      <div class="cap-progreso-footer">
+        <div class="cap-fecha">Inicio: <b>${i.fechaInicio || i.fechaAlta || '-'}</b></div>
+        <div class="cap-progreso-pct">${pct}%</div>
+      </div>
+    </div>
+    <div class="cap-extra-title" onclick="document.getElementById('${idExtra}').style.display=document.getElementById('${idExtra}').style.display==='none'?'block':'none'">Ver más datos ▾</div>
+    <div id="${idExtra}" style="display:none">
+      <div class="cap-extra">Etapa pipeline: ${i.etapa || '-'} · Estado: ${i.estado || '-'}</div>
+      <div class="cap-extra">Agente: ${i.agente || '-'}</div>
+      <div class="cap-extra">Fecha de alta: ${i.fechaAlta || '-'}</div>
+      <div class="cap-extra">Fotos: ${i.fotos || '-'}</div>
+      <div class="cap-extra">Autorización: ${i.autorizacion || '-'} · Escritura: ${i.escritura || '-'} · Impuestos: ${i.impuestos || '-'}</div>
+      ${i.observacion ? `<div class="cap-extra">Obs.: ${i.observacion}</div>` : ''}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
       ${(!i.publicada && !i.noPublicar) ? `<button class="btn-nopub" onclick="marcarNoPublicaClick(${i.fila})">No quiere publicar / Rechazó ACM</button>` : ''}
       ${i.noPublicar ? `<button class="btn-nopub" style="border-color:var(--verde);color:var(--verde)" onclick="deshacerNoPublicaClick(${i.fila})">↩ Deshacer</button>` : ''}
     </div>
@@ -1739,9 +1782,16 @@ function _aplicarChecklistCaptacion(fila, key, nuevoValor, fechaISO) {
   renderizarCaptaciones(agruparCaptaciones(cacheVistas.captacionesCrudo));
   _encolarEscritura('setEtapaCaptacionChecklist', { fila: fila, key: key, valor: nuevoValor, fecha: fechaISO || null });
 }
-function deshacerNoPublicaClick(fila) {
-  apiCall('deshacerNoPublicarCaptacion', { fila: fila }).then(pintarCaptaciones).catch(mostrarError);
+function toggleBajaCaptacion(fila, marcar) {
+  if (marcar && !confirm('¿Marcar como "No quiere publicar / Rechazó ACM"? Se cuenta para tu efectividad.')) return;
+  const item = (cacheVistas.captacionesCrudo || []).find(x => x.fila === fila);
+  if (item) item.noPublicar = marcar; // se ve al instante
+  renderizarCaptaciones(agruparCaptaciones(cacheVistas.captacionesCrudo));
+  const accion = marcar ? 'marcarCaptacionNoPublicar' : 'deshacerNoPublicarCaptacion';
+  apiCall(accion, { fila: fila }).then(pintarCaptaciones).catch(mostrarError);
 }
+function marcarNoPublicaClick(fila) { toggleBajaCaptacion(fila, true); }
+function deshacerNoPublicaClick(fila) { toggleBajaCaptacion(fila, false); }
 function abrirEditarCaptacion(fila) {
   const i = (cacheVistas.captacionesCrudo || []).find(x => x.fila === fila);
   if (!i) return;
@@ -1795,11 +1845,6 @@ function filtroMesTodos(todos) {
   _mesesFiltroActivos = todos ? Array.from({length:12}, (_,i)=>i+1) : [];
   renderizarCaptaciones(agruparCaptaciones(cacheVistas.captacionesCrudo));
 }
-function marcarNoPublicaClick(fila) {
-  if (!confirm('¿Marcar como "No quiere publicar / Rechazó ACM"? Se cuenta para tu efectividad.')) return;
-  apiCall('marcarCaptacionNoPublicar', { fila: fila }).then(pintarCaptaciones).catch(mostrarError);
-}
-
 // ---- Prospección diaria ----
 let _prospeccionLista = [];
 function pintarProspeccionDelDia() {
