@@ -1374,6 +1374,7 @@ VENDEDORES_SEG.forEach(v => { segObjetivos[v] = {...(OBJ_BASE[v]||OBJ_BASE['Mart
 let segVendedorActivo = "Martina"; // vendedor activo en seguimiento
 let _cambiosPendientes = {}; // {vendedor_mes_key: valor} cambios sin guardar
 let _hayPendientes = false; // flag de cambios sin guardar
+let _cambiosSemanalPendientes = {}; // {vendedor_mes_idx_key: valor} cambios del calendario semanal sin guardar
 // segVista se declara en las funciones de seguimiento
 
 function getSegVal(vendedor, mes, metKey){
@@ -1398,6 +1399,7 @@ function setSemana(vendedor, mes, idx, key, val){
   }
   if(key==='fecha'){
     segData[vendedor][mes].semanas[idx].fecha=val;
+    registrarCambioSemanalPendiente(vendedor, mes, idx, key, val);
     // Si la fecha indica un mes diferente, advertir
     const mesSem = getMesCalendario(val);
     if(mesSem && mesSem !== mes) {
@@ -1405,6 +1407,7 @@ function setSemana(vendedor, mes, idx, key, val){
     }
   } else {
     segData[vendedor][mes].semanas[idx].vals[key]=parseInt(val)||0;
+    registrarCambioSemanalPendiente(vendedor, mes, idx, key, parseInt(val)||0);
     // Recalcular total mensual sumando todas las semanas del mes
     const semMetKeys = ['p','pre','acm','pro','cg','m'];
     if(semMetKeys.includes(key)){
@@ -1660,27 +1663,54 @@ function registrarCambioPendiente(vendedor, mes, key, valor, inputEl){
   if(btnSave){ btnSave.style.display='inline-flex'; btnSave.style.animation='pulse 1s infinite'; }
 }
 
-function guardarCambiosPendientes(callback){
+function registrarCambioSemanalPendiente(vendedor, mes, idx, key, valor){
+  const k = vendedor+'|'+mes+'|'+idx+'|'+key;
+  _cambiosSemanalPendientes[k] = {vendedor, mes, idx, key, valor};
+  _hayPendientes = true;
+  const btnSave = document.getElementById('btn-seg-guardar-pendientes');
+  if(btnSave){ btnSave.style.display='inline-flex'; btnSave.style.animation='pulse 1s infinite'; }
+}
+
+async function guardarCambiosPendientes(callback){
   if(!_hayPendientes){ if(callback) callback(); return; }
-  // Aplicar todos los cambios pendientes
-  Object.values(_cambiosPendientes).forEach(c=>{
+
+  const cambios = Object.values(_cambiosPendientes);
+  const filas = [];
+
+  // Aplicar todos los cambios en memoria primero (para que se vea al instante)
+  cambios.forEach(c=>{
     if(c.key.startsWith('obj_')){
       const metrica = c.key.replace('obj_','');
       if(!segObjetivos[c.vendedor]) segObjetivos[c.vendedor]={};
       if(!segObjetivos[c.vendedor][c.mes]) segObjetivos[c.vendedor][c.mes]={};
       segObjetivos[c.vendedor][c.mes][metrica] = c.valor;
-      dbGuardar('seguimiento',[Date.now(),c.vendedor,c.mes,c.key,c.valor]);
     } else {
       setSegVal(c.vendedor,c.mes,c.key,c.valor);
-      dbGuardar('seguimiento',[Date.now(),c.vendedor,c.mes,c.key,c.valor]);
     }
+    filas.push([Date.now()+Math.random(), c.vendedor, c.mes, c.key, c.valor]);
   });
-  _cambiosPendientes = {};
-  _hayPendientes = false;
-  // Ocultar botón
+
+  const cambiosSemanal = Object.values(_cambiosSemanalPendientes);
+  const filasSemanal = cambiosSemanal.map(c=>[Date.now()+Math.random(), c.vendedor, c.mes, c.idx, c.key, c.valor]);
+
+  showToast('⏳ Guardando cambios...');
+  const okMensual = filas.length ? await dbGuardarLote('seguimiento', filas) : true;
+  const okSemanal = filasSemanal.length ? await dbGuardarLote('seguimiento_semanal', filasSemanal) : true;
+  const ok = okMensual && okSemanal;
+
   const btnSave = document.getElementById('btn-seg-guardar-pendientes');
-  if(btnSave){ btnSave.style.display='none'; }
-  showToast('✅ Cambios guardados');
+  if(ok){
+    _cambiosPendientes = {};
+    _cambiosSemanalPendientes = {};
+    _hayPendientes = false;
+    if(btnSave){ btnSave.style.display='none'; }
+    showToast('✅ Cambios guardados');
+  } else {
+    // NO limpiar los pendientes que fallaron: si falló, hay que poder reintentar sin perder lo cargado
+    if(okMensual) _cambiosPendientes = {};
+    if(okSemanal) _cambiosSemanalPendientes = {};
+    showToast('⚠️ No se pudo guardar todo en Sheets. Lo que falló sigue pendiente, probá guardar de nuevo.', 'amber');
+  }
   // Re-renderizar para actualizar % y cruces
   renderSeguimiento();
   if(callback) callback();
@@ -1688,6 +1718,7 @@ function guardarCambiosPendientes(callback){
 
 function descartarCambiosPendientes(callback){
   _cambiosPendientes = {};
+  _cambiosSemanalPendientes = {};
   _hayPendientes = false;
   const btnSave = document.getElementById('btn-seg-guardar-pendientes');
   if(btnSave){ btnSave.style.display='none'; }
