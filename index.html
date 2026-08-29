@@ -3337,7 +3337,7 @@ function renderSeguimiento(){
   const totFac = allM.reduce((s,m)=>s+(getMd(m).f||0),0);
   const opsCobradasVendedor = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Cobrada');
   const totGananciaVendedor = opsCobradasVendedor.reduce((s,o)=>s+gananciaVendedor(o),0);
-  const ticketPromedio = opsCobradasVendedor.length ? opsCobradasVendedor.reduce((s,o)=>s+(o.precio||0),0)/opsCobradasVendedor.length : 0;
+  const comisionPromedio = opsCobradasVendedor.length ? opsCobradasVendedor.reduce((s,o)=>s+(o.comision||0),0)/opsCobradasVendedor.length : 0;
   // Proyección de FACTURACIÓN BRUTA del vendedor seleccionado (no ganancia de Martina) — misma estacionalidad trimestral que Operaciones
   let pesoTranscurridoSeg = 0;
   for(let mm=1; mm<=mesActual; mm++) pesoTranscurridoSeg += pesoMensual(mm);
@@ -3351,7 +3351,7 @@ function renderSeguimiento(){
     <div class="kpi" style="flex:1"><div class="kpi-label">Captaciones año</div><div class="kpi-value gold">${totCap}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ventas año</div><div class="kpi-value green">${totVen}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ganancia del vendedor</div><div class="kpi-value amber">${fmtUSD(totGananciaVendedor)}</div></div>
-    <div class="kpi" style="flex:1"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" style="color:var(--text)">${fmtUSD(Math.round(ticketPromedio))}</div><div class="kpi-sub">Precio de venta promedio por operación</div></div>
+    <div class="kpi" style="flex:1"><div class="kpi-label">Comisión bruta promedio</div><div class="kpi-value" style="color:var(--text)">${fmtUSD(Math.round(comisionPromedio))}</div><div class="kpi-sub">Por operación cobrada</div></div>
     <div class="kpi" style="flex:1;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
       <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
