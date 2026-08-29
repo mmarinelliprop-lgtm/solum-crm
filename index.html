@@ -1507,7 +1507,7 @@ function gananciaVendedor(op){
 // Kito: % fijo (60%), objetivo propio distinto
 const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000 }; // resto: 30000
 const OBJETIVO_EQUIPO_ANUAL = 180000; // suma facturación bruta de todo el equipo, sin Martina
-const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000 }; // resto (sistema del 50%): 34000
+const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000 }; // resto (sistema del 50%): 34000
 
 function objetivoBaseVendedor(agente){
   const n = normAgente(agente);
@@ -1551,12 +1551,36 @@ function estadoNivelVendedor(agente, anio){
     else { objetivoActual=30000; pctActual=0.50; siguienteNivel=0.60; }
   }
   const umbralViaje = viajeUmbralVendedor(n);
-  const viajeGanado = n!=='Martina' && facturacion>=umbralViaje;
+  const viajeGanado = facturacion>=umbralViaje;
   return {facturacion, objetivoActual, pctActual, siguienteNivel, umbralViaje, viajeGanado};
 }
 // Estacionalidad del rubro inmobiliario: % de la ganancia anual que se genera por trimestre
 const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32]; // Q1, Q2, Q3, Q4 — suman 1.00
 function pesoMensual(mes){ return PESOS_TRIMESTRE[Math.floor((mes-1)/3)]/3; }
+
+// Desde cuándo las reservas se cuentan automáticamente por fecha real (antes de esto, se respeta lo precargado a mano)
+const SISTEMA_DESDE_ANIO = 2026;
+const SISTEMA_DESDE_MES = 1;
+// ¿Ya terminó ese mes/año? (para no evaluar cumplimiento de objetivos de un mes en curso o futuro)
+function mesFinalizado(mes, anio){
+  const hoy = new Date();
+  const anioActual = hoy.getFullYear(), mesActualReal = hoy.getMonth()+1;
+  if(anio < anioActual) return true;
+  if(anio > anioActual) return false;
+  return mes < mesActualReal;
+}
+// Mes/año en que se considera "tomada" una reserva: la fecha cargada en la operación (fechaEsc) si existe,
+// o si no, el mes/año en que se cargó la operación al sistema.
+function mesAnioReservaOp(o){
+  if(o.fechaEsc){
+    const partes = String(o.fechaEsc).split('/');
+    if(partes.length===3){
+      const mm = parseInt(partes[1]), aa = parseInt(partes[2]);
+      if(mm>=1 && mm<=12 && aa>2000) return {mes:mm, anio:aa};
+    }
+  }
+  return {mes:o.mes, anio:o.anio};
+}
 
 // ═══════════════════════════════════════════════
 // NORMALIZACIÓN DE NOMBRES DE AGENTES (global)
@@ -1602,7 +1626,21 @@ function getSegMes(vendedor, mes, anio) {
   ));
   merged.v = opsDelMes.filter(o=>o.estado==='Cobrada').length;
   merged.f = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
-  // r viene del segData (Sheet) — no se pisa
+
+  // Reservas: desde que existe el sistema, se cuentan por la fecha real en que se tomó la reserva
+  // (fechaEsc de la operación si está cargada; si no, el mes/año en que se cargó al sistema).
+  // Los meses anteriores a la creación del sistema mantienen el valor precargado a mano (segData/Sheet), sin tocar.
+  const esPeriodoSistema = anio > SISTEMA_DESDE_ANIO || (anio===SISTEMA_DESDE_ANIO && mes>=SISTEMA_DESDE_MES);
+  if(esPeriodoSistema){
+    const esDelVendedor = o => normAgente(o.agente)===vendedor || o.agente===vendedor ||
+      (vendedor==='Martina' && (o.agente==='Martina'||o.agente==='propia'||o.agente==='Martina Marinelli'));
+    merged.r = operaciones.filter(o=>{
+      if(!esDelVendedor(o)) return false;
+      const {mes:mR, anio:aR} = mesAnioReservaOp(o);
+      return mR===mes && aR===anio;
+    }).length;
+  }
+  // Si es anterior a la creación del sistema, merged.r ya trae el valor manual precargado y no se toca.
 
   return merged;
 }
@@ -1766,9 +1804,9 @@ function actualizarPctSeg(vendedor, key, rowIdx){
   const activeCol = activeEl?.dataset?.col;
   const activeTipo = activeEl?.dataset?.tipo;
 
-  const mesActualNum = new Date().getMonth()+1;
-  const mesesP = Array.from({length:mesActualNum},(_,i)=>i+1);
-  const totalReal = mesesP.reduce((s,m)=>{const d=getSegMes(vendedor,m,new Date().getFullYear());return s+(d[key]??0);},0);
+  const anioActualizarPct = new Date().getFullYear();
+  const mesesP = Array.from({length:12},(_,i)=>i+1).filter(m=>mesFinalizado(m, anioActualizarPct));
+  const totalReal = mesesP.reduce((s,m)=>{const d=getSegMes(vendedor,m,anioActualizarPct);return s+(d[key]??0);},0);
   const totalObj = mesesP.reduce((s,m)=>s+getObj(m,key),0);
   const pct = totalObj>0?Math.min(Math.round(totalReal/totalObj*100),999):0;
   const pctColor = pct>=100?'var(--green)':pct>=70?'var(--amber)':'var(--red)';
@@ -3211,7 +3249,7 @@ function renderSeguimiento(){
           <div class="kpi-value green">${est.objetivoActual ? fmtUSD(est.objetivoActual) : '¡Nivel máximo!'}</div>
           <div class="kpi-sub">${est.objetivoActual ? `Faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}` : 'Nivel máximo alcanzado'}</div>
         </div>
-        ${vendedor!=='Martina' ? `
+        ${true ? `
         <div class="kpi" style="flex:1;min-width:160px;border:1px solid ${est.viajeGanado?'rgba(46,230,184,0.35)':'rgba(255,255,255,0.08)'};background:${est.viajeGanado?'rgba(46,230,184,0.08)':'transparent'}">
           <div class="kpi-label" style="display:flex;align-items:center;gap:6px">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.85;flex-shrink:0">
@@ -3255,8 +3293,8 @@ function renderSeguimiento(){
     const key = OBJ_KEYS[i];
     const objV = objVals[i] || 0;
 
-    // Calcular % acumulado solo de meses ya procesados (hasta hoy)
-    const mesesProcesados = Array.from({length:mesActualNum},(_,mi)=>mi+1);
+    // Calcular % acumulado solo de meses YA FINALIZADOS (no el mes en curso, todavía incompleto)
+    const mesesProcesados = Array.from({length:12},(_,mi)=>mi+1).filter(m=>mesFinalizado(m, anioSeg));
     const totalReal = mesesProcesados.reduce((s,m)=>{const d=getMd(m);return s+(d[key]??0);},0);
     const totalObj = mesesProcesados.reduce((s,m)=>s+getObj(m,key),0);
     const pctAcum = totalObj>0 ? Math.round(totalReal/totalObj*100) : 0;
@@ -3270,9 +3308,10 @@ function renderSeguimiento(){
       const d = getMd(m);
       const real = d[key] ?? null;
       const objVm = getObj(m,key);
-      const cumple = real !== null && objVm > 0 && real >= objVm;
-      const bgColor = real===null?'transparent':(cumple?'rgba(46,230,184,0.15)':'rgba(255,77,151,0.13)');
-      const textColor = real===null?'var(--text3)':(cumple?'var(--green)':'var(--red)');
+      const finalizado = mesFinalizado(m, anioSeg);
+      const cumple = finalizado && real !== null && objVm > 0 && real >= objVm;
+      const bgColor = real===null?'transparent':(!finalizado?'rgba(74,158,255,0.10)':(cumple?'rgba(46,230,184,0.15)':'rgba(255,77,151,0.13)'));
+      const textColor = real===null?'var(--text3)':(!finalizado?'var(--blue)':(cumple?'var(--green)':'var(--red)'));
       tableHTML += `<td contenteditable="true"
         class="seg-cell seg-cell-obj" data-row="${rowIdx}" data-col="${m}" data-tipo="obj" data-vendedor="${vendedor}" data-key="${key}"
         style="width:56px;min-width:56px;max-width:56px;padding:5px 2px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--text3);cursor:text;outline:none;white-space:nowrap;overflow:hidden"
@@ -3296,7 +3335,9 @@ function renderSeguimiento(){
   const totCap = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
   const totVen = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
   const totFac = allM.reduce((s,m)=>s+(getMd(m).f||0),0);
-  const totGananciaVendedor = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Cobrada').reduce((s,o)=>s+gananciaVendedor(o),0);
+  const opsCobradasVendedor = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Cobrada');
+  const totGananciaVendedor = opsCobradasVendedor.reduce((s,o)=>s+gananciaVendedor(o),0);
+  const ticketPromedio = opsCobradasVendedor.length ? opsCobradasVendedor.reduce((s,o)=>s+(o.precio||0),0)/opsCobradasVendedor.length : 0;
   // Proyección de FACTURACIÓN BRUTA del vendedor seleccionado (no ganancia de Martina) — misma estacionalidad trimestral que Operaciones
   let pesoTranscurridoSeg = 0;
   for(let mm=1; mm<=mesActual; mm++) pesoTranscurridoSeg += pesoMensual(mm);
@@ -3310,6 +3351,7 @@ function renderSeguimiento(){
     <div class="kpi" style="flex:1"><div class="kpi-label">Captaciones año</div><div class="kpi-value gold">${totCap}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ventas año</div><div class="kpi-value green">${totVen}</div></div>
     <div class="kpi" style="flex:1"><div class="kpi-label">Ganancia del vendedor</div><div class="kpi-value amber">${fmtUSD(totGananciaVendedor)}</div></div>
+    <div class="kpi" style="flex:1"><div class="kpi-label">Ticket promedio</div><div class="kpi-value" style="color:var(--text)">${fmtUSD(Math.round(ticketPromedio))}</div><div class="kpi-sub">Precio de venta promedio por operación</div></div>
     <div class="kpi" style="flex:1;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
       <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
