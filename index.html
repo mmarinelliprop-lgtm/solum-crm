@@ -3785,7 +3785,7 @@ function renderCalendarioSemanal(){
     html += `<div class="cal-week">
       <div class="cal-week-header">
         <div class="cal-week-date">Semana ${i+1} ${partidaLabel}</div>
-        <div class="cal-week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
+        <div class="cal-week-range">${sem.diaInicioNombre.charAt(0).toUpperCase()+sem.diaInicioNombre.slice(1)} ${sem.lunes} → Viernes ${sem.viernes}</div>
       </div>
       <div class="cal-week-body">`;
     semMetricas.forEach(({label,key,obj:o}) => {
@@ -3846,21 +3846,26 @@ function prorratearSemana(vals, lunes, viernes, mesDestino, anioDestino) {
 }
 
 function getSemanasMes(anio, mes){
-  // Devuelve las semanas (lun-vie) del mes dado
+  // Devuelve las semanas (lun-vie) del mes dado. La primera semana puede empezar
+  // a mitad de semana (ej. martes) si el mes no arranca un lunes — no se salta
+  // esos días ni se agregan días del mes anterior.
   const semanas = [];
-  const primerDia = new Date(anio, mes-1, 1);
   const ultimoDia = new Date(anio, mes, 0);
-  let dia = new Date(primerDia);
-  // Ir al primer lunes
-  while(dia.getDay()!==1) dia.setDate(dia.getDate()+1);
+  let dia = new Date(anio, mes-1, 1);
   while(dia <= ultimoDia){
-    const lunes = new Date(dia);
-    const viernes = new Date(dia); viernes.setDate(dia.getDate()+4);
+    const dow = dia.getDay(); // 0=dom..6=sab
+    if(dow===0){ dia.setDate(dia.getDate()+1); continue; } // domingo → arranca el lunes
+    if(dow===6){ dia.setDate(dia.getDate()+2); continue; } // sábado → arranca el lunes
+    const inicio = new Date(dia);
+    const viernes = new Date(dia); viernes.setDate(dia.getDate()+(5-dow));
+    const fin = viernes<=ultimoDia?viernes:ultimoDia;
     semanas.push({
-      lunes: lunes.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
-      viernes: (viernes<=ultimoDia?viernes:ultimoDia).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})
+      lunes: inicio.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      viernes: fin.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      diaInicioNombre: inicio.toLocaleDateString('es-AR',{weekday:'long'})
     });
-    dia.setDate(dia.getDate()+7);
+    dia = new Date(viernes);
+    dia.setDate(dia.getDate()+3); // del viernes al lunes siguiente
   }
   return semanas;
 }
