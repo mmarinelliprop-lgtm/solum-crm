@@ -3753,7 +3753,8 @@ function renderCalendarioSemanal(){
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   const mes = parseInt(document.getElementById('seg-cal-mes').value);
   const anio = 2026;
-  const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
+  const getObjMes = key => segObjetivos?.[vendedor]?.[mes]?.[key] ?? segObjetivos?.[vendedor]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
+  const obj = {p:getObjMes('p'), ec:getObjMes('ec'), acm:getObjMes('acm'), pr:getObjMes('pr'), cg:getObjMes('cg'), m:getObjMes('m')};
 
   // Calcular semanas del mes (lunes a viernes)
   const semanas = getSemanasMes(anio, mes);
