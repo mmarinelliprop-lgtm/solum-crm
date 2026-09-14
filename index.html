@@ -3759,29 +3759,43 @@ function renderCalendarioSemanal(){
   const semanas = getSemanasMes(anio, mes);
   const semData = getSemanas(vendedor, mes);
 
-  const semMetricas = [
-    {label:'Prospección',key:'p',obj:Math.ceil(obj.p/4)},
-    {label:'Entrevistas captación',key:'ec',obj:Math.ceil((obj.ec||2)/4)||2},
-    {label:'ACM',key:'acm',obj:2},
-    {label:'Promo',key:'pr',obj:2},
-    {label:'Consultas',key:'cg',obj:Math.ceil(obj.cg/4)},
-    {label:'Muestras',key:'m',obj:Math.ceil(obj.m/4)},
-  ];
+  // Prorratear el objetivo mensual entre semanas según sus días hábiles reales
+  // (una semana partida entre dos meses aporta menos días hábiles y le toca
+  // proporcionalmente menos objetivo, en vez de dividir siempre por 4).
+  const contarHabiles = (d1, d2) => {
+    let c = 0, d = new Date(d1);
+    while(d <= d2){ const dw = d.getDay(); if(dw>=1 && dw<=5) c++; d.setDate(d.getDate()+1); }
+    return c;
+  };
+  const primerDiaMes = new Date(anio, mes-1, 1);
+  const ultimoDiaMes = new Date(anio, mes, 0);
+  const diasHabilesMes = contarHabiles(primerDiaMes, ultimoDiaMes);
 
   let html = '';
   semanas.forEach((sem, i) => {
     const semVals = semData[i]?.vals || {};
-    
+
     // Detectar si la semana está partida entre dos meses
     const lunesParts = sem.lunes.split('/');
     const viernesParts = sem.viernes.split('/');
     const lunesDate = new Date(anio, parseInt(lunesParts[1])-1, parseInt(lunesParts[0]));
     const viernesDate = new Date(anio, parseInt(viernesParts[1])-1, parseInt(viernesParts[0]));
     const esPartida = lunesDate.getMonth() !== viernesDate.getMonth();
-    
-    const partidaLabel = esPartida ? 
+
+    const diasHabilesSemana = contarHabiles(lunesDate, viernesDate);
+    const factor = diasHabilesMes>0 ? diasHabilesSemana/diasHabilesMes : 0;
+    const semMetricas = [
+      {label:'Prospección',key:'p',obj:Math.round(obj.p*factor)},
+      {label:'Entrevistas captación',key:'ec',obj:Math.round((obj.ec||0)*factor)},
+      {label:'ACM',key:'acm',obj:Math.round((obj.acm||0)*factor)},
+      {label:'Promo',key:'pr',obj:Math.round((obj.pr||0)*factor)},
+      {label:'Consultas',key:'cg',obj:Math.round(obj.cg*factor)},
+      {label:'Muestras',key:'m',obj:Math.round(obj.m*factor)},
+    ];
+
+    const partidaLabel = esPartida ?
       `<span style="font-size:10px;color:var(--amber);margin-left:8px">⚠️ Semana partida — se prorrateará</span>` : '';
-    
+
     html += `<div class="cal-week">
       <div class="cal-week-header">
         <div class="cal-week-date">Semana ${i+1} ${partidaLabel}</div>
