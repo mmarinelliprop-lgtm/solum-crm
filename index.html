@@ -1559,7 +1559,7 @@ const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32]; // Q1, Q2, Q3, Q4 — suman 
 function pesoMensual(mes){ return PESOS_TRIMESTRE[Math.floor((mes-1)/3)]/3; }
 
 // Desde cuándo las reservas se cuentan automáticamente por fecha real (antes de esto, se respeta lo precargado a mano)
-const SISTEMA_DESDE_ANIO = 2026;
+const SISTEMA_DESDE_ANIO = 2025;
 const SISTEMA_DESDE_MES = 1;
 // ¿Ya terminó ese mes/año? (para no evaluar cumplimiento de objetivos de un mes en curso o futuro)
 function mesFinalizado(mes, anio){
@@ -1569,17 +1569,18 @@ function mesFinalizado(mes, anio){
   if(anio > anioActual) return false;
   return mes < mesActualReal;
 }
-// Mes/año en que se considera "tomada" una reserva: la fecha cargada en la operación (fechaEsc) si existe,
-// o si no, el mes/año en que se cargó la operación al sistema.
+// Mes/año en que se considera "tomada" una reserva: SIEMPRE la fechaReserva de la operación.
+// Si no la tiene cargada, no se puede determinar → devuelve null (no cuenta como reserva de ningún mes,
+// y se marca como incongruencia en detectarIncongruencias/alertasActivas).
 function mesAnioReservaOp(o){
-  if(o.fechaEsc){
-    const partes = String(o.fechaEsc).split('/');
+  if(o.fechaReserva){
+    const partes = String(o.fechaReserva).split('/');
     if(partes.length===3){
       const mm = parseInt(partes[1]), aa = parseInt(partes[2]);
       if(mm>=1 && mm<=12 && aa>2000) return {mes:mm, anio:aa};
     }
   }
-  return {mes:o.mes, anio:o.anio};
+  return null;
 }
 
 // ═══════════════════════════════════════════════
@@ -1627,8 +1628,8 @@ function getSegMes(vendedor, mes, anio) {
   merged.v = opsDelMes.filter(o=>o.estado==='Cobrada').length;
   merged.f = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
 
-  // Reservas: desde que existe el sistema, se cuentan por la fecha real en que se tomó la reserva
-  // (fechaEsc de la operación si está cargada; si no, el mes/año en que se cargó al sistema).
+  // Reservas: desde que existe el sistema, se cuentan SIEMPRE por fechaReserva de la operación.
+  // Operaciones sin fechaReserva cargada no cuentan en ningún mes (quedan afuera, y se alertan aparte).
   // Los meses anteriores a la creación del sistema mantienen el valor precargado a mano (segData/Sheet), sin tocar.
   const esPeriodoSistema = anio > SISTEMA_DESDE_ANIO || (anio===SISTEMA_DESDE_ANIO && mes>=SISTEMA_DESDE_MES);
   if(esPeriodoSistema){
@@ -1636,8 +1637,8 @@ function getSegMes(vendedor, mes, anio) {
       (vendedor==='Martina' && (o.agente==='Martina'||o.agente==='propia'||o.agente==='Martina Marinelli'));
     merged.r = operaciones.filter(o=>{
       if(!esDelVendedor(o)) return false;
-      const {mes:mR, anio:aR} = mesAnioReservaOp(o);
-      return mR===mes && aR===anio;
+      const fr = mesAnioReservaOp(o);
+      return fr && fr.mes===mes && fr.anio===anio;
     }).length;
   }
   // Si es anterior a la creación del sistema, merged.r ya trae el valor manual precargado y no se toca.
@@ -1671,7 +1672,20 @@ function calcTotalMensualDesdeSemanas(vendedor, mes) {
 // Detectar incongruencias y actualizar ícono
 function detectarIncongruencias() {
   alertasActivas = [];
-  actualizarIconoAlertas();
+
+  // Operaciones del período del sistema (>= SISTEMA_DESDE_ANIO/MES) sin fechaReserva cargada:
+  // no se pueden contar como reserva de ningún mes hasta que se complete el dato.
+  operaciones.forEach(o=>{
+    const esPeriodoSistema = o.anio > SISTEMA_DESDE_ANIO || (o.anio===SISTEMA_DESDE_ANIO && o.mes>=SISTEMA_DESDE_MES);
+    if(esPeriodoSistema && !o.fechaReserva){
+      alertasActivas.push({
+        id: 'sin-fechaReserva-'+o.id,
+        tipo: 'Falta fecha de reserva',
+        msg: `${o.propiedad} (${o.agente}, ${o.punta}) no tiene fecha de reserva cargada — no se está contando en Reservas de ningún mes.`,
+        opId: o.id
+      });
+    }
+  });
 
   actualizarIconoAlertas();
 }
@@ -4146,8 +4160,8 @@ Cuando analizás una foto o planilla:
 2. Identificá la punta (Comprador/Vendedor) → si no está clara, preguntá
 3. Calculá comisión bruta (monto × 3%) y verificá contra lo que figura
 4. Determiná el estado según el mapeo
-5. Usá la fecha de escritura/operación para el mes/año
-6. Identificá la fecha de firma/toma de la reserva → puede figurar como "fecha de la reserva", "reserva conformada" o fecha de firma. Si no está clara, preguntá (igual que agente/punta/cliente)
+5. "fechaEsc" (fecha de cobro) = la MÁS TEMPRANA entre fecha de escritura, fecha de cesión y fecha de boleto, de las que figuren en el documento. Si solo figura una, usá esa. Usá esa fecha también para el mes/año de la operación.
+6. Identificá la fecha de firma/toma de la reserva → puede figurar como "fecha de la reserva", "reserva conformada" o fecha de firma → va en "fechaReserva". Si no está clara en el documento, NO preguntes: dejala vacía y avisá en el resumen que falta (se completa después a mano)
 7. Mostrá resumen antes de cargar y esperá confirmación
 
 Si hay dos puntas (comprador Y vendedor) → son DOS operaciones separadas.
@@ -4164,8 +4178,8 @@ OPERACIÓN:
 2. Precio de venta → "precio" (en USD)
 3. Agente → quién firma o está asignado. Si no figura → preguntá con lista
 4. Punta → Vendedor o Comprador. Si no está claro → preguntá
-5. Fecha escritura estimada → fecha de escritura, posesión o vencimiento
-6. Fecha de firma/toma de la reserva → puede figurar como "fecha de la reserva", "reserva conformada" o fecha de firma del boleto/reserva → "fechaReserva". Si no está clara → preguntá
+5. "fechaEsc" (fecha de cobro) → la MÁS TEMPRANA entre fecha de escritura, fecha de cesión y fecha de boleto que figuren en el documento (si solo hay una, esa)
+6. Fecha de firma/toma de la reserva → puede figurar como "fecha de la reserva", "reserva conformada" o fecha de firma del boleto/reserva → "fechaReserva". Si no está clara en el documento, dejala vacía (NO preguntes por esta) — el sistema la completa solo con la fecha de hoy
 7. Estado → reserva nueva = "Por cobrar"
 8. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
 9. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
@@ -4181,7 +4195,7 @@ ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","preci
 
 Si falta el precio → preguntá.
 Si falta el agente → preguntá siempre.
-Si falta la fecha de reserva → preguntá siempre.
+Si falta la fecha de reserva → NO preguntes, dejala vacía en el ACCION (el sistema la completa con la fecha de hoy).
 Si hay dos puntas → DOS acciones ACCION separadas.
 
 Mostrá resumen antes de cargar y esperá confirmación.
@@ -4190,7 +4204,7 @@ Mostrá resumen antes de cargar y esperá confirmación.
 CRUCES AUTOMÁTICOS
 ═══════════════════════════════════════════════
 Al cargar una operación:
-- Por cobrar → +1 Reservas del agente ese mes en Seguimiento
+- Se cuenta como Reserva del agente en el mes de su fechaReserva (no en el de carga ni en el de fechaEsc)
 - Cobrada → +1 Ventas + suma Facturación del agente + suma Ingresos de Martina en Finanzas
 
 ═══════════════════════════════════════════════
@@ -4350,7 +4364,8 @@ function procesarAccion(accion){
       ganancia_martina,
       ganancia_solum,
       fechaEsc: d.fechaEsc||'',
-      fechaReserva: d.fechaReserva||'',
+      // Si no viene fechaReserva en la carga por chat, se toma el día en que se cargó (hoy), no se deja vacía.
+      fechaReserva: d.fechaReserva || fmtFechaHoy(),
       estado,
       mes: parseInt(d.mes)||new Date().getMonth()+1,
       anio: parseInt(d.anio)||new Date().getFullYear(),
@@ -4365,14 +4380,8 @@ function procesarAccion(accion){
       newOp.fechaEsc, newOp.fechaReserva, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
 
     // Cruzar con seguimiento del agente
-    const agSeg = mapAgenteToSeg(newOp.agente);
-    if(!segData[agSeg]) segData[agSeg]={};
-    if(!segData[agSeg][newOp.mes]) segData[agSeg][newOp.mes]={};
-    if(estado==='Por cobrar'){
-      // Nueva reserva → sumar +1 a r y guardar en Sheet
-      segData[agSeg][newOp.mes].r = (segData[agSeg][newOp.mes].r||0)+1;
-      dbGuardar('seguimiento', [Date.now(), agSeg, newOp.mes, 'r', segData[agSeg][newOp.mes].r]);
-    } else if(estado==='Cobrada'){
+    // r ya no se guarda a mano acá: getSegMes la calcula siempre desde fechaReserva de las operaciones.
+    if(estado==='Cobrada'){
       // v y f se calculan en getSegMes desde operaciones — no guardar en segData
       if(!historicoIngresos[newOp.anio]) historicoIngresos[newOp.anio]={};
       historicoIngresos[newOp.anio][newOp.mes] = (historicoIngresos[newOp.anio][newOp.mes]||0)+newOp.ganancia_martina;
