@@ -392,6 +392,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="Kito">Kito (Esteban)</option>
         <option value="Cris">Cris (Cristian)</option>
         <option value="Ceci">Ceci (Cecilia)</option>
+        <option value="Joaco">Joaco (Joaquín)</option>
       </select>
     </div>
   </div>
@@ -477,6 +478,9 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
             <input type="checkbox" value="Ceci" checked onchange="renderOperaciones()" style="cursor:pointer"> Ceci
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Joaco" checked onchange="renderOperaciones()" style="cursor:pointer"> Joaco
           </label>
         </div>
       </div>
@@ -836,6 +840,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="Manu">Manu</option>
         <option value="Cris">Cris</option>
         <option value="Ceci">Ceci</option>
+        <option value="Joaco">Joaco</option>
         <option value="Jose">Jose</option>
         <option value="Luli">Luli</option>
       </select>
@@ -934,6 +939,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="M. Victoria">M. Victoria</option><option value="Manuela">Manuela</option>
         <option value="Marce">Marce</option><option value="Esteban">Kito</option>
         <option value="Cristian">Cristian</option><option value="Cecilia">Cecilia</option>
+        <option value="Joaquin">Joaquín (Joaco)</option>
       </select>
     </div>
     <div class="modal-field"><label class="modal-label">Punta</label>
@@ -1107,6 +1113,7 @@ async function cargarDatosDB() {
           'Esteban':'Kito','Esteban Romero':'Kito',
           'Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
           'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+          'Joaquin':'Joaco','Joaquín':'Joaco',
         };
         agente = mapAgente[agente] || agente;
         return {
@@ -1275,6 +1282,7 @@ const COMISIONES = {
   'Cristian': 0.50, 'Cris': 0.50, 'Cristian Ruiz Diaz': 0.50,
   'Esteban': 0.60, 'Kito': 0.60, 'Esteban Romero': 0.60,
   'Cecilia': 0.50, 'Ceci': 0.50, 'Cecilia Bruno': 0.50,
+  'Joaquin': 0.50, 'Joaquín': 0.50, 'Joaco': 0.50,
   'Josefina': 0.50, 'Jose': 0.50,
   'Luli': 0.50
 };
@@ -1328,7 +1336,7 @@ let gastosPesos = [];
 // ═══════════════════════════════════════════════
 // SEGUIMIENTO — DATOS Y LÓGICA CORRECTA
 // ═══════════════════════════════════════════════
-const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Jose','Luli'];
+const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Joaco','Jose','Luli'];
 
 // 13 métricas exactas de la planilla
 const METRICAS_SEG = [
@@ -1352,6 +1360,7 @@ const OBJ_BASE = {
   'Ceci':    {p:12,ec:6,acm:4,cp:3,pr:4,cg:160,ca:80,b:6,m:16,r:2,v:1,f:2500,cap:0},
   'Jose':    {p:25,ec:4,acm:4,cp:2,pr:4,cg:60,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
   'Luli':    {p:15,ec:6,acm:4,cp:3,pr:8,cg:120,ca:100,b:5,m:20,r:2,v:1,f:3000,cap:1},
+  'Joaco':   {p:15,ec:4,acm:4,cp:2,pr:4,cg:60,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
 };
 
 const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
@@ -1360,7 +1369,7 @@ const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
 // Formato: {mes: {p,ec,acm,cp,pr,cg,ca,b,m,r,v,f,cap}}
 const SEG_DATA_REAL = {
   'Martina':{}, 'Marce':{}, 'Kito':{}, 'Vicky':{},
-  'Manu':{}, 'Cris':{}, 'Ceci':{}, 'Jose':{}, 'Luli':{}
+  'Manu':{}, 'Cris':{}, 'Ceci':{}, 'Jose':{}, 'Luli':{}, 'Joaco':{}
 };
 
 // (OBJ_KEYS ya declarado arriba)
@@ -1595,10 +1604,11 @@ function normAgente(a){
     'Esteban':'Kito','Esteban Romero':'Kito',
     'Cristian':'Cris','Cristian Ruiz Diaz':'Cris','Cristian Ruiz Díaz':'Cris',
     'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+    'Joaquin':'Joaco','Joaquín':'Joaco',
     'Josefina':'Jose','Jose':'Jose',
     'Luli':'Luli',
     'propia':'Martina','Martina':'Martina','Martina Marinelli':'Martina',
-    'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci'
+    'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci','Joaco':'Joaco'
   };
   return map[a?.trim()] || a || '';
 }
@@ -1896,7 +1906,7 @@ function actualizarOp(id, campo, valor){
 
 function mapNombreAgente(v) {
   // Mapear nombre de pestaña a nombre en operaciones
-  const map = {'Vicky':'M. Victoria','Manu':'Manuela','Cris':'Cristian','Kito':'Esteban','Ceci':'Cecilia','Jose':'Josefina'};
+  const map = {'Vicky':'M. Victoria','Manu':'Manuela','Cris':'Cristian','Kito':'Esteban','Ceci':'Cecilia','Jose':'Josefina','Joaco':'Joaquín'};
   return map[v] || v;
 }
 
@@ -2219,6 +2229,8 @@ function mapAgenteToSeg(agente) {
     // Ceci
     'Cecilia':'Ceci','Ceci':'Ceci',
     'Cecilia Bruno':'Ceci',
+    // Joaco
+    'Joaquin':'Joaco','Joaquín':'Joaco','Joaco':'Joaco',
     // Jose
     'Josefina':'Jose','Jose':'Jose',
     // Luli
@@ -2310,7 +2322,7 @@ function renderDashboard(){
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#b8b0a4',font:{size:11},padding:12}}}}
   });
 
-  const agentesRanking = ['Vicky','Manu','Marce','Kito','Cris','Ceci'];
+  const agentesRanking = ['Vicky','Manu','Marce','Kito','Cris','Ceci','Joaco'];
   // normAgente es función global — definida abajo
   // Solo operaciones cobradas para el ranking
   const opsCobradas = ops.filter(o=>o.estado==='Cobrada');
@@ -2400,7 +2412,7 @@ function renderGanancia(){
   });
 
   destroyChart('chartAgentes');
-  const agentesRank = ['Vicky','Manu','Marce','Kito','Cris','Ceci'];
+  const agentesRank = ['Vicky','Manu','Marce','Kito','Cris','Ceci','Joaco'];
   const ganPorAgente = agentesRank.map(a=>operaciones.filter(o=>o.anio===anio&&normAgente(o.agente)===a&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
   const agEl = document.getElementById('chartAgentes');
   if(agEl) charts['chartAgentes'] = new Chart(agEl,{
@@ -2517,6 +2529,7 @@ function renderOperaciones(){
           <option value="Kito" ${normAgente(o.agente)==='Kito'?'selected':''}>Kito</option>
           <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
           <option value="Ceci" ${normAgente(o.agente)==='Ceci'?'selected':''}>Ceci</option>
+          <option value="Joaco" ${normAgente(o.agente)==='Joaco'?'selected':''}>Joaco</option>
         </select>
       </td>
       <td>
@@ -4123,6 +4136,7 @@ Agentes y porcentajes:
 - Marce (Marcela, Marcela Corsalini): agente 50% / Martina 20% / SOLUM 30%
 - Cris (Cristian, Cristian Ruiz Diaz): agente 50% / Martina 20% / SOLUM 30%
 - Ceci (Cecilia, Cecilia Bruno): agente 50% / Martina 20% / SOLUM 30%
+- Joaco (Joaquín): agente 50% / Martina 20% / SOLUM 30%
 - Kito (Esteban, Esteban Romero): agente 60% / Martina 10% / SOLUM 30%
 - Propia (Martina sola): Martina 80% / SOLUM 20%
 
@@ -4354,7 +4368,7 @@ function procesarAccion(accion){
           'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','Manuela':'Manu',
           'Manuela Pellegrini':'Manu','Marcela':'Marce','Marcela Corsalini':'Marce',
           'Esteban':'Kito','Esteban Romero':'Kito','Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
-          'Cecilia':'Ceci','Cecilia Bruno':'Ceci'};
+          'Cecilia':'Ceci','Cecilia Bruno':'Ceci','Joaquin':'Joaco','Joaquín':'Joaco'};
         return m[a] || a;
       })(),
       punta: d.punta||'Vendedor',
