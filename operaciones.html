@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLUMITOS — Operaciones</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2317355B%22/><text x=%2250%22 y=%2268%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22%23B6A284%22 font-family=%22Georgia,serif%22>S</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#17355B;--navy2:#1e3f6e;--navy3:#0f2240;
+  --gold:#B6A284;--gold2:#d4bfa0;--gold3:#8a7562;
+  --bg:#0a1628;--bg2:#0f1e38;--bg3:#142444;
+  --card:#152238;--card2:#1a2d4a;--card3:#1f3455;
+  --text:#f0ece4;--text2:#b8b0a4;--text3:#7a7468;
+  --green:#2ee6b8;--greenbg:rgba(46,230,184,0.14);
+  --amber:#ffd36e;--amberbg:rgba(255,211,110,0.15);
+  --red:#ff4d97;--redbg:rgba(255,77,151,0.14);
+  --blue:#4a9eff;--bluebg:rgba(74,158,255,0.12);
+  --radius:10px;--radius2:14px;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--gold3) var(--bg2);}
+*::-webkit-scrollbar{height:9px;width:9px;}
+*::-webkit-scrollbar-track{background:var(--bg2);border-radius:6px;}
+*::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:6px;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.header{background:var(--bg2);border-bottom:1px solid rgba(255,255,255,0.06);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+.header-name{font-size:18px;font-weight:800;color:var(--gold2);}
+.tabs{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid rgba(255,255,255,0.06);}
+.tab-btn{padding:12px 20px;background:none;border:none;color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;}
+.tab-btn.active{color:var(--gold2);border-bottom-color:var(--gold);}
+.content{padding:20px;max-width:1400px;margin:0 auto;}
+.filters{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;}
+.filter-label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
+.filter-select{background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none;}
+.table-wrap{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);overflow:auto;max-height:75vh;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{position:sticky;top:0;background:var(--card2);color:var(--gold2);text-align:left;padding:10px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;z-index:2;}
+td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;}
+input.cell,select.cell{background:transparent;border:1px solid transparent;color:var(--text);font-size:12px;padding:3px 5px;border-radius:4px;width:100%;}
+input.cell:hover,select.cell:hover{border-color:rgba(255,255,255,0.1);}
+input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;background:var(--card2);}
+.alert-banner{background:var(--redbg);border:1px solid rgba(255,77,151,0.35);border-radius:var(--radius2);padding:14px 16px;margin-bottom:16px;}
+.alert-title{font-size:12px;font-weight:700;color:var(--red);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.alert-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,77,151,0.15);font-size:12px;flex-wrap:wrap;}
+.alert-row:first-of-type{border-top:none;}
+.alert-row b{color:var(--text);}
+.btn{padding:6px 12px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;}
+.btn-cobrado{background:var(--green);color:#0a1628;}
+.btn-prorroga{background:var(--amber);color:#0a1628;}
+.estado-badge{padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;}
+.est-cobrar{background:var(--amberbg);color:var(--amber);}
+.est-cobrada{background:var(--greenbg);color:var(--green);}
+.est-caida{background:var(--redbg);color:var(--red);}
+/* Chat */
+.chat-wrap{max-width:700px;margin:0 auto;display:flex;flex-direction:column;height:78vh;}
+.chat-msgs{flex:1;overflow-y:auto;background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);padding:16px;display:flex;flex-direction:column;gap:10px;}
+.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;}
+.msg.user{align-self:flex-end;background:var(--gold);color:var(--navy3);}
+.msg.claude{align-self:flex-start;background:var(--card2);color:var(--text);}
+.chat-input-row{display:flex;gap:8px;margin-top:12px;}
+.chat-input-row input{flex:1;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:10px 14px;border-radius:10px;font-size:13px;outline:none;}
+.chat-input-row button{background:var(--gold);color:var(--navy3);border:none;padding:0 18px;border-radius:10px;font-weight:700;cursor:pointer;}
+.hidden{display:none!important;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card2);color:var(--text);padding:10px 18px;border-radius:10px;font-size:12px;border:1px solid rgba(255,255,255,0.1);z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-name" id="header-greeting">🧚 Hola Jose! 👋</div>
+  <div style="font-size:11px;color:var(--text3)" id="header-frase"></div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tab-planilla-btn" onclick="switchTab('planilla')">📋 Planilla</button>
+  <button class="tab-btn" id="tab-chat-btn" onclick="switchTab('chat')">💬 Chat — Cargar reserva</button>
+</div>
+
+<div class="content" id="tab-planilla">
+  <div id="alert-container"></div>
+
+  <div class="filters">
+    <div><span class="filter-label">Mes</span>
+      <select class="filter-select" id="op-mes" onchange="renderTabla()">
+        <option value="all">Año completo</option>
+        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+        <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+        <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+      </select>
+    </div>
+    <div><span class="filter-label">Estado</span>
+      <select class="filter-select" id="op-estado" onchange="renderTabla()">
+        <option value="all">Todos</option>
+        <option value="Por cobrar" selected>Por cobrar</option>
+        <option value="Cobrada">Cobrada</option>
+        <option value="Caída">Caída</option>
+      </select>
+    </div>
+    <div><span class="filter-label">Año</span>
+      <select class="filter-select" id="op-anio" onchange="renderTabla()">
+        <option value="2026" selected>2026</option><option value="2025">2025</option>
+        <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Propiedad</th><th>Agente</th><th>Punta</th><th>Precio venta</th><th>% Com.</th>
+          <th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>🤝 Vendedor</th>
+          <th>Fecha</th><th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body"></tbody>
+    </table>
+  </div>
+
+  <div id="rendicion-container" style="margin-top:20px"></div>
+</div>
+
+<div class="content hidden" id="tab-chat">
+  <div class="chat-wrap">
+    <div class="chat-msgs" id="chat-msgs">
+      <div class="msg claude">Hola Josefina 👋 Contame los datos de la reserva (propiedad, agente, punta, precio, % de comisión) y la cargo directo a Operaciones.</div>
+    </div>
+    <div id="chat-img-preview" style="display:none;margin-top:8px;position:relative;width:fit-content">
+      <img id="chat-img-preview-src" style="max-height:100px;border-radius:8px;display:block">
+      <button onclick="quitarImagenChat()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer">✕</button>
+    </div>
+    <div class="chat-input-row">
+      <label style="background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);padding:0 14px;border-radius:10px;display:flex;align-items:center;cursor:pointer;font-size:16px">
+        📷<input type="file" accept="image/*" id="chat-img-input" style="display:none" onchange="previsualizarImagenChat(event)">
+      </label>
+      <input type="text" id="chat-input" placeholder="Ej: Reserva de Santiago 60 bis, agente Vicky, punta comprador, precio 140000, comisión 3%" onkeydown="if(event.key==='Enter') enviarChat()">
+      <button onclick="enviarChat()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="modal-planilla" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--radius2);padding:22px;width:360px;max-width:92vw;max-height:85vh;overflow-y:auto">
+    <div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:14px">Datos para la planilla</div>
+    <div id="modal-planilla-resumen" style="font-size:11px;color:var(--text3);margin-bottom:12px"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-cliente" placeholder="Cliente (nombre y apellido)">
+      <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-cuit" placeholder="CUIT/DNI (opcional)">
+      <select class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-tipocliente">
+        <option value="Consumidor Final">Consumidor Final</option>
+        <option value="Responsable Inscripto">Responsable Inscripto</option>
+        <option value="Monotributista">Monotributista</option>
+      </select>
+      <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-telefono" placeholder="Teléfono (opcional)">
+      <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-mail" placeholder="Mail (opcional)">
+      <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-origen" placeholder="Origen del cliente (opcional)">
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn" style="flex:1;background:var(--card3);color:var(--text2)" onclick="cerrarModalPlanilla()">Cancelar</button>
+      <button class="btn btn-cobrado" style="flex:1" onclick="generarPlanillaDesdeModal()">Generar y marcar cobrada</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const DB_URL = '/.netlify/functions/sheets';
+let operaciones = [];
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+function switchTab(tab){
+  document.getElementById('tab-planilla').classList.toggle('hidden', tab!=='planilla');
+  document.getElementById('tab-chat').classList.toggle('hidden', tab!=='chat');
+  document.getElementById('tab-planilla-btn').classList.toggle('active', tab==='planilla');
+  document.getElementById('tab-chat-btn').classList.toggle('active', tab==='chat');
+}
+
+async function dbLeer(tipo){
+  try{
+    const r = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'leer'})});
+    const d = await r.json();
+    return (d.ok && d.datos) ? d.datos : [];
+  }catch(e){ return []; }
+}
+async function dbActualizar(tipo,id,fila){
+  try{
+    await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'actualizar',id,fila})});
+  }catch(e){ console.error(e); }
+}
+async function dbGuardar(tipo,fila){
+  try{
+    await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'guardar',fila})});
+  }catch(e){ console.error(e); }
+}
+
+function fmtUSD(n){ return '$'+Math.round(n||0).toLocaleString('es-AR'); }
+function fmtFecha(f){ return f || ''; }
+
+// Frase del día — rota sola, distinta cada día, con humor irónico sobre el equipo
+const FRASES_DIA = [
+  'Hoy toca levantar a este equipo de asesores dormidos, dale que podés 💀',
+  'Otro día, otra chance de que alguien conteste el WhatsApp a tiempo 📱',
+  'Hoy toca perseguir asesores como quien pastorea gatos 🐈',
+  'Sos la única acá que labura en serio — no hace falta que se lo digas a nadie 🤫',
+  '"Lo mando mañana" en este equipo significa "no lo voy a mandar nunca" 😅',
+  'Misión del día: encontrar una fecha de cobro que no esté vencida 🕵️',
+  'Si el equipo fuera un embudo de ventas, hoy estaríamos en la parte más angosta 📉',
+  'Tené paciencia, Jose — es lo único que rinde seguro en este equipo 🙏',
+  'Hoy es un buen día para que alguien mande el mail que prometió hace una semana 📧',
+  'Nivel de dificultad de hoy: lograr que te cobren a tiempo 🎮',
+  'Un poco de polvo de hada no vendría mal para que este equipo cobre más rápido ✨',
+  'Ni todo el polvo mágico del mundo hace que un asesor conteste antes del mediodía 🧚',
+  'Hoy el equipo necesita más de tu magia que de tu paciencia, elegí bien dónde la usás ✨'
+];
+function setFraseDelDia(){
+  const hoy = new Date();
+  const diaDelAnio = Math.floor((hoy - new Date(hoy.getFullYear(),0,0)) / 86400000);
+  document.getElementById('header-frase').textContent = FRASES_DIA[diaDelAnio % FRASES_DIA.length];
+}
+setFraseDelDia();
+function parseFechaDDMMYYYY(f){
+  if(!f) return null;
+  const partes = String(f).split('/');
+  if(partes.length!==3) return null;
+  const d = parseInt(partes[0]), m = parseInt(partes[1]), a = parseInt(partes[2]);
+  if(!d||!m||!a) return null;
+  return new Date(a, m-1, d);
+}
+
+async function cargarOperaciones(){
+  showToast('⏳ Cargando desde Sheets...');
+  const opRows = await dbLeer('operaciones');
+  if(opRows.length>1){
+    const mapAgente = {
+      'Martina Marinelli':'Martina','Propia':'Martina','propia':'Martina','':'Martina',
+      'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky',
+      'Manuela':'Manu','Marcela':'Marce','Esteban':'Kito','Cristian':'Cris','Cecilia':'Ceci','Josefina':'Jose'
+    };
+    operaciones = opRows.slice(1).map(r=>{
+      let agente = String(r[2]||'').trim();
+      agente = mapAgente[agente] || agente;
+      return {
+        id:r[0], propiedad:r[1], agente, punta:r[3],
+        precio:parseFloat(r[4])||0, comision:parseFloat(r[5])||0,
+        comision_vendedor:parseFloat(r[6])||0,
+        ganancia_martina:parseFloat(r[7])||0, ganancia_solum:parseFloat(r[8])||0,
+        fechaEsc:r[9], estado:r[10],
+        mes:parseInt(r[11])||0, anio:parseInt(r[12])||0,
+        planillaGenerada: r[13]==='true'||r[13]===true,
+        rendicion: r[14] || 'pendiente_asesor'
+      };
+    });
+    showToast('✅ '+operaciones.length+' operaciones cargadas');
+  }
+  renderAlertas();
+  renderTabla();
+  renderRendicion();
+}
+
+function renderAlertas(){
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const vencidas = operaciones.filter(o=>{
+    if(o.estado!=='Por cobrar') return false;
+    const f = parseFechaDDMMYYYY(o.fechaEsc);
+    return f && f < hoy;
+  });
+  const cont = document.getElementById('alert-container');
+  if(vencidas.length===0){ cont.innerHTML=''; return; }
+  cont.innerHTML = `
+    <div class="alert-banner">
+      <div class="alert-title">⚠️ ${vencidas.length} operación(es) con fecha de cobro vencida</div>
+      ${vencidas.map(o=>`
+        <div class="alert-row">
+          <span><b>${o.propiedad}</b> — ${o.agente} — vencía ${o.fechaEsc}</span>
+          <input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${o.fechaEsc||''}" placeholder="dd/mm/aaaa">
+          <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="guardarFechaAlerta('${o.id}')">Guardar fecha</button>
+          <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar (WSP)</button>
+          <button class="btn btn-cobrado" onclick="abrirModalPlanilla('${o.id}')">Planilla</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+function guardarFechaAlerta(id){
+  const op = operaciones.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  const nuevaFecha = document.getElementById('fecha-'+id).value.trim();
+  if(!nuevaFecha) return;
+  op.fechaEsc = nuevaFecha;
+  guardarFila(op);
+  showToast('✅ Fecha actualizada');
+  renderAlertas(); renderTabla();
+}
+
+function prorrogar(id){
+  const op = operaciones.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  const asunto = 'Hola '+op.agente+'! Te consulto por la operación "'+op.propiedad+'": ¿se prorrogó? ¿ya enviaste el mail avisando a las partes?';
+  window.open('https://wa.me/?text='+encodeURIComponent(asunto), '_blank');
+  showToast('La fecha se actualiza a mano acá arriba cuando te confirmen la nueva');
+}
+
+let _opPlanillaActual = null;
+function abrirModalPlanilla(id){
+  const op = operaciones.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  _opPlanillaActual = op;
+  document.getElementById('modal-planilla-resumen').textContent = op.propiedad+' — '+op.agente+' — '+fmtUSD(op.precio);
+  document.getElementById('mp-cliente').value = '';
+  document.getElementById('mp-cuit').value = '';
+  document.getElementById('mp-telefono').value = '';
+  document.getElementById('mp-mail').value = '';
+  document.getElementById('mp-origen').value = '';
+  document.getElementById('modal-planilla').classList.remove('hidden');
+}
+function cerrarModalPlanilla(){
+  document.getElementById('modal-planilla').classList.add('hidden');
+  _opPlanillaActual = null;
+}
+async function generarPlanillaDesdeModal(){
+  const op = _opPlanillaActual;
+  if(!op) return;
+  const cliente = document.getElementById('mp-cliente').value.trim();
+  if(!cliente){ showToast('⚠️ Falta el nombre del cliente'); return; }
+  const pctAgenteMap = {'Martina':0.80,'Kito':0.60};
+  const datos = {
+    fecha: op.fechaEsc || '',
+    agente: op.agente,
+    propiedad: op.propiedad,
+    compartida: '-',
+    punta: op.punta,
+    cliente,
+    cuit: document.getElementById('mp-cuit').value.trim(),
+    tipo_cliente: document.getElementById('mp-tipocliente').value,
+    precio: op.precio,
+    pct_comision: op.precio ? op.comision/op.precio : 0.03,
+    iva: '',
+    pct_agente: pctAgenteMap[op.agente] || 0.50,
+    telefono: document.getElementById('mp-telefono').value.trim(),
+    mail: document.getElementById('mp-mail').value.trim(),
+    origen: document.getElementById('mp-origen').value.trim()
+  };
+  showToast('⏳ Generando planilla...');
+  try{
+    const resp = await fetch(DB_URL, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({tipo:'operaciones', accion:'planilla', datos})
+    });
+    const d = await resp.json();
+    if(d.ok && d.base64){
+      const link = document.createElement('a');
+      link.href = 'data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,'+d.base64;
+      link.download = d.nombre || 'planilla.xlsx';
+      link.click();
+      op.estado = 'Cobrada';
+      op.rendicion = 'pendiente_asesor';
+      guardarFila(op);
+      showToast('✅ Planilla generada y operación marcada como cobrada');
+      cerrarModalPlanilla();
+      renderAlertas(); renderTabla(); renderRendicion();
+    } else {
+      showToast('⚠️ No se pudo generar la planilla: '+(d.error||'error desconocido'));
+    }
+  }catch(e){
+    showToast('⚠️ Error al generar la planilla');
+  }
+}
+function renderRendicion(){
+  const cont = document.getElementById('rendicion-container');
+  if(!cont) return;
+  const cobradas = operaciones.filter(o=>o.estado==='Cobrada');
+
+  const pendAsesor = cobradas.filter(o=>(o.rendicion||'pendiente_asesor')==='pendiente_asesor');
+  const pendPox = cobradas.filter(o=>o.rendicion==='pendiente_pox');
+  const pendMartu = cobradas.filter(o=>o.rendicion==='pendiente_martu');
+
+  const montoAsesor = o => (o.comision||0) - (o.comision_vendedor||0); // lo que el asesor cobró y debe rendir (sin su propia comisión)
+  const montoPox = o => o.ganancia_solum||0;
+  const montoMartu = o => o.ganancia_martina||0;
+
+  function tarjeta(titulo, lista, montoFn, siguienteEstado, colorVar){
+    const total = lista.reduce((s,o)=>s+montoFn(o),0);
+    return `
+    <div class="table-wrap" style="padding:16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(${colorVar})">${titulo}</div>
+        <div style="font-size:14px;font-weight:800;color:var(${colorVar})">${fmtUSD(total)}</div>
+      </div>
+      ${lista.length===0 ? '<div style="font-size:11px;color:var(--text3)">Nada pendiente acá</div>' : lista.map(o=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,0.05);font-size:12px">
+          <span>${o.propiedad} — ${o.agente} — ${fmtUSD(montoFn(o))}</span>
+          ${siguienteEstado ? `<button class="btn" style="background:var(${colorVar});color:#0a1628" onclick="marcarRendida('${o.id}','${siguienteEstado}')">Marcar rendida</button>` : ''}
+        </div>`).join('')}
+    </div>`;
+  }
+
+  cont.innerHTML =
+    tarjeta('📤 Pendiente de rendir — Asesores', pendAsesor, montoAsesor, 'pendiente_pox', '--amber') +
+    tarjeta('📤 Por rendir a Pox', pendPox, montoPox, 'pendiente_martu', '--blue') +
+    tarjeta('📤 Por rendir a Martú', pendMartu, montoMartu, 'completa', '--green');
+}
+
+function marcarRendida(id, siguienteEstado){
+  const op = operaciones.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  op.rendicion = siguienteEstado;
+  guardarFila(op);
+  showToast('✅ Marcada como rendida');
+  renderRendicion();
+}
+
+function guardarFila(op){
+  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+    op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
+    op.fechaEsc,op.estado,op.mes,op.anio,op.planillaGenerada||false,op.rendicion||'pendiente_asesor']);
+}
+
+function actualizarCampo(id, campo, valor){
+  const op = operaciones.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  if(campo==='precio'){
+    op.precio = parseFloat(valor)||0;
+    op.comision = Math.round(op.precio*0.03);
+  } else if(campo==='pctComision'){
+    const pct = parseFloat(valor)/100 || 0.03;
+    op.comision = Math.round(op.precio*pct);
+  } else {
+    op[campo] = valor;
+    if(campo==='estado' && valor==='Cobrada' && !op.rendicion) op.rendicion = 'pendiente_asesor';
+  }
+  guardarFila(op);
+  showToast('✅ Actualizado');
+  renderAlertas();
+  renderRendicion();
+}
+
+function renderTabla(){
+  const mes = document.getElementById('op-mes').value;
+  const estado = document.getElementById('op-estado').value;
+  const anio = parseInt(document.getElementById('op-anio').value);
+
+  let ops = operaciones.filter(o=>o.anio===anio);
+  if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
+  if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
+
+  const estadoClass = {'Por cobrar':'est-cobrar','Cobrada':'est-cobrada','Caída':'est-caida'};
+
+  document.getElementById('tabla-body').innerHTML = ops.length ? ops.map(o=>{
+    const pctCom = o.precio ? Math.round((o.comision/o.precio)*10000)/100 : 3;
+    return `
+    <tr>
+      <td><input class="cell" value="${o.propiedad||''}" onchange="actualizarCampo('${o.id}','propiedad',this.value)"></td>
+      <td>${o.agente}</td>
+      <td>
+        <select class="cell" onchange="actualizarCampo('${o.id}','punta',this.value)">
+          <option value="Comprador" ${o.punta==='Comprador'?'selected':''}>Comprador</option>
+          <option value="Vendedor" ${o.punta==='Vendedor'?'selected':''}>Vendedor</option>
+        </select>
+      </td>
+      <td><input class="cell" type="number" value="${o.precio}" onchange="actualizarCampo('${o.id}','precio',this.value)"></td>
+      <td><input class="cell" type="number" step="0.01" value="${pctCom}" onchange="actualizarCampo('${o.id}','pctComision',this.value)"></td>
+      <td>${fmtUSD(o.comision)}</td>
+      <td>${fmtUSD(o.ganancia_martina)}</td>
+      <td>${fmtUSD(o.ganancia_solum)}</td>
+      <td>${fmtUSD(o.comision_vendedor)}</td>
+      <td><input class="cell" value="${fmtFecha(o.fechaEsc)}" placeholder="dd/mm/aaaa" onchange="actualizarCampo('${o.id}','fechaEsc',this.value)"></td>
+      <td>
+        <select class="cell estado-badge ${estadoClass[o.estado]||''}" onchange="actualizarCampo('${o.id}','estado',this.value)">
+          <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Por cobrar</option>
+          <option value="Cobrada" ${o.estado==='Cobrada'?'selected':''}>Cobrada</option>
+          <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
+        </select>
+      </td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
+}
+
+// ── Chat para cargar reservas ──
+let chatHistory = [];
+let _imagenChatBase64 = null, _imagenChatMediaType = null;
+
+function previsualizarImagenChat(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const resultado = ev.target.result; // data:image/jpeg;base64,....
+    _imagenChatMediaType = file.type;
+    _imagenChatBase64 = resultado.split(',')[1];
+    document.getElementById('chat-img-preview-src').src = resultado;
+    document.getElementById('chat-img-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function quitarImagenChat(){
+  _imagenChatBase64 = null; _imagenChatMediaType = null;
+  document.getElementById('chat-img-preview').style.display = 'none';
+  document.getElementById('chat-img-input').value = '';
+}
+
+async function enviarChat(){
+  const input = document.getElementById('chat-input');
+  const texto = input.value.trim();
+  if(!texto && !_imagenChatBase64) return;
+
+  agregarMsg(texto || '📷 (foto de la reserva)', 'user');
+  input.value = '';
+
+  // Armar el contenido del mensaje: texto + imagen si hay
+  const contentBlocks = [];
+  if(_imagenChatBase64){
+    contentBlocks.push({type:'image', source:{type:'base64', media_type:_imagenChatMediaType, data:_imagenChatBase64}});
+  }
+  contentBlocks.push({type:'text', text: texto || 'Te mando la foto de la reserva, sacá los datos que puedas y preguntame lo que falte.'});
+  quitarImagenChat();
+
+  chatHistory.push({role:'user', content:contentBlocks});
+
+  try{
+    const resp = await fetch('/.netlify/functions/claude', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        system: `Sos el asistente de carga de reservas de SOLUMITOS. Josefina te va a describir una reserva en lenguaje natural, o te va a mandar una foto de la reserva (formulario, contrato, whatsapp, lo que sea) para que saques los datos vos misma. Datos que necesitás: propiedad, agente, punta, precio, % de comisión, fecha. Tu trabajo:
+1. Extraer los datos que puedas del texto y/o de la imagen.
+2. Si falta algún dato importante (propiedad, agente, punta o precio), preguntale específicamente por lo que falta, en texto plano, corto.
+3. Cuando tengas propiedad, agente, punta y precio, respondé EXCLUSIVAMENTE con un bloque JSON (nada de texto alrededor) con esta forma exacta:
+{"accion":"cargar_reserva","propiedad":"...","agente":"...","punta":"Comprador o Vendedor","precio":numero,"pctComision":numero_o_null,"fecha":"dd/mm/aaaa o null"}
+Si pctComision no se menciona, usá null (se asume 3% después). Si la fecha no se menciona, usá null (se usa la fecha de hoy).
+Nombres de agentes válidos: Martina, Vicky, Manu, Marce, Kito, Cris, Ceci, Jose, Luli, Joaquin. Si menciona un nombre distinto (ej "Victoria"), mapealo al que corresponda.`,
+        messages: chatHistory
+      })
+    });
+    const data = await resp.json();
+    const reply = data.content?.[0]?.text || 'No pude procesar eso, ¿podés reformularlo?';
+
+    // ¿Es un JSON de carga?
+    const jsonMatch = reply.match(/\{[\s\S]*"accion"\s*:\s*"cargar_reserva"[\s\S]*\}/);
+    if(jsonMatch){
+      try{
+        const datos = JSON.parse(jsonMatch[0]);
+        await cargarReservaDesdeChat(datos);
+        return;
+      }catch(e){ /* si no parsea, seguir como texto normal */ }
+    }
+
+    agregarMsg(reply, 'claude');
+    chatHistory.push({role:'assistant', content:reply});
+  }catch(e){
+    agregarMsg('Error al conectar. Probá de nuevo en un momento.', 'claude');
+  }
+}
+
+async function cargarReservaDesdeChat(datos){
+  const nuevoId = Date.now();
+  const hoy = new Date();
+  const fechaHoy = String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
+  const pct = datos.pctComision ? datos.pctComision/100 : 0.03;
+  const comision = Math.round(datos.precio*pct);
+  const fecha = datos.fecha || fechaHoy;
+  const partesFecha = fecha.split('/');
+  const mes = partesFecha.length===3 ? parseInt(partesFecha[1]) : hoy.getMonth()+1;
+  const anio = partesFecha.length===3 ? parseInt(partesFecha[2]) : hoy.getFullYear();
+
+  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, 'Por cobrar', mes, anio, false, 'pendiente_asesor'];
+  await dbGuardar('operaciones', fila);
+
+  agregarMsg(`✅ Reserva cargada: ${datos.propiedad} — ${datos.agente} — ${datos.punta} — ${fmtUSD(datos.precio)} (comisión ${fmtUSD(comision)}). Ya está en la planilla como "Por cobrar".`, 'claude');
+  chatHistory = []; // reiniciar conversación para la próxima carga
+  await cargarOperaciones();
+}
+
+function agregarMsg(texto, tipo){
+  const cont = document.getElementById('chat-msgs');
+  const div = document.createElement('div');
+  div.className = 'msg '+tipo;
+  div.textContent = texto;
+  cont.appendChild(div);
+  cont.scrollTop = cont.scrollHeight;
+}
+
+cargarOperaciones();
+</script>
+</body>
+</html>

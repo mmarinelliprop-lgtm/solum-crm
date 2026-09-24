@@ -392,7 +392,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="Kito">Kito (Esteban)</option>
         <option value="Cris">Cris (Cristian)</option>
         <option value="Ceci">Ceci (Cecilia)</option>
-        <option value="Joaco">Joaco (Joaquín)</option>
+        <option value="Joaquin">Joaquín</option>
       </select>
     </div>
   </div>
@@ -480,7 +480,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
             <input type="checkbox" value="Ceci" checked onchange="renderOperaciones()" style="cursor:pointer"> Ceci
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
-            <input type="checkbox" value="Joaco" checked onchange="renderOperaciones()" style="cursor:pointer"> Joaco
+            <input type="checkbox" value="Joaquin" checked onchange="renderOperaciones()" style="cursor:pointer"> Joaquín
           </label>
         </div>
       </div>
@@ -530,7 +530,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
     <table>
       <thead><tr>
         <th>Propiedad</th><th>Agente</th><th>Punta</th>
-        <th>Precio venta</th><th>% Com.</th><th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>🤝 Vendedor</th><th>Est. escritura</th><th>Fecha reserva</th>
+        <th>Precio venta</th><th>% Com.</th><th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>🤝 Vendedor</th><th>Est. escritura</th>
         <th>Estado</th><th>Acciones</th>
       </tr></thead>
       <tbody id="ops-tabla"></tbody>
@@ -840,9 +840,9 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="Manu">Manu</option>
         <option value="Cris">Cris</option>
         <option value="Ceci">Ceci</option>
-        <option value="Joaco">Joaco</option>
         <option value="Jose">Jose</option>
         <option value="Luli">Luli</option>
+        <option value="Joaquin">Joaquín</option>
       </select>
       <button class="btn btn-gold btn-sm" onclick="guardarSeguimiento()">💾 Guardar</button>
       <button id="btn-seg-guardar-pendientes" class="btn btn-sm" onclick="guardarCambiosPendientes()" style="display:none;background:var(--amber);color:var(--bg);animation:pulse 1s infinite">💾 Guardar cambios</button>
@@ -939,7 +939,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="M. Victoria">M. Victoria</option><option value="Manuela">Manuela</option>
         <option value="Marce">Marce</option><option value="Esteban">Kito</option>
         <option value="Cristian">Cristian</option><option value="Cecilia">Cecilia</option>
-        <option value="Joaquin">Joaquín (Joaco)</option>
+        <option value="Joaquin">Joaquín</option>
       </select>
     </div>
     <div class="modal-field"><label class="modal-label">Punta</label>
@@ -1113,7 +1113,6 @@ async function cargarDatosDB() {
           'Esteban':'Kito','Esteban Romero':'Kito',
           'Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
           'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
-          'Joaquin':'Joaco','Joaquín':'Joaco',
         };
         agente = mapAgente[agente] || agente;
         return {
@@ -1121,9 +1120,10 @@ async function cargarDatosDB() {
           precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
           comision_vendedor: parseFloat(r[6])||0,
           ganancia_martina: parseFloat(r[7])||0, ganancia_solum: parseFloat(r[8])||0,
-          fechaEsc: r[9], fechaReserva: r[10], estado: r[11],
-          mes: parseInt(r[12])||0, anio: parseInt(r[13])||0,
-          planillaGenerada: r[14]==='true'||r[14]===true
+          fechaEsc: r[9], estado: r[10],
+          mes: parseInt(r[11])||0, anio: parseInt(r[12])||0,
+          planillaGenerada: r[13]==='true'||r[13]===true,
+          rendicion: r[14] || 'pendiente_asesor'
         };
       });
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
@@ -1282,8 +1282,8 @@ const COMISIONES = {
   'Cristian': 0.50, 'Cris': 0.50, 'Cristian Ruiz Diaz': 0.50,
   'Esteban': 0.60, 'Kito': 0.60, 'Esteban Romero': 0.60,
   'Cecilia': 0.50, 'Ceci': 0.50, 'Cecilia Bruno': 0.50,
-  'Joaquin': 0.50, 'Joaquín': 0.50, 'Joaco': 0.50,
   'Josefina': 0.50, 'Jose': 0.50,
+  'Joaquin': 0.50, 'Joaquín': 0.50,
   'Luli': 0.50
 };
 
@@ -1336,7 +1336,7 @@ let gastosPesos = [];
 // ═══════════════════════════════════════════════
 // SEGUIMIENTO — DATOS Y LÓGICA CORRECTA
 // ═══════════════════════════════════════════════
-const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Joaco','Jose','Luli'];
+const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Jose','Luli','Joaquin'];
 
 // 13 métricas exactas de la planilla
 const METRICAS_SEG = [
@@ -1360,7 +1360,7 @@ const OBJ_BASE = {
   'Ceci':    {p:12,ec:6,acm:4,cp:3,pr:4,cg:160,ca:80,b:6,m:16,r:2,v:1,f:2500,cap:0},
   'Jose':    {p:25,ec:4,acm:4,cp:2,pr:4,cg:60,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
   'Luli':    {p:15,ec:6,acm:4,cp:3,pr:8,cg:120,ca:100,b:5,m:20,r:2,v:1,f:3000,cap:1},
-  'Joaco':   {p:15,ec:4,acm:4,cp:2,pr:4,cg:60,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
+  'Joaquin': {p:20,ec:6,acm:4,cp:3,pr:8,cg:100,ca:40,b:5,m:20,r:2,v:1,f:0,cap:1},
 };
 
 const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
@@ -1369,7 +1369,7 @@ const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
 // Formato: {mes: {p,ec,acm,cp,pr,cg,ca,b,m,r,v,f,cap}}
 const SEG_DATA_REAL = {
   'Martina':{}, 'Marce':{}, 'Kito':{}, 'Vicky':{},
-  'Manu':{}, 'Cris':{}, 'Ceci':{}, 'Jose':{}, 'Luli':{}, 'Joaco':{}
+  'Manu':{}, 'Cris':{}, 'Ceci':{}, 'Jose':{}, 'Luli':{}, 'Joaquin':{}
 };
 
 // (OBJ_KEYS ya declarado arriba)
@@ -1568,7 +1568,7 @@ const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32]; // Q1, Q2, Q3, Q4 — suman 
 function pesoMensual(mes){ return PESOS_TRIMESTRE[Math.floor((mes-1)/3)]/3; }
 
 // Desde cuándo las reservas se cuentan automáticamente por fecha real (antes de esto, se respeta lo precargado a mano)
-const SISTEMA_DESDE_ANIO = 2025;
+const SISTEMA_DESDE_ANIO = 2026;
 const SISTEMA_DESDE_MES = 1;
 // ¿Ya terminó ese mes/año? (para no evaluar cumplimiento de objetivos de un mes en curso o futuro)
 function mesFinalizado(mes, anio){
@@ -1578,18 +1578,17 @@ function mesFinalizado(mes, anio){
   if(anio > anioActual) return false;
   return mes < mesActualReal;
 }
-// Mes/año en que se considera "tomada" una reserva: SIEMPRE la fechaReserva de la operación.
-// Si no la tiene cargada, no se puede determinar → devuelve null (no cuenta como reserva de ningún mes,
-// y se marca como incongruencia en detectarIncongruencias/alertasActivas).
+// Mes/año en que se considera "tomada" una reserva: la fecha cargada en la operación (fechaEsc) si existe,
+// o si no, el mes/año en que se cargó la operación al sistema.
 function mesAnioReservaOp(o){
-  if(o.fechaReserva){
-    const partes = String(o.fechaReserva).split('/');
+  if(o.fechaEsc){
+    const partes = String(o.fechaEsc).split('/');
     if(partes.length===3){
       const mm = parseInt(partes[1]), aa = parseInt(partes[2]);
       if(mm>=1 && mm<=12 && aa>2000) return {mes:mm, anio:aa};
     }
   }
-  return null;
+  return {mes:o.mes, anio:o.anio};
 }
 
 // ═══════════════════════════════════════════════
@@ -1604,11 +1603,11 @@ function normAgente(a){
     'Esteban':'Kito','Esteban Romero':'Kito',
     'Cristian':'Cris','Cristian Ruiz Diaz':'Cris','Cristian Ruiz Díaz':'Cris',
     'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
-    'Joaquin':'Joaco','Joaquín':'Joaco',
     'Josefina':'Jose','Jose':'Jose',
     'Luli':'Luli',
+    'Joaquin':'Joaquin','Joaquín':'Joaquin',
     'propia':'Martina','Martina':'Martina','Martina Marinelli':'Martina',
-    'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci','Joaco':'Joaco'
+    'Vicky':'Vicky','Manu':'Manu','Marce':'Marce','Kito':'Kito','Cris':'Cris','Ceci':'Ceci'
   };
   return map[a?.trim()] || a || '';
 }
@@ -1638,8 +1637,8 @@ function getSegMes(vendedor, mes, anio) {
   merged.v = opsDelMes.filter(o=>o.estado==='Cobrada').length;
   merged.f = opsDelMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
 
-  // Reservas: desde que existe el sistema, se cuentan SIEMPRE por fechaReserva de la operación.
-  // Operaciones sin fechaReserva cargada no cuentan en ningún mes (quedan afuera, y se alertan aparte).
+  // Reservas: desde que existe el sistema, se cuentan por la fecha real en que se tomó la reserva
+  // (fechaEsc de la operación si está cargada; si no, el mes/año en que se cargó al sistema).
   // Los meses anteriores a la creación del sistema mantienen el valor precargado a mano (segData/Sheet), sin tocar.
   const esPeriodoSistema = anio > SISTEMA_DESDE_ANIO || (anio===SISTEMA_DESDE_ANIO && mes>=SISTEMA_DESDE_MES);
   if(esPeriodoSistema){
@@ -1647,8 +1646,8 @@ function getSegMes(vendedor, mes, anio) {
       (vendedor==='Martina' && (o.agente==='Martina'||o.agente==='propia'||o.agente==='Martina Marinelli'));
     merged.r = operaciones.filter(o=>{
       if(!esDelVendedor(o)) return false;
-      const fr = mesAnioReservaOp(o);
-      return fr && fr.mes===mes && fr.anio===anio;
+      const {mes:mR, anio:aR} = mesAnioReservaOp(o);
+      return mR===mes && aR===anio;
     }).length;
   }
   // Si es anterior a la creación del sistema, merged.r ya trae el valor manual precargado y no se toca.
@@ -1682,20 +1681,7 @@ function calcTotalMensualDesdeSemanas(vendedor, mes) {
 // Detectar incongruencias y actualizar ícono
 function detectarIncongruencias() {
   alertasActivas = [];
-
-  // Operaciones del período del sistema (>= SISTEMA_DESDE_ANIO/MES) sin fechaReserva cargada:
-  // no se pueden contar como reserva de ningún mes hasta que se complete el dato.
-  operaciones.forEach(o=>{
-    const esPeriodoSistema = o.anio > SISTEMA_DESDE_ANIO || (o.anio===SISTEMA_DESDE_ANIO && o.mes>=SISTEMA_DESDE_MES);
-    if(esPeriodoSistema && !o.fechaReserva){
-      alertasActivas.push({
-        id: 'sin-fechaReserva-'+o.id,
-        tipo: 'Falta fecha de reserva',
-        msg: `${o.propiedad} (${o.agente}, ${o.punta}) no tiene fecha de reserva cargada — no se está contando en Reservas de ningún mes.`,
-        opId: o.id
-      });
-    }
-  });
+  actualizarIconoAlertas();
 
   actualizarIconoAlertas();
 }
@@ -1897,7 +1883,7 @@ function actualizarOp(id, campo, valor){
   }
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
-    op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false]);
+    op.fechaEsc,op.estado,op.mes,op.anio,op.planillaGenerada||false,op.rendicion||'pendiente_asesor']);
   detectarIncongruencias();
   renderDashboard();
   renderOperaciones();
@@ -1906,7 +1892,7 @@ function actualizarOp(id, campo, valor){
 
 function mapNombreAgente(v) {
   // Mapear nombre de pestaña a nombre en operaciones
-  const map = {'Vicky':'M. Victoria','Manu':'Manuela','Cris':'Cristian','Kito':'Esteban','Ceci':'Cecilia','Jose':'Josefina','Joaco':'Joaquín'};
+  const map = {'Vicky':'M. Victoria','Manu':'Manuela','Cris':'Cristian','Kito':'Esteban','Ceci':'Cecilia','Jose':'Josefina'};
   return map[v] || v;
 }
 
@@ -2152,7 +2138,7 @@ async function ejecutarPlanilla(op, g) {
   // Actualizar en Sheets
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
-    op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,true]);
+    op.fechaEsc,op.estado,op.mes,op.anio,true]);
 
   // Generar planilla via Apps Script (usa el modelo en Drive con formato completo)
   try {
@@ -2229,8 +2215,6 @@ function mapAgenteToSeg(agente) {
     // Ceci
     'Cecilia':'Ceci','Ceci':'Ceci',
     'Cecilia Bruno':'Ceci',
-    // Joaco
-    'Joaquin':'Joaco','Joaquín':'Joaco','Joaco':'Joaco',
     // Jose
     'Josefina':'Jose','Jose':'Jose',
     // Luli
@@ -2322,7 +2306,7 @@ function renderDashboard(){
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#b8b0a4',font:{size:11},padding:12}}}}
   });
 
-  const agentesRanking = ['Vicky','Manu','Marce','Kito','Cris','Ceci','Joaco'];
+  const agentesRanking = ['Vicky','Manu','Marce','Kito','Cris','Ceci','Joaquin'];
   // normAgente es función global — definida abajo
   // Solo operaciones cobradas para el ranking
   const opsCobradas = ops.filter(o=>o.estado==='Cobrada');
@@ -2412,7 +2396,7 @@ function renderGanancia(){
   });
 
   destroyChart('chartAgentes');
-  const agentesRank = ['Vicky','Manu','Marce','Kito','Cris','Ceci','Joaco'];
+  const agentesRank = ['Vicky','Manu','Marce','Kito','Cris','Ceci','Joaquin'];
   const ganPorAgente = agentesRank.map(a=>operaciones.filter(o=>o.anio===anio&&normAgente(o.agente)===a&&o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).equipo),0));
   const agEl = document.getElementById('chartAgentes');
   if(agEl) charts['chartAgentes'] = new Chart(agEl,{
@@ -2529,7 +2513,7 @@ function renderOperaciones(){
           <option value="Kito" ${normAgente(o.agente)==='Kito'?'selected':''}>Kito</option>
           <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
           <option value="Ceci" ${normAgente(o.agente)==='Ceci'?'selected':''}>Ceci</option>
-          <option value="Joaco" ${normAgente(o.agente)==='Joaco'?'selected':''}>Joaco</option>
+          <option value="Joaquin" ${normAgente(o.agente)==='Joaquin'?'selected':''}>Joaquín</option>
         </select>
       </td>
       <td>
@@ -2552,7 +2536,6 @@ function renderOperaciones(){
       </td>
       <td style="color:var(--text2);font-size:12px">${o.agente==='Martina'?'—':fmtUSD(o.comision_vendedor||0)}</td>
       <td><input style="${inputStyle}" value="${fmtFecha(o.fechaEsc)}" placeholder="—" ${inputFocus} ${inputBlur('fechaEsc', o.id)}></td>
-      <td><input style="${inputStyle}" value="${fmtFecha(o.fechaReserva)}" placeholder="—" ${inputFocus} ${inputBlur('fechaReserva', o.id)}></td>
       <td>
         <select style="${inputStyle}" onchange="actualizarOp(${o.id},'estado',this.value)">
           <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Por cobrar</option>
@@ -2564,7 +2547,7 @@ function renderOperaciones(){
         <button class="btn btn-gold btn-sm" onclick="generarPlanilla(${o.id})">Planilla</button>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text3)">Sin operaciones para este filtro</td></tr>';
+  }).join('') || '<tr><td colspan="11" style="text-align:center;padding:30px;color:var(--text3)">Sin operaciones para este filtro</td></tr>';
 
   // Totales separados por estado
   const totComision = ops.reduce((s,o)=>s+o.comision,0);
@@ -2578,7 +2561,7 @@ function renderOperaciones(){
 
   document.getElementById('ops-totales').innerHTML = ops.length ? `
     <tr style="background:var(--bg3);border-top:2px solid rgba(255,255,255,0.08)">
-      <td colspan="13" style="padding:0"></td>
+      <td colspan="12" style="padding:0"></td>
     </tr>
     <tr style="background:var(--bg3);font-size:11px">
       <td colspan="3" style="padding:10px 14px;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;font-weight:700">${ops.length} ops filtradas</td>
@@ -2594,7 +2577,6 @@ function renderOperaciones(){
         <span style="color:rgba(74,158,255,0.6);font-size:10px">${fmtUSD(totSolumPend)} pend.</span>
       </td>
       <td style="padding:10px 14px;color:var(--text2);font-weight:600">${fmtUSD(totVendedores)}</td>
-      <td></td>
       <td></td>
       <td style="padding:10px 14px;color:var(--red);font-size:10px">Caídas: ${fmtUSD(totCaidasMiGan)}</td>
       <td></td>
@@ -3780,54 +3762,39 @@ function renderCalendarioSemanal(){
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   const mes = parseInt(document.getElementById('seg-cal-mes').value);
   const anio = 2026;
-  const getObjMes = key => segObjetivos?.[vendedor]?.[mes]?.[key] ?? segObjetivos?.[vendedor]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
-  const obj = {p:getObjMes('p'), ec:getObjMes('ec'), acm:getObjMes('acm'), pr:getObjMes('pr'), cg:getObjMes('cg'), m:getObjMes('m')};
+  const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
 
   // Calcular semanas del mes (lunes a viernes)
   const semanas = getSemanasMes(anio, mes);
   const semData = getSemanas(vendedor, mes);
 
-  // Prorratear el objetivo mensual entre semanas según sus días hábiles reales
-  // (una semana partida entre dos meses aporta menos días hábiles y le toca
-  // proporcionalmente menos objetivo, en vez de dividir siempre por 4).
-  const contarHabiles = (d1, d2) => {
-    let c = 0, d = new Date(d1);
-    while(d <= d2){ const dw = d.getDay(); if(dw>=1 && dw<=5) c++; d.setDate(d.getDate()+1); }
-    return c;
-  };
-  const primerDiaMes = new Date(anio, mes-1, 1);
-  const ultimoDiaMes = new Date(anio, mes, 0);
-  const diasHabilesMes = contarHabiles(primerDiaMes, ultimoDiaMes);
+  const semMetricas = [
+    {label:'Prospección',key:'p',obj:Math.ceil(obj.p/4)},
+    {label:'Entrevistas captación',key:'ec',obj:Math.ceil((obj.ec||2)/4)||2},
+    {label:'ACM',key:'acm',obj:2},
+    {label:'Promo',key:'pr',obj:2},
+    {label:'Consultas',key:'cg',obj:Math.ceil(obj.cg/4)},
+    {label:'Muestras',key:'m',obj:Math.ceil(obj.m/4)},
+  ];
 
   let html = '';
   semanas.forEach((sem, i) => {
     const semVals = semData[i]?.vals || {};
-
+    
     // Detectar si la semana está partida entre dos meses
     const lunesParts = sem.lunes.split('/');
     const viernesParts = sem.viernes.split('/');
     const lunesDate = new Date(anio, parseInt(lunesParts[1])-1, parseInt(lunesParts[0]));
     const viernesDate = new Date(anio, parseInt(viernesParts[1])-1, parseInt(viernesParts[0]));
     const esPartida = lunesDate.getMonth() !== viernesDate.getMonth();
-
-    const diasHabilesSemana = contarHabiles(lunesDate, viernesDate);
-    const factor = diasHabilesMes>0 ? diasHabilesSemana/diasHabilesMes : 0;
-    const semMetricas = [
-      {label:'Prospección',key:'p',obj:Math.round(obj.p*factor)},
-      {label:'Entrevistas captación',key:'ec',obj:Math.round((obj.ec||0)*factor)},
-      {label:'ACM',key:'acm',obj:Math.round((obj.acm||0)*factor)},
-      {label:'Promo',key:'pr',obj:Math.round((obj.pr||0)*factor)},
-      {label:'Consultas',key:'cg',obj:Math.round(obj.cg*factor)},
-      {label:'Muestras',key:'m',obj:Math.round(obj.m*factor)},
-    ];
-
-    const partidaLabel = esPartida ?
+    
+    const partidaLabel = esPartida ? 
       `<span style="font-size:10px;color:var(--amber);margin-left:8px">⚠️ Semana partida — se prorrateará</span>` : '';
-
+    
     html += `<div class="cal-week">
       <div class="cal-week-header">
         <div class="cal-week-date">Semana ${i+1} ${partidaLabel}</div>
-        <div class="cal-week-range">${sem.diaInicioNombre.charAt(0).toUpperCase()+sem.diaInicioNombre.slice(1)} ${sem.lunes} → Viernes ${sem.viernes}</div>
+        <div class="cal-week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
       </div>
       <div class="cal-week-body">`;
     semMetricas.forEach(({label,key,obj:o}) => {
@@ -3888,26 +3855,39 @@ function prorratearSemana(vals, lunes, viernes, mesDestino, anioDestino) {
 }
 
 function getSemanasMes(anio, mes){
-  // Devuelve las semanas (lun-vie) del mes dado. La primera semana puede empezar
-  // a mitad de semana (ej. martes) si el mes no arranca un lunes — no se salta
-  // esos días ni se agregan días del mes anterior.
+  // Devuelve las semanas (lun-vie, o el tramo parcial que corresponda) del mes dado
   const semanas = [];
+  const primerDia = new Date(anio, mes-1, 1);
   const ultimoDia = new Date(anio, mes, 0);
-  let dia = new Date(anio, mes-1, 1);
-  while(dia <= ultimoDia){
-    const dow = dia.getDay(); // 0=dom..6=sab
-    if(dow===0){ dia.setDate(dia.getDate()+1); continue; } // domingo → arranca el lunes
-    if(dow===6){ dia.setDate(dia.getDate()+2); continue; } // sábado → arranca el lunes
-    const inicio = new Date(dia);
-    const viernes = new Date(dia); viernes.setDate(dia.getDate()+(5-dow));
-    const fin = viernes<=ultimoDia?viernes:ultimoDia;
+  let dia = new Date(primerDia);
+
+  // Si el mes arranca en día hábil que no es lunes (ej: viernes), ese tramo suelto
+  // (desde el día 1 hasta el domingo o fin de mes) cuenta como su propia semana — no se descarta.
+  const diaSemanaInicio = dia.getDay(); // 0=domingo ... 6=sábado
+  if(diaSemanaInicio>=2 && diaSemanaInicio<=5){ // martes a viernes: hay al menos 1 día hábil suelto
+    const inicioParcial = new Date(dia);
+    const finParcial = new Date(dia);
+    while(finParcial.getDay()!==0 && finParcial < ultimoDia) finParcial.setDate(finParcial.getDate()+1);
+    const finReal = finParcial <= ultimoDia ? finParcial : ultimoDia;
     semanas.push({
-      lunes: inicio.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
-      viernes: fin.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
-      diaInicioNombre: inicio.toLocaleDateString('es-AR',{weekday:'long'})
+      lunes: inicioParcial.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      viernes: finReal.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})
     });
-    dia = new Date(viernes);
-    dia.setDate(dia.getDate()+3); // del viernes al lunes siguiente
+    dia = new Date(finReal);
+    dia.setDate(dia.getDate()+1);
+  } else {
+    // Domingo, sábado o ya es lunes: ir al primer lunes del mes normalmente
+    while(dia.getDay()!==1) dia.setDate(dia.getDate()+1);
+  }
+
+  while(dia <= ultimoDia){
+    const lunes = new Date(dia);
+    const viernes = new Date(dia); viernes.setDate(dia.getDate()+4);
+    semanas.push({
+      lunes: lunes.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      viernes: (viernes<=ultimoDia?viernes:ultimoDia).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})
+    });
+    dia.setDate(dia.getDate()+7);
   }
   return semanas;
 }
@@ -4136,7 +4116,6 @@ Agentes y porcentajes:
 - Marce (Marcela, Marcela Corsalini): agente 50% / Martina 20% / SOLUM 30%
 - Cris (Cristian, Cristian Ruiz Diaz): agente 50% / Martina 20% / SOLUM 30%
 - Ceci (Cecilia, Cecilia Bruno): agente 50% / Martina 20% / SOLUM 30%
-- Joaco (Joaquín): agente 50% / Martina 20% / SOLUM 30%
 - Kito (Esteban, Esteban Romero): agente 60% / Martina 10% / SOLUM 30%
 - Propia (Martina sola): Martina 80% / SOLUM 20%
 
@@ -4174,9 +4153,8 @@ Cuando analizás una foto o planilla:
 2. Identificá la punta (Comprador/Vendedor) → si no está clara, preguntá
 3. Calculá comisión bruta (monto × 3%) y verificá contra lo que figura
 4. Determiná el estado según el mapeo
-5. "fechaEsc" (fecha de cobro) = la MÁS TEMPRANA entre fecha de escritura, fecha de cesión y fecha de boleto, de las que figuren en el documento. Si solo figura una, usá esa. Usá esa fecha también para el mes/año de la operación.
-6. Identificá la fecha de firma/toma de la reserva → puede figurar como "fecha de la reserva", "reserva conformada" o fecha de firma → va en "fechaReserva". Si no está clara en el documento, NO preguntes: dejala vacía y avisá en el resumen que falta (se completa después a mano)
-7. Mostrá resumen antes de cargar y esperá confirmación
+5. Usá la fecha de escritura/operación para el mes/año
+6. Mostrá resumen antes de cargar y esperá confirmación
 
 Si hay dos puntas (comprador Y vendedor) → son DOS operaciones separadas.
 
@@ -4192,24 +4170,22 @@ OPERACIÓN:
 2. Precio de venta → "precio" (en USD)
 3. Agente → quién firma o está asignado. Si no figura → preguntá con lista
 4. Punta → Vendedor o Comprador. Si no está claro → preguntá
-5. "fechaEsc" (fecha de cobro) → la MÁS TEMPRANA entre fecha de escritura, fecha de cesión y fecha de boleto que figuren en el documento (si solo hay una, esa)
-6. Fecha de firma/toma de la reserva → puede figurar como "fecha de la reserva", "reserva conformada" o fecha de firma del boleto/reserva → "fechaReserva". Si no está clara en el documento, dejala vacía (NO preguntes por esta) — el sistema la completa solo con la fecha de hoy
-7. Estado → reserva nueva = "Por cobrar"
-8. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
-9. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
+5. Fecha escritura estimada → fecha de escritura, posesión o vencimiento
+6. Estado → reserva nueva = "Por cobrar"
+7. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
+8. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
 
 DATOS DEL CLIENTE (para la planilla de facturación):
-10. Nombre completo del cliente → "cliente"
-11. DNI o CUIT/CUIL → "cuit"
-12. Mail → "mail"
-13. Teléfono → "telefono" (si figura)
+9. Nombre completo del cliente → "cliente"
+10. DNI o CUIT/CUIL → "cuit"
+11. Mail → "mail"
+12. Teléfono → "telefono" (si figura)
 
 Al generar el ACCION, incluí los datos del cliente:
-ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","fechaReserva":"","estado":"Por cobrar","mes":0,"anio":0,"cliente":"","cuit":"","mail":"","telefono":"","pct_comision":0.03}}
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0,"cliente":"","cuit":"","mail":"","telefono":"","pct_comision":0.03}}
 
 Si falta el precio → preguntá.
 Si falta el agente → preguntá siempre.
-Si falta la fecha de reserva → NO preguntes, dejala vacía en el ACCION (el sistema la completa con la fecha de hoy).
 Si hay dos puntas → DOS acciones ACCION separadas.
 
 Mostrá resumen antes de cargar y esperá confirmación.
@@ -4218,7 +4194,7 @@ Mostrá resumen antes de cargar y esperá confirmación.
 CRUCES AUTOMÁTICOS
 ═══════════════════════════════════════════════
 Al cargar una operación:
-- Se cuenta como Reserva del agente en el mes de su fechaReserva (no en el de carga ni en el de fechaEsc)
+- Por cobrar → +1 Reservas del agente ese mes en Seguimiento
 - Cobrada → +1 Ventas + suma Facturación del agente + suma Ingresos de Martina en Finanzas
 
 ═══════════════════════════════════════════════
@@ -4237,7 +4213,7 @@ NUNCA uses markdown (##, **, listas con guión, <details>). Solo texto plano.
 ACCIONES JSON
 ═══════════════════════════════════════════════
 Para cargar operación:
-ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","fechaReserva":"","estado":"Por cobrar","mes":0,"anio":0}}
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0}}
 
 Para exchange:
 ACCION:{"tipo":"exchange","datos":{"mes":0,"anio":0,"usd":0,"cotiz":0}}
@@ -4368,7 +4344,7 @@ function procesarAccion(accion){
           'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','Manuela':'Manu',
           'Manuela Pellegrini':'Manu','Marcela':'Marce','Marcela Corsalini':'Marce',
           'Esteban':'Kito','Esteban Romero':'Kito','Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
-          'Cecilia':'Ceci','Cecilia Bruno':'Ceci','Joaquin':'Joaco','Joaquín':'Joaco'};
+          'Cecilia':'Ceci','Cecilia Bruno':'Ceci'};
         return m[a] || a;
       })(),
       punta: d.punta||'Vendedor',
@@ -4378,8 +4354,6 @@ function procesarAccion(accion){
       ganancia_martina,
       ganancia_solum,
       fechaEsc: d.fechaEsc||'',
-      // Si no viene fechaReserva en la carga por chat, se toma el día en que se cargó (hoy), no se deja vacía.
-      fechaReserva: d.fechaReserva || fmtFechaHoy(),
       estado,
       mes: parseInt(d.mes)||new Date().getMonth()+1,
       anio: parseInt(d.anio)||new Date().getFullYear(),
@@ -4391,11 +4365,17 @@ function procesarAccion(accion){
     if(!window._opBuffer) window._opBuffer = [];
     window._opBuffer.push([newOp.id, newOp.propiedad, newOp.agente==='propia'?'Martina':newOp.agente, newOp.punta,
       newOp.precio, newOp.comision, newOp.comision_vendedor||0, newOp.ganancia_martina, newOp.ganancia_solum,
-      newOp.fechaEsc, newOp.fechaReserva, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
+      newOp.fechaEsc, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
 
     // Cruzar con seguimiento del agente
-    // r ya no se guarda a mano acá: getSegMes la calcula siempre desde fechaReserva de las operaciones.
-    if(estado==='Cobrada'){
+    const agSeg = mapAgenteToSeg(newOp.agente);
+    if(!segData[agSeg]) segData[agSeg]={};
+    if(!segData[agSeg][newOp.mes]) segData[agSeg][newOp.mes]={};
+    if(estado==='Por cobrar'){
+      // Nueva reserva → sumar +1 a r y guardar en Sheet
+      segData[agSeg][newOp.mes].r = (segData[agSeg][newOp.mes].r||0)+1;
+      dbGuardar('seguimiento', [Date.now(), agSeg, newOp.mes, 'r', segData[agSeg][newOp.mes].r]);
+    } else if(estado==='Cobrada'){
       // v y f se calculan en getSegMes desde operaciones — no guardar en segData
       if(!historicoIngresos[newOp.anio]) historicoIngresos[newOp.anio]={};
       historicoIngresos[newOp.anio][newOp.mes] = (historicoIngresos[newOp.anio][newOp.mes]||0)+newOp.ganancia_martina;
