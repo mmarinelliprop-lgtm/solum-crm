@@ -33,7 +33,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .filters{display:flex;gap:14px;margin-bottom:16px;flex-wrap:wrap;align-items:flex-end;}
 .filter-label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;}
 .filter-select{background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer;outline:none;}
-.table-wrap{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);overflow:auto;max-height:75vh;}
+.table-wrap{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);overflow:auto;max-height:75vh;-webkit-overflow-scrolling:touch;}
 table{width:100%;border-collapse:collapse;font-size:12px;}
 th{position:sticky;top:0;background:var(--card2);color:var(--gold2);text-align:left;padding:10px 10px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;z-index:2;}
 td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);white-space:nowrap;}
@@ -93,15 +93,16 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
     </div>
     <div><span class="filter-label">Estado</span>
       <select class="filter-select" id="op-estado" onchange="renderTabla()">
-        <option value="all">Todos</option>
-        <option value="Por cobrar" selected>Por cobrar</option>
+        <option value="all" selected>Todos</option>
+        <option value="Por cobrar">Por cobrar</option>
         <option value="Cobrada">Cobrada</option>
         <option value="Caída">Caída</option>
       </select>
     </div>
     <div><span class="filter-label">Año</span>
       <select class="filter-select" id="op-anio" onchange="renderTabla()">
-        <option value="2026" selected>2026</option><option value="2025">2025</option>
+        <option value="all" selected>Todos</option>
+        <option value="2026">2026</option><option value="2025">2025</option>
         <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
     </div>
@@ -205,8 +206,20 @@ async function dbGuardar(tipo,fila){
 
 function fmtUSD(n){ return '$'+Math.round(n||0).toLocaleString('es-AR'); }
 function fmtFecha(f){ return f || ''; }
+// Convierte cualquier formato de fecha (ISO de Sheets o dd/mm/aaaa) siempre a dd/mm/aaaa
+function normFecha(f){
+  if(!f) return '';
+  const s = String(f).trim();
+  if(!s) return '';
+  if(s.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    return '';
+  }
+  return s;
+}
 
-// Frase del día — rota sola, distinta cada día, con humor irónico sobre el equipo
+// Frases — una distinta cada vez que se abre la página, sin repetir hasta agotar la lista
 const FRASES_DIA = [
   'Hoy toca levantar a este equipo de asesores dormidos, dale que podés 💀',
   'Otro día, otra chance de que alguien conteste el WhatsApp a tiempo 📱',
@@ -220,21 +233,58 @@ const FRASES_DIA = [
   'Nivel de dificultad de hoy: lograr que te cobren a tiempo 🎮',
   'Un poco de polvo de hada no vendría mal para que este equipo cobre más rápido ✨',
   'Ni todo el polvo mágico del mundo hace que un asesor conteste antes del mediodía 🧚',
-  'Hoy el equipo necesita más de tu magia que de tu paciencia, elegí bien dónde la usás ✨'
+  'Hoy el equipo necesita más de tu magia que de tu paciencia, elegí bien dónde la usás ✨',
+  'Recordatorio del día: "ya casi cierro" puede significar cualquier cosa, menos que cerró 🎯',
+  'Si cobrar a tiempo fuera fácil, no necesitarían una hadita para lograrlo 🧚‍♀️',
+  'Hoy vas a escuchar "cualquier cosa te aviso" al menos tres veces. Contalas 📊',
+  'Alerta meteorológica: alta probabilidad de asesores desaparecidos hasta la tarde ☁️',
+  'Sabías que podés convertir polvo de hada en fechas de cobro cumplidas? Ojalá 🧚',
+  'Hoy el objetivo es simple: que nadie te diga "ahora te llamo" y no llame 📞',
+  'Un asesor que responde rápido es una leyenda urbana. Hoy buscamos una 🦄',
+  'Dato del día: "lo estoy viendo" no es sinónimo de "lo estoy haciendo" 🔍',
+  'Tu superpoder de hoy: convertir silencios de WhatsApp en respuestas concretas 🧚',
+  'Recordá que perseguir vencimientos también cuenta como cardio 🏃',
+  'Hoy alguien va a prometer "en cinco minutos". Avisame si pasa antes de una hora ⏱️',
+  'El equipo te necesita más a vos con la lista de vencidos que a cualquier charla motivacional 📋',
+  'Si existiera un ranking de paciencia, hoy lo ganás por default 🏆',
+  'Buen día para recordarle a alguien que las fechas de cobro no se prorrogan solas 📅',
+  'Hoy tu magia de hada rinde más que cualquier mail de seguimiento 🧚‍♀️',
+  'Un consejo: si alguien dice "ya te confirmo", anotá la fecha y el chiste va a escribirse solo 📝',
+  'Este equipo sin vos sería puro humo y cero cobros. Que no se te olvide 💨'
 ];
+
+function elegirFraseSinRepetir(){
+  let usadas = [];
+  try{ usadas = JSON.parse(localStorage.getItem('frasesUsadas')||'[]'); }catch(e){ usadas = []; }
+  if(!Array.isArray(usadas) || usadas.length >= FRASES_DIA.length) usadas = [];
+  const disponibles = FRASES_DIA.map((_,i)=>i).filter(i=>!usadas.includes(i));
+  const idx = disponibles[Math.floor(Math.random()*disponibles.length)];
+  usadas.push(idx);
+  try{ localStorage.setItem('frasesUsadas', JSON.stringify(usadas)); }catch(e){}
+  return FRASES_DIA[idx];
+}
 function setFraseDelDia(){
-  const hoy = new Date();
-  const diaDelAnio = Math.floor((hoy - new Date(hoy.getFullYear(),0,0)) / 86400000);
-  document.getElementById('header-frase').textContent = FRASES_DIA[diaDelAnio % FRASES_DIA.length];
+  document.getElementById('header-frase').textContent = elegirFraseSinRepetir();
 }
 setFraseDelDia();
-function parseFechaDDMMYYYY(f){
+function parseFecha(f){
   if(!f) return null;
-  const partes = String(f).split('/');
+  const s = String(f).trim();
+  if(s.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const partes = s.split('/');
   if(partes.length!==3) return null;
-  const d = parseInt(partes[0]), m = parseInt(partes[1]), a = parseInt(partes[2]);
-  if(!d||!m||!a) return null;
-  return new Date(a, m-1, d);
+  const dia = parseInt(partes[0]), mes = parseInt(partes[1]), anio = parseInt(partes[2]);
+  if(!dia||!mes||!anio) return null;
+  const d = new Date(anio, mes-1, dia);
+  return isNaN(d.getTime()) ? null : d;
+}
+function fmtFechaCorta(f){
+  const d = parseFecha(f);
+  if(!d) return '';
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
 
 async function cargarOperaciones(){
@@ -254,10 +304,12 @@ async function cargarOperaciones(){
         precio:parseFloat(r[4])||0, comision:parseFloat(r[5])||0,
         comision_vendedor:parseFloat(r[6])||0,
         ganancia_martina:parseFloat(r[7])||0, ganancia_solum:parseFloat(r[8])||0,
-        fechaEsc:r[9], estado:r[10],
-        mes:parseInt(r[11])||0, anio:parseInt(r[12])||0,
-        planillaGenerada: r[13]==='true'||r[13]===true,
-        rendicion: r[14] || 'pendiente_asesor'
+        fechaEsc:normFecha(r[9]), fechaReserva:normFecha(r[10]),
+        estado:r[11],
+        mes:parseInt(r[12])||0, anio:parseInt(r[13])||0,
+        planillaGenerada: r[14]==='true'||r[14]===true,
+        notas: r[15]||'',
+        rendicion: r[16] || 'pendiente_asesor'
       };
     });
     showToast('✅ '+operaciones.length+' operaciones cargadas');
@@ -271,7 +323,7 @@ function renderAlertas(){
   const hoy = new Date(); hoy.setHours(0,0,0,0);
   const vencidas = operaciones.filter(o=>{
     if(o.estado!=='Por cobrar') return false;
-    const f = parseFechaDDMMYYYY(o.fechaEsc);
+    const f = parseFecha(o.fechaEsc);
     return f && f < hoy;
   });
   const cont = document.getElementById('alert-container');
@@ -281,8 +333,8 @@ function renderAlertas(){
       <div class="alert-title">⚠️ ${vencidas.length} operación(es) con fecha de cobro vencida</div>
       ${vencidas.map(o=>`
         <div class="alert-row">
-          <span><b>${o.propiedad}</b> — ${o.agente} — vencía ${o.fechaEsc}</span>
-          <input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${o.fechaEsc||''}" placeholder="dd/mm/aaaa">
+          <span><b>${o.propiedad}</b> — ${o.agente} — vencía ${fmtFechaCorta(o.fechaEsc)}</span>
+          <input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa">
           <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="guardarFechaAlerta('${o.id}')">Guardar fecha</button>
           <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar (WSP)</button>
           <button class="btn btn-cobrado" onclick="abrirModalPlanilla('${o.id}')">Planilla</button>
@@ -333,7 +385,7 @@ async function generarPlanillaDesdeModal(){
   if(!cliente){ showToast('⚠️ Falta el nombre del cliente'); return; }
   const pctAgenteMap = {'Martina':0.80,'Kito':0.60};
   const datos = {
-    fecha: op.fechaEsc || '',
+    fecha: fmtFechaCorta(op.fechaEsc) || '',
     agente: op.agente,
     propiedad: op.propiedad,
     compartida: '-',
@@ -406,7 +458,7 @@ function renderRendicion(){
   cont.innerHTML =
     tarjeta('📤 Pendiente de rendir — Asesores', pendAsesor, montoAsesor, 'pendiente_pox', '--amber') +
     tarjeta('📤 Por rendir a Pox', pendPox, montoPox, 'pendiente_martu', '--blue') +
-    tarjeta('📤 Por rendir a Martú', pendMartu, montoMartu, 'completa', '--green');
+    tarjeta('📤 Por rendir a Martu', pendMartu, montoMartu, 'completa', '--green');
 }
 
 function marcarRendida(id, siguienteEstado){
@@ -421,7 +473,8 @@ function marcarRendida(id, siguienteEstado){
 function guardarFila(op){
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
-    op.fechaEsc,op.estado,op.mes,op.anio,op.planillaGenerada||false,op.rendicion||'pendiente_asesor']);
+    op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
+    op.notas||'',op.rendicion||'pendiente_asesor']);
 }
 
 function actualizarCampo(id, campo, valor){
@@ -446,9 +499,10 @@ function actualizarCampo(id, campo, valor){
 function renderTabla(){
   const mes = document.getElementById('op-mes').value;
   const estado = document.getElementById('op-estado').value;
-  const anio = parseInt(document.getElementById('op-anio').value);
+  const anioVal = document.getElementById('op-anio').value;
 
-  let ops = operaciones.filter(o=>o.anio===anio);
+  let ops = operaciones;
+  if(anioVal!=='all') ops = ops.filter(o=>o.anio===parseInt(anioVal));
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
   if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
 
@@ -472,7 +526,7 @@ function renderTabla(){
       <td>${fmtUSD(o.ganancia_martina)}</td>
       <td>${fmtUSD(o.ganancia_solum)}</td>
       <td>${fmtUSD(o.comision_vendedor)}</td>
-      <td><input class="cell" value="${fmtFecha(o.fechaEsc)}" placeholder="dd/mm/aaaa" onchange="actualizarCampo('${o.id}','fechaEsc',this.value)"></td>
+      <td><input class="cell" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa" onchange="actualizarCampo('${o.id}','fechaEsc',this.value)"></td>
       <td>
         <select class="cell estado-badge ${estadoClass[o.estado]||''}" onchange="actualizarCampo('${o.id}','estado',this.value)">
           <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Por cobrar</option>
@@ -573,7 +627,7 @@ async function cargarReservaDesdeChat(datos){
   const mes = partesFecha.length===3 ? parseInt(partesFecha[1]) : hoy.getMonth()+1;
   const anio = partesFecha.length===3 ? parseInt(partesFecha[2]) : hoy.getFullYear();
 
-  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, 'Por cobrar', mes, anio, false, 'pendiente_asesor'];
+  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, '', 'Por cobrar', mes, anio, false, '', 'pendiente_asesor'];
   await dbGuardar('operaciones', fila);
 
   agregarMsg(`✅ Reserva cargada: ${datos.propiedad} — ${datos.agente} — ${datos.punta} — ${fmtUSD(datos.precio)} (comisión ${fmtUSD(comision)}). Ya está en la planilla como "Por cobrar".`, 'claude');

@@ -51,7 +51,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .tab-icon{margin-right:6px;font-size:14px;}
 
 /* ── LAYOUT ── */
-.main{display:flex;flex:1;overflow:hidden;}
+.main{display:flex;flex:1;overflow:hidden;min-width:0;}
 .sidebar{width:220px;background:var(--bg2);border-right:1px solid rgba(255,255,255,0.06);padding:16px 0;flex-shrink:0;display:none;}
 .sidebar.visible{display:block;}
 .sidebar-section{padding:8px 16px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-top:8px;}
@@ -59,7 +59,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .sidebar-item:hover{background:rgba(255,255,255,0.04);color:var(--text);}
 .sidebar-item.active{background:rgba(182,162,132,0.1);color:var(--gold2);border-right:2px solid var(--gold);}
 
-.content{flex:1;overflow-y:auto;padding:24px;}
+.content{flex:1;overflow-y:auto;padding:24px;min-width:0;}
 
 /* ── CARDS / KPI ── */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px;}
@@ -102,7 +102,7 @@ body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,san
 .btn-sm{padding:5px 10px;font-size:11px;}
 
 /* ── TABLE ── */
-.table-wrap{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);overflow:hidden;}
+.table-wrap{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;}
 *{scrollbar-width:thin;scrollbar-color:var(--gold3) var(--bg2);}
 *::-webkit-scrollbar{height:9px;width:9px;}
 *::-webkit-scrollbar-track{background:var(--bg2);border-radius:6px;}
@@ -200,7 +200,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .seg-pct{font-size:10px;color:var(--text3);margin-top:4px;}
 
 /* ── WEEKLY TABLE ── */
-.week-table-wrap{background:var(--card);border-radius:var(--radius2);padding:16px;border:1px solid rgba(255,255,255,0.05);overflow-x:auto;}
+.week-table-wrap{background:var(--card);border-radius:var(--radius2);padding:16px;border:1px solid rgba(255,255,255,0.05);overflow-x:auto;-webkit-overflow-scrolling:touch;}
 .week-table{width:100%;border-collapse:collapse;font-size:12px;}
 .week-table th{padding:8px 10px;background:var(--bg3);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.6px;}
 .week-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.03);color:var(--text2);}
@@ -1120,10 +1120,12 @@ async function cargarDatosDB() {
           precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
           comision_vendedor: parseFloat(r[6])||0,
           ganancia_martina: parseFloat(r[7])||0, ganancia_solum: parseFloat(r[8])||0,
-          fechaEsc: r[9], estado: r[10],
-          mes: parseInt(r[11])||0, anio: parseInt(r[12])||0,
-          planillaGenerada: r[13]==='true'||r[13]===true,
-          rendicion: r[14] || 'pendiente_asesor'
+          fechaEsc: normFecha(r[9]), fechaReserva: normFecha(r[10]),
+          estado: r[11],
+          mes: parseInt(r[12])||0, anio: parseInt(r[13])||0,
+          planillaGenerada: r[14]==='true'||r[14]===true,
+          notas: r[15]||'',
+          rendicion: r[16] || 'pendiente_asesor'
         };
       });
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
@@ -1474,6 +1476,18 @@ function fmtFecha(f){
   return s;
 }
 function fmtFechaHoy(){ const d=new Date(); return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(); }
+// Convierte cualquier formato de fecha (ISO de Sheets o dd/mm/aaaa) siempre a dd/mm/aaaa
+function normFecha(f){
+  if(!f) return '';
+  const s = String(f).trim();
+  if(!s) return '';
+  if(s.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    return '';
+  }
+  return s; // ya viene en dd/mm/aaaa (u otro texto), se deja como está
+}
 function mesHoy(){ return new Date().getMonth()+1; }
 function anioHoy(){ return new Date().getFullYear(); }
 function fmtPesos(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
@@ -1581,12 +1595,16 @@ function mesFinalizado(mes, anio){
 // Mes/año en que se considera "tomada" una reserva: la fecha cargada en la operación (fechaEsc) si existe,
 // o si no, el mes/año en que se cargó la operación al sistema.
 function mesAnioReservaOp(o){
-  if(o.fechaEsc){
-    const partes = String(o.fechaEsc).split('/');
-    if(partes.length===3){
-      const mm = parseInt(partes[1]), aa = parseInt(partes[2]);
-      if(mm>=1 && mm<=12 && aa>2000) return {mes:mm, anio:aa};
+  if(o.fechaReserva){
+    const s = String(o.fechaReserva).trim();
+    let d = null;
+    if(s.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(s)){
+      d = new Date(s);
+    } else {
+      const partes = s.split('/');
+      if(partes.length===3) d = new Date(parseInt(partes[2]), parseInt(partes[1])-1, parseInt(partes[0]));
     }
+    if(d && !isNaN(d.getTime())) return {mes:d.getMonth()+1, anio:d.getFullYear()};
   }
   return {mes:o.mes, anio:o.anio};
 }
@@ -1883,7 +1901,8 @@ function actualizarOp(id, campo, valor){
   }
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
-    op.fechaEsc,op.estado,op.mes,op.anio,op.planillaGenerada||false,op.rendicion||'pendiente_asesor']);
+    op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
+    op.notas||'',op.rendicion||'pendiente_asesor']);
   detectarIncongruencias();
   renderDashboard();
   renderOperaciones();
@@ -2138,7 +2157,8 @@ async function ejecutarPlanilla(op, g) {
   // Actualizar en Sheets
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
-    op.fechaEsc,op.estado,op.mes,op.anio,true]);
+    op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,true,
+    op.notas||'',op.rendicion||'pendiente_asesor']);
 
   // Generar planilla via Apps Script (usa el modelo en Drive con formato completo)
   try {
