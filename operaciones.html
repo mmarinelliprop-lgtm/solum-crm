@@ -76,6 +76,7 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
 <div class="tabs">
   <button class="tab-btn active" id="tab-planilla-btn" onclick="switchTab('planilla')">📋 Planilla</button>
   <button class="tab-btn" id="tab-chat-btn" onclick="switchTab('chat')">💬 Chat — Cargar reserva</button>
+  <button class="tab-btn" onclick="abrirModalReporte()">📊 Reporte</button>
 </div>
 
 <div class="content" id="tab-planilla">
@@ -145,6 +146,30 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
 
 <div class="toast" id="toast"></div>
 
+<div id="modal-reporte" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--radius2);padding:22px;width:90vw;max-width:900px;max-height:85vh;overflow-y:auto">
+    <div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:14px">Reporte de operaciones y modificaciones</div>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+      <div><span class="filter-label">Desde</span><input type="date" id="rep-desde" class="filter-select" style="color:var(--text)"></div>
+      <div><span class="filter-label">Hasta</span><input type="date" id="rep-hasta" class="filter-select" style="color:var(--text)"></div>
+      <button class="btn btn-cobrado" onclick="generarReporte()">Generar</button>
+      <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="cerrarModalReporte()">Cerrar</button>
+    </div>
+    <div id="reporte-resultado" style="font-size:12px"></div>
+  </div>
+</div>
+
+<div id="modal-mensaje" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--card);border-radius:var(--radius2);padding:22px;width:340px;max-width:92vw">
+    <div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:12px">Mensaje para consultar</div>
+    <textarea id="mp-mensaje-texto" readonly style="width:100%;height:100px;background:var(--card2);color:var(--text);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;resize:none"></textarea>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn" style="flex:1;background:var(--card3);color:var(--text2)" onclick="cerrarModalMensaje()">Cerrar</button>
+      <button class="btn btn-cobrado" style="flex:1" onclick="copiarMensajeProrroga()">Copiar mensaje</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-planilla" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:center;justify-content:center">
   <div style="background:var(--card);border-radius:var(--radius2);padding:22px;width:360px;max-width:92vw;max-height:85vh;overflow-y:auto">
     <div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:14px">Datos para la planilla</div>
@@ -205,6 +230,16 @@ async function dbGuardar(tipo,fila){
 }
 
 function fmtUSD(n){ return '$'+Math.round(n||0).toLocaleString('es-AR'); }
+function fmtFechaHoraLog(){
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+async function registrarAccion(op, accion, detalle){
+  try{
+    const fila = [Date.now(), fmtFechaHoraLog(), op.id, op.propiedad, op.agente, op.punta, op.precio, op.comision, op.estado, accion, detalle];
+    await dbGuardar('log_operaciones', fila);
+  }catch(e){ console.error('No se pudo registrar la acción', e); }
+}
 function fmtFecha(f){ return f || ''; }
 // Convierte cualquier formato de fecha (ISO de Sheets o dd/mm/aaaa) siempre a dd/mm/aaaa
 function normFecha(f){
@@ -321,34 +356,45 @@ async function cargarOperaciones(){
 
 function renderAlertas(){
   const hoy = new Date(); hoy.setHours(0,0,0,0);
-  const vencidas = operaciones.filter(o=>{
+  const umbral = new Date(hoy); umbral.setDate(umbral.getDate()+2); // avisa desde 2 días antes
+  const proximas = operaciones.filter(o=>{
     if(o.estado!=='Por cobrar') return false;
     const f = parseFecha(o.fechaEsc);
-    return f && f < hoy;
-  });
+    return f && f <= umbral;
+  }).sort((a,b)=>parseFecha(a.fechaEsc)-parseFecha(b.fechaEsc));
+
   const cont = document.getElementById('alert-container');
-  if(vencidas.length===0){ cont.innerHTML=''; return; }
+  if(proximas.length===0){ cont.innerHTML=''; return; }
   cont.innerHTML = `
     <div class="alert-banner">
-      <div class="alert-title">⚠️ ${vencidas.length} operación(es) con fecha de cobro vencida</div>
-      ${vencidas.map(o=>`
+      <div class="alert-title">⚠️ ${proximas.length} operación(es) por vencer o vencidas</div>
+      ${proximas.map(o=>{
+        const f = parseFecha(o.fechaEsc);
+        const diasDif = Math.round((f - hoy)/86400000);
+        const estadoTxt = diasDif < 0 ? `🔴 Vencida — Deadline: ${fmtFechaCorta(o.fechaEsc)}`
+          : diasDif === 0 ? `🟠 Vence hoy — Deadline: ${fmtFechaCorta(o.fechaEsc)}`
+          : `🟡 Vence en ${diasDif} día(s) — Deadline: ${fmtFechaCorta(o.fechaEsc)}`;
+        return `
         <div class="alert-row">
-          <span><b>${o.propiedad}</b> — ${o.agente} — vencía ${fmtFechaCorta(o.fechaEsc)}</span>
+          <span><b>${o.propiedad}</b> — ${o.agente} — ${estadoTxt}</span>
           <input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa">
           <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="guardarFechaAlerta('${o.id}')">Guardar fecha</button>
-          <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar (WSP)</button>
+          <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar</button>
           <button class="btn btn-cobrado" onclick="abrirModalPlanilla('${o.id}')">Planilla</button>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     </div>`;
 }
 
 function guardarFechaAlerta(id){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
+  const fechaAnterior = op.fechaEsc;
   const nuevaFecha = document.getElementById('fecha-'+id).value.trim();
   if(!nuevaFecha) return;
   op.fechaEsc = nuevaFecha;
   guardarFila(op);
+  registrarAccion(op, 'Prórroga', `Fecha de cobro cambiada de ${fechaAnterior} a ${nuevaFecha}`);
   showToast('✅ Fecha actualizada');
   renderAlertas(); renderTabla();
 }
@@ -356,12 +402,94 @@ function guardarFechaAlerta(id){
 function prorrogar(id){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
-  const asunto = 'Hola '+op.agente+'! Te consulto por la operación "'+op.propiedad+'": ¿se prorrogó? ¿ya enviaste el mail avisando a las partes?';
-  window.open('https://wa.me/?text='+encodeURIComponent(asunto), '_blank');
+  const mensaje = 'Hola '+op.agente+'! Te consulto por la operación "'+op.propiedad+'": ¿se prorrogó? ¿ya enviaste el mail avisando a las partes?';
+  document.getElementById('mp-mensaje-texto').value = mensaje;
+  document.getElementById('modal-mensaje').classList.remove('hidden');
   showToast('La fecha se actualiza a mano acá arriba cuando te confirmen la nueva');
+}
+function copiarMensajeProrroga(){
+  const ta = document.getElementById('mp-mensaje-texto');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try{
+    document.execCommand('copy');
+    showToast('✅ Mensaje copiado');
+  }catch(e){
+    navigator.clipboard?.writeText(ta.value).then(()=>showToast('✅ Mensaje copiado'));
+  }
+}
+function cerrarModalMensaje(){
+  document.getElementById('modal-mensaje').classList.add('hidden');
 }
 
 let _opPlanillaActual = null;
+function abrirModalReporte(){
+  const hoy = new Date();
+  const hace7 = new Date(); hace7.setDate(hoy.getDate()-7);
+  document.getElementById('rep-desde').value = hace7.toISOString().slice(0,10);
+  document.getElementById('rep-hasta').value = hoy.toISOString().slice(0,10);
+  document.getElementById('reporte-resultado').innerHTML = '';
+  document.getElementById('modal-reporte').classList.remove('hidden');
+}
+function cerrarModalReporte(){
+  document.getElementById('modal-reporte').classList.add('hidden');
+}
+async function generarReporte(){
+  const desdeVal = document.getElementById('rep-desde').value;
+  const hastaVal = document.getElementById('rep-hasta').value;
+  if(!desdeVal || !hastaVal){ showToast('⚠️ Elegí las dos fechas'); return; }
+  const desde = new Date(desdeVal+'T00:00:00');
+  const hasta = new Date(hastaVal+'T23:59:59');
+
+  document.getElementById('reporte-resultado').innerHTML = '<div style="color:var(--text3)">⏳ Generando...</div>';
+  const logRows = await dbLeer('log_operaciones');
+  if(!logRows || logRows.length<=1){
+    document.getElementById('reporte-resultado').innerHTML = '<div style="color:var(--text3)">No hay acciones registradas todavía en este período.</div>';
+    return;
+  }
+
+  // columnas del log: id, fechaHora, opId, propiedad, agente, punta, precio, comision, estado, accion, detalle
+  const filtradas = logRows.slice(1).filter(r=>{
+    const partes = String(r[1]||'').split(' ')[0].split('/'); // dd/mm/aaaa
+    if(partes.length!==3) return false;
+    const f = new Date(parseInt(partes[2]), parseInt(partes[1])-1, parseInt(partes[0]));
+    return f >= new Date(desde.getFullYear(),desde.getMonth(),desde.getDate()) && f <= hasta;
+  }).sort((a,b)=> (a[0]>b[0]?-1:1)); // más reciente primero
+
+  if(filtradas.length===0){
+    document.getElementById('reporte-resultado').innerHTML = '<div style="color:var(--text3)">No hay acciones registradas en ese rango de fechas.</div>';
+    return;
+  }
+
+  document.getElementById('reporte-resultado').innerHTML = `
+    <div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <thead><tr>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Fecha/hora</th>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Operación</th>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Agente / Punta</th>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Precio / Comisión</th>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Estado</th>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Acción</th>
+        <th style="text-align:left;padding:6px;color:var(--gold2)">Detalle</th>
+      </tr></thead>
+      <tbody>
+        ${filtradas.map(r=>`
+          <tr style="border-top:1px solid rgba(255,255,255,0.06)">
+            <td style="padding:6px">${r[1]}</td>
+            <td style="padding:6px">${r[3]}</td>
+            <td style="padding:6px">${r[4]} — ${r[5]}</td>
+            <td style="padding:6px">${fmtUSD(r[6])} / ${fmtUSD(r[7])}</td>
+            <td style="padding:6px">${r[8]}</td>
+            <td style="padding:6px;color:var(--gold)">${r[9]}</td>
+            <td style="padding:6px;color:var(--text2)">${r[10]}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div style="margin-top:10px;color:var(--text3)">${filtradas.length} acción(es) en el período.</div>`;
+}
+
 function abrirModalPlanilla(id){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
@@ -416,6 +544,7 @@ async function generarPlanillaDesdeModal(){
       op.estado = 'Cobrada';
       op.rendicion = 'pendiente_asesor';
       guardarFila(op);
+      registrarAccion(op, 'Planilla generada', `Marcada como Cobrada. Cliente: ${cliente}`);
       showToast('✅ Planilla generada y operación marcada como cobrada');
       cerrarModalPlanilla();
       renderAlertas(); renderTabla(); renderRendicion();
@@ -464,8 +593,10 @@ function renderRendicion(){
 function marcarRendida(id, siguienteEstado){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
+  const etapaAnterior = op.rendicion;
   op.rendicion = siguienteEstado;
   guardarFila(op);
+  registrarAccion(op, 'Rendición', `Pasó de "${etapaAnterior}" a "${siguienteEstado}"`);
   showToast('✅ Marcada como rendida');
   renderRendicion();
 }
@@ -480,6 +611,7 @@ function guardarFila(op){
 function actualizarCampo(id, campo, valor){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
+  const valorAnterior = op[campo];
   if(campo==='precio'){
     op.precio = parseFloat(valor)||0;
     op.comision = Math.round(op.precio*0.03);
@@ -491,6 +623,7 @@ function actualizarCampo(id, campo, valor){
     if(campo==='estado' && valor==='Cobrada' && !op.rendicion) op.rendicion = 'pendiente_asesor';
   }
   guardarFila(op);
+  registrarAccion(op, 'Edición', `Campo "${campo}" cambiado de "${valorAnterior}" a "${valor}"`);
   showToast('✅ Actualizado');
   renderAlertas();
   renderRendicion();
@@ -629,6 +762,7 @@ async function cargarReservaDesdeChat(datos){
 
   const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, '', 'Por cobrar', mes, anio, false, '', 'pendiente_asesor'];
   await dbGuardar('operaciones', fila);
+  registrarAccion({id:nuevoId, propiedad:datos.propiedad, agente:datos.agente, punta:datos.punta, precio:datos.precio, comision, estado:'Por cobrar'}, 'Reserva cargada', 'Cargada por chat (Josefina)');
 
   agregarMsg(`✅ Reserva cargada: ${datos.propiedad} — ${datos.agente} — ${datos.punta} — ${fmtUSD(datos.precio)} (comisión ${fmtUSD(comision)}). Ya está en la planilla como "Por cobrar".`, 'claude');
   chatHistory = []; // reiniciar conversación para la próxima carga
