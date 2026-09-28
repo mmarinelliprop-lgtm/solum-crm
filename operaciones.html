@@ -448,11 +448,34 @@ async function generarReporte(){
     return;
   }
 
+  // Convierte la fecha/hora del log (texto "dd/mm/aaaa HH:mm", ISO de Sheets, o ya un Date) a un Date real.
+  function parseFechaHoraLog(valor){
+    if(!valor) return null;
+    if(valor instanceof Date) return isNaN(valor.getTime()) ? null : valor;
+    const s = String(valor).trim();
+    if(!s) return null;
+    if(s.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(s)){
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const partes = s.split(' ')[0].split('/'); // dd/mm/aaaa
+    if(partes.length!==3) return null;
+    const dia = parseInt(partes[0]), mes = parseInt(partes[1]), anio = parseInt(partes[2]);
+    if(!dia||!mes||!anio) return null;
+    const horaMin = (s.split(' ')[1]||'').split(':');
+    const d = new Date(anio, mes-1, dia, parseInt(horaMin[0])||0, parseInt(horaMin[1])||0);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function fmtFechaHoraCorta(valor){
+    const d = parseFechaHoraLog(valor);
+    if(!d) return valor || '';
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+
   // columnas del log: id, fechaHora, opId, propiedad, agente, punta, precio, comision, estado, accion, detalle
   const filtradas = logRows.slice(1).filter(r=>{
-    const partes = String(r[1]||'').split(' ')[0].split('/'); // dd/mm/aaaa
-    if(partes.length!==3) return false;
-    const f = new Date(parseInt(partes[2]), parseInt(partes[1])-1, parseInt(partes[0]));
+    const f = parseFechaHoraLog(r[1]);
+    if(!f) return false;
     return f >= new Date(desde.getFullYear(),desde.getMonth(),desde.getDate()) && f <= hasta;
   }).sort((a,b)=> (a[0]>b[0]?-1:1)); // más reciente primero
 
@@ -476,7 +499,7 @@ async function generarReporte(){
       <tbody>
         ${filtradas.map(r=>`
           <tr style="border-top:1px solid rgba(255,255,255,0.06)">
-            <td style="padding:6px">${r[1]}</td>
+            <td style="padding:6px">${fmtFechaHoraCorta(r[1])}</td>
             <td style="padding:6px">${r[3]}</td>
             <td style="padding:6px">${r[4]} — ${r[5]}</td>
             <td style="padding:6px">${fmtUSD(r[6])} / ${fmtUSD(r[7])}</td>
