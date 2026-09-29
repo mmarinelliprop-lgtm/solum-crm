@@ -1569,6 +1569,14 @@ function pctVigenteNivel(agente, anio, operacionActual){
   if(previo>=40000) return 0.60;
   return 0.50;
 }
+// % real que le corresponde al agente en ESTA operación: fijo para Martina/Kito, escalera de
+// facturación acumulada (50%→60% a los $40.000→70% a los $50.000) para el resto del equipo.
+function pctAsesorVigente(op){
+  const n = normAgente(op.agente);
+  if(n==='Martina') return 0.80;
+  if(n==='Kito') return 0.60;
+  return pctVigenteNivel(op.agente, op.anio, op);
+}
 // Estado actual de nivel/objetivo/viaje de un vendedor en un año (para mostrar en Seguimiento)
 function estadoNivelVendedor(agente, anio){
   const n = normAgente(agente);
@@ -2158,9 +2166,20 @@ async function ejecutarPlanilla(op, g) {
   const tieneIVA = planillaRespuestas.iva === 'Sí paga IVA (5,25%)';
   const iva = tieneIVA ? Math.round(op.comision * 0.0525) : 0;
   const totalCliente = op.comision + iva;
-  const pctAgente = COMISIONES[op.agente] || 0.50;
-  const comAgente = Math.round(op.comision * pctAgente);
-  const comOficina = op.comision - comAgente;
+
+  // Recalcular comision_vendedor/ganancia_martina/ganancia_solum con el % real vigente al
+  // momento de cobrar (respeta la escalera 50%→60%(40k)→70%(50k) de facturación acumulada,
+  // en vez del % fijo con el que se pudo haber cargado la reserva).
+  if(normAgente(op.agente)==='Martina'){
+    op.comision_vendedor = 0;
+    op.ganancia_martina = Math.round(op.comision*0.80);
+    op.ganancia_solum = op.comision - op.ganancia_martina;
+  } else {
+    const pctAgente = pctAsesorVigente(op);
+    op.comision_vendedor = Math.round(op.comision*pctAgente);
+    op.ganancia_solum = Math.round(op.comision*0.30);
+    op.ganancia_martina = op.comision - op.comision_vendedor - op.ganancia_solum;
+  }
 
   // Seguimiento — venta se computa en el mes de la fecha de cobro (hoy)
   if(planillaRespuestas.sumarVenta === 'Sí'){

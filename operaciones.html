@@ -331,6 +331,23 @@ function fmtFechaCorta(f){
   return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
 
+// ── Escalera de comisión por facturación acumulada (50%→60% a los $40.000→70% a los $50.000) ──
+// Mismo criterio que index.html — Martina y Kito tienen % fijo, el resto del equipo escala.
+function facturacionAcumuladaPrevia(agente, anio, operacionActual){
+  return operaciones
+    .filter(o=>o.agente===agente && o.anio===anio && o.estado==='Cobrada' && o.id!==operacionActual.id)
+    .filter(o=>(o.mes<operacionActual.mes) || (o.mes===operacionActual.mes && (o.id||0)<(operacionActual.id||0)))
+    .reduce((s,o)=>s+(o.comision||0),0);
+}
+function pctAsesorVigente(op){
+  if(op.agente==='Martina') return 0.80;
+  if(op.agente==='Kito') return 0.60;
+  const previo = facturacionAcumuladaPrevia(op.agente, op.anio, op);
+  if(previo>=50000) return 0.70;
+  if(previo>=40000) return 0.60;
+  return 0.50;
+}
+
 async function cargarOperaciones(){
   showToast('⏳ Cargando desde Sheets...');
   const opRows = await dbLeer('operaciones');
@@ -618,6 +635,18 @@ async function generarPlanillaDesdeModal(){
       op.fechaEsc = fechaCobroVal;
       op.mes = fechaCobro.getMonth()+1;
       op.anio = fechaCobro.getFullYear();
+      // Comision_vendedor/ganancia_martina/ganancia_solum con el % real vigente al cobrar
+      // (escalera de facturación acumulada), no con lo que haya quedado de la carga inicial.
+      if(op.agente==='Martina'){
+        op.comision_vendedor = 0;
+        op.ganancia_martina = Math.round(op.comision*0.80);
+        op.ganancia_solum = op.comision - op.ganancia_martina;
+      } else {
+        const pctAgente = pctAsesorVigente(op);
+        op.comision_vendedor = Math.round(op.comision*pctAgente);
+        op.ganancia_solum = Math.round(op.comision*0.30);
+        op.ganancia_martina = op.comision - op.comision_vendedor - op.ganancia_solum;
+      }
       guardarFila(op);
       registrarAccion(op, 'Planilla generada', `Marcada como Cobrada el ${fechaCobroVal}. Cliente: ${cliente}`);
       showToast('✅ Planilla generada y operación marcada como cobrada');
