@@ -77,6 +77,7 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
   <button class="tab-btn active" id="tab-planilla-btn" onclick="switchTab('planilla')">📋 Planilla</button>
   <button class="tab-btn" id="tab-chat-btn" onclick="switchTab('chat')">💬 Chat — Cargar reserva</button>
   <button class="tab-btn" onclick="abrirModalReporte()">📊 Reporte</button>
+  <button class="tab-btn" onclick="recalcularComisiones()">🔄 Recalcular comisiones</button>
 </div>
 
 <div class="content" id="tab-planilla">
@@ -346,6 +347,60 @@ function pctAsesorVigente(op){
   if(previo>=50000) return 0.70;
   if(previo>=40000) return 0.60;
   return 0.50;
+}
+
+/**
+ * Recorre TODAS las operaciones Cobradas y recalcula comision_vendedor/ganancia_martina/
+ * ganancia_solum aplicando la escalera de comisión (50%→60% a los $40.000→70% a los $50.000)
+ * en orden cronológico por asesor y año. Corrige operaciones marcadas Cobrada antes de que
+ * este cálculo existiera. Escribe en la misma hoja que leen operaciones.html e index.html.
+ */
+async function recalcularComisiones(){
+  if(!confirm('Esto recalcula comision_vendedor, ganancia_martina y ganancia_solum de TODAS las operaciones Cobradas, aplicando la escalera de comisión en orden cronológico por asesor y año.\n\n¿Continuar?')) return;
+  showToast('⏳ Recalculando comisiones...');
+  const cobradas = operaciones.filter(o=>o.estado==='Cobrada');
+  const grupos = {};
+  cobradas.forEach(o=>{
+    const key = o.agente+'|'+o.anio;
+    (grupos[key] = grupos[key]||[]).push(o);
+  });
+  let corregidas = 0;
+  for(const key in grupos){
+    const lista = grupos[key].slice().sort((a,b)=> a.mes!==b.mes ? a.mes-b.mes : (a.id||0)-(b.id||0));
+    let acumulado = 0;
+    for(const op of lista){
+      let comVendedor, ganMartina, ganSolum;
+      if(op.agente==='Martina'){
+        comVendedor = 0;
+        ganMartina = Math.round(op.comision*0.80);
+        ganSolum = op.comision - ganMartina;
+      } else {
+        let pct;
+        if(op.agente==='Kito') pct = 0.60;
+        else if(acumulado>=50000) pct = 0.70;
+        else if(acumulado>=40000) pct = 0.60;
+        else pct = 0.50;
+        comVendedor = Math.round(op.comision*pct);
+        ganSolum = Math.round(op.comision*0.30);
+        ganMartina = op.comision - comVendedor - ganSolum;
+      }
+      acumulado += (op.comision||0);
+      if(op.comision_vendedor!==comVendedor || op.ganancia_martina!==ganMartina || op.ganancia_solum!==ganSolum){
+        const anteriores = `vendedor ${fmtUSD(op.comision_vendedor)} / martina ${fmtUSD(op.ganancia_martina)} / solum ${fmtUSD(op.ganancia_solum)}`;
+        op.comision_vendedor = comVendedor;
+        op.ganancia_martina = ganMartina;
+        op.ganancia_solum = ganSolum;
+        await dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+          op.precio,op.comision,op.comision_vendedor,op.ganancia_martina,op.ganancia_solum,
+          op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
+          op.notas||'',op.rendicion||'pendiente_asesor']);
+        registrarAccion(op, 'Recalculo de comisión', `Antes: ${anteriores}. Ahora: vendedor ${fmtUSD(comVendedor)} / martina ${fmtUSD(ganMartina)} / solum ${fmtUSD(ganSolum)}`);
+        corregidas++;
+      }
+    }
+  }
+  showToast(`✅ ${corregidas} operación(es) recalculada(s)`);
+  renderTabla(); renderRendicion();
 }
 
 async function cargarOperaciones(){
