@@ -180,6 +180,10 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
     <div style="font-size:14px;font-weight:700;color:var(--gold2);margin-bottom:14px">Datos para la planilla</div>
     <div id="modal-planilla-resumen" style="font-size:11px;color:var(--text3);margin-bottom:12px"></div>
     <div style="display:flex;flex-direction:column;gap:10px">
+      <div>
+        <span class="filter-label">Fecha de cobro</span>
+        <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-fecha-cobro" placeholder="dd/mm/aaaa">
+      </div>
       <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-cliente" placeholder="Cliente (nombre y apellido)">
       <input class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-cuit" placeholder="CUIT/DNI (opcional)">
       <select class="cell" style="border:1px solid rgba(255,255,255,0.1);background:var(--card2);padding:8px" id="mp-tipocliente">
@@ -555,6 +559,8 @@ function abrirModalPlanilla(id){
   document.getElementById('mp-telefono').value = telefonoPrecargado;
   document.getElementById('mp-mail').value = '';
   document.getElementById('mp-origen').value = '';
+  const hoy = new Date();
+  document.getElementById('mp-fecha-cobro').value = String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
   document.getElementById('modal-planilla').classList.remove('hidden');
 }
 function cerrarModalPlanilla(){
@@ -566,9 +572,12 @@ async function generarPlanillaDesdeModal(){
   if(!op) return;
   const cliente = document.getElementById('mp-cliente').value.trim();
   if(!cliente){ showToast('⚠️ Falta el nombre del cliente'); return; }
+  const fechaCobroVal = document.getElementById('mp-fecha-cobro').value.trim();
+  const fechaCobro = parseFecha(fechaCobroVal);
+  if(!fechaCobro){ showToast('⚠️ Fecha de cobro inválida (dd/mm/aaaa)'); return; }
   const pctAgenteMap = {'Martina':0.80,'Kito':0.60};
   const datos = {
-    fecha: fmtFechaCorta(op.fechaEsc) || '',
+    fecha: fechaCobroVal,
     agente: op.agente,
     propiedad: op.propiedad,
     compartida: '-',
@@ -598,8 +607,11 @@ async function generarPlanillaDesdeModal(){
       link.click();
       op.estado = 'Cobrada';
       op.rendicion = 'pendiente_asesor';
+      op.fechaEsc = fechaCobroVal;
+      op.mes = fechaCobro.getMonth()+1;
+      op.anio = fechaCobro.getFullYear();
       guardarFila(op);
-      registrarAccion(op, 'Planilla generada', `Marcada como Cobrada. Cliente: ${cliente}`);
+      registrarAccion(op, 'Planilla generada', `Marcada como Cobrada el ${fechaCobroVal}. Cliente: ${cliente}`);
       showToast('✅ Planilla generada y operación marcada como cobrada');
       cerrarModalPlanilla();
       renderAlertas(); renderTabla(); renderRendicion();

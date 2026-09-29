@@ -1995,6 +1995,8 @@ function renderPlanillaStep(op){
     },
   ];
 
+  steps.push({q:'¿Fecha de cobro?', opts:[], key:'fechaCobro', freetext:true, def:fmtFechaHoy()});
+
   // Preguntar datos del cliente que faltan
   if(!op.cliente) steps.push({q:'¿Nombre completo del cliente? (buscamos en la base de datos)', opts:[], key:'cliente', freetext:true, buscarDB:true});
   if(!op.cuit) steps.push({q:'¿DNI o CUIT/CUIL del cliente?', opts:[], key:'cuit', freetext:true});
@@ -2011,7 +2013,7 @@ function renderPlanillaStep(op){
   if(step.freetext){
     container.innerHTML = `
       <div style="margin-bottom:12px;font-size:13px;color:var(--text2)">${step.q}</div>
-      <input id="planilla-input" class="modal-input" placeholder="Escribí acá..." style="margin-bottom:12px">
+      <input id="planilla-input" class="modal-input" placeholder="Escribí acá..." value="${step.def||''}" style="margin-bottom:12px">
       ${step.opts.map(opt=>`<button onclick="responderPlanilla('${step.key}','${opt}')" 
         style="padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:var(--card2);color:var(--text2);margin-right:8px">${opt}</button>`).join('')}
       <button onclick="responderPlanilla('${step.key}',document.getElementById('planilla-input').value||'')"
@@ -2125,9 +2127,12 @@ async function ejecutarPlanilla(op, g) {
   op.planillaGenerada = true;
   op.estado = 'Cobrada';
 
-  op.fechaEsc = fmtFechaHoy();
-  op.mes = mesHoy();
-  op.anio = anioHoy();
+  const fechaCobroStr = (planillaRespuestas.fechaCobro || '').trim();
+  const partesCobro = fechaCobroStr.split('/');
+  const fechaCobroValida = partesCobro.length===3 && parseInt(partesCobro[1]) && parseInt(partesCobro[2]);
+  op.fechaEsc = fechaCobroValida ? fechaCobroStr : fmtFechaHoy();
+  op.mes = fechaCobroValida ? parseInt(partesCobro[1]) : mesHoy();
+  op.anio = fechaCobroValida ? parseInt(partesCobro[2]) : anioHoy();
 
   // Comisión real (puede ser distinta al 3%)
   const pctComision = planillaRespuestas.pctComision === '3% (estándar)' ? 0.03 : (op.pct_comision || 0.03);
