@@ -42,9 +42,9 @@ input.cell:hover,select.cell:hover{border-color:rgba(255,255,255,0.1);}
 input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;background:var(--card2);}
 .alert-banner{background:var(--redbg);border:1px solid rgba(255,77,151,0.35);border-radius:var(--radius2);padding:14px 16px;margin-bottom:16px;}
 .alert-title{font-size:12px;font-weight:700;color:var(--red);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
-.alert-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(255,77,151,0.15);font-size:12px;flex-wrap:wrap;}
-.alert-row:first-of-type{border-top:none;}
-.alert-row b{color:var(--text);}
+.deadline-bar-wrap{width:90px;height:7px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;}
+.deadline-bar{height:100%;border-radius:4px;transition:width .3s;}
+.deadline-txt{font-size:10.5px;margin-top:3px;white-space:nowrap;}
 .btn{padding:6px 12px;border-radius:7px;border:none;font-size:11px;font-weight:700;cursor:pointer;}
 .btn-cobrado{background:var(--green);color:#0a1628;}
 .btn-prorroga{background:var(--amber);color:#0a1628;}
@@ -90,6 +90,11 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
         <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
         <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
         <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+      </select>
+    </div>
+    <div><span class="filter-label">Asesor</span>
+      <select class="filter-select" id="op-agente" onchange="renderTabla()">
+        <option value="all" selected>Todos</option>
       </select>
     </div>
     <div><span class="filter-label">Estado</span>
@@ -349,6 +354,7 @@ async function cargarOperaciones(){
     });
     showToast('✅ '+operaciones.length+' operaciones cargadas');
   }
+  poblarFiltroAgentes();
   renderAlertas();
   renderTabla();
   renderRendicion();
@@ -365,24 +371,47 @@ function renderAlertas(){
 
   const cont = document.getElementById('alert-container');
   if(proximas.length===0){ cont.innerHTML=''; return; }
+
+  const VENTANA_DIAS = 5; // ventana de referencia para la barra: a partir de acá se considera "llena"
   cont.innerHTML = `
     <div class="alert-banner">
       <div class="alert-title">⚠️ ${proximas.length} operación(es) por vencer o vencidas</div>
-      ${proximas.map(o=>{
-        const f = parseFecha(o.fechaEsc);
-        const diasDif = Math.round((f - hoy)/86400000);
-        const estadoTxt = diasDif < 0 ? `🔴 Vencida — Deadline: ${fmtFechaCorta(o.fechaEsc)}`
-          : diasDif === 0 ? `🟠 Vence hoy — Deadline: ${fmtFechaCorta(o.fechaEsc)}`
-          : `🟡 Vence en ${diasDif} día(s) — Deadline: ${fmtFechaCorta(o.fechaEsc)}`;
-        return `
-        <div class="alert-row">
-          <span><b>${o.propiedad}</b> — ${o.agente} — ${o.punta} — ${estadoTxt}</span>
-          <input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa">
-          <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="guardarFechaAlerta('${o.id}')">Guardar fecha</button>
-          <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar</button>
-          <button class="btn btn-cobrado" onclick="abrirModalPlanilla('${o.id}')">Planilla</button>
-        </div>`;
-      }).join('')}
+      <div class="table-wrap" style="max-height:none;border:none;background:transparent">
+        <table>
+          <thead>
+            <tr>
+              <th>Propiedad</th><th>Agente</th><th>Punta</th><th>Deadline</th><th>Fecha</th><th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${proximas.map(o=>{
+              const f = parseFecha(o.fechaEsc);
+              const diasDif = Math.round((f - hoy)/86400000);
+              const pct = Math.max(0, Math.min(100, (diasDif/VENTANA_DIAS)*100));
+              const color = diasDif < 0 ? '--red' : diasDif <= 1 ? '--red' : diasDif <= 3 ? '--amber' : '--green';
+              const estadoTxt = diasDif < 0 ? `🔴 Vencida hace ${Math.abs(diasDif)} día(s)`
+                : diasDif === 0 ? `🟠 Vence hoy`
+                : `🟡 Vence en ${diasDif} día(s)`;
+              return `
+              <tr>
+                <td>${o.propiedad}</td>
+                <td>${o.agente}</td>
+                <td>${o.punta}</td>
+                <td>
+                  <div class="deadline-bar-wrap"><div class="deadline-bar" style="width:${pct}%;background:var(${color})"></div></div>
+                  <div class="deadline-txt" style="color:var(${color})">${estadoTxt}</div>
+                </td>
+                <td><input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa"></td>
+                <td style="display:flex;gap:6px;flex-wrap:wrap">
+                  <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="guardarFechaAlerta('${o.id}')">Guardar</button>
+                  <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar</button>
+                  <button class="btn btn-cobrado" onclick="abrirModalPlanilla('${o.id}')">Planilla</button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>`;
 }
 
@@ -655,15 +684,25 @@ function actualizarCampo(id, campo, valor){
   renderRendicion();
 }
 
+function poblarFiltroAgentes(){
+  const sel = document.getElementById('op-agente');
+  const actual = sel.value;
+  const agentes = [...new Set(operaciones.map(o=>o.agente).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="all">Todos</option>' + agentes.map(a=>`<option value="${a}">${a}</option>`).join('');
+  if(agentes.includes(actual)) sel.value = actual;
+}
+
 function renderTabla(){
   const mes = document.getElementById('op-mes').value;
   const estado = document.getElementById('op-estado').value;
   const anioVal = document.getElementById('op-anio').value;
+  const agenteVal = document.getElementById('op-agente').value;
 
   let ops = operaciones;
   if(anioVal!=='all') ops = ops.filter(o=>o.anio===parseInt(anioVal));
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
   if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
+  if(agenteVal!=='all') ops = ops.filter(o=>o.agente===agenteVal);
 
   const estadoClass = {'Por cobrar':'est-cobrar','Cobrada':'est-cobrada','Caída':'est-caida'};
 
