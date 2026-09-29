@@ -1115,14 +1115,20 @@ async function cargarDatosDB() {
           'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
         };
         agente = mapAgente[agente] || agente;
+        const fechaEsc = normFecha(r[9]);
+        // mes/año siempre se derivan de fechaEsc (fuente real), nunca de las columnas guardadas,
+        // que pueden haber quedado desactualizadas en operaciones cargadas antes de este fix.
+        const fParaMesAnio = parseFechaDDMM(fechaEsc);
+        const mesGuardado = parseInt(r[12])||0, anioGuardado = parseInt(r[13])||0;
         return {
           id: r[0], propiedad: r[1], agente, punta: r[3],
           precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0,
           comision_vendedor: parseFloat(r[6])||0,
           ganancia_martina: parseFloat(r[7])||0, ganancia_solum: parseFloat(r[8])||0,
-          fechaEsc: normFecha(r[9]), fechaReserva: normFecha(r[10]),
+          fechaEsc, fechaReserva: normFecha(r[10]),
           estado: r[11],
-          mes: parseInt(r[12])||0, anio: parseInt(r[13])||0,
+          mes: fParaMesAnio ? fParaMesAnio.getMonth()+1 : mesGuardado,
+          anio: fParaMesAnio ? fParaMesAnio.getFullYear() : anioGuardado,
           planillaGenerada: r[14]==='true'||r[14]===true,
           notas: r[15]||'',
           rendicion: r[16] || 'pendiente_asesor'
@@ -1490,6 +1496,15 @@ function normFecha(f){
 }
 function mesHoy(){ return new Date().getMonth()+1; }
 function anioHoy(){ return new Date().getFullYear(); }
+function parseFechaDDMM(f){
+  if(!f) return null;
+  const partes = String(f).trim().split('/');
+  if(partes.length!==3) return null;
+  const dia=parseInt(partes[0]), mes=parseInt(partes[1]), anio=parseInt(partes[2]);
+  if(!dia||!mes||!anio) return null;
+  const d = new Date(anio, mes-1, dia);
+  return isNaN(d.getTime()) ? null : d;
+}
 function fmtPesos(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function calcGanancia(op){
   // Si la operación ya trae ganancia_martina calculada, usarla
@@ -1898,6 +1913,10 @@ function actualizarOp(id, campo, valor){
     op.ganancia_solum = parseFloat(valor)||0;
   } else {
     op[campo]=valor;
+    if(campo==='fechaEsc'){
+      const f = parseFechaDDMM(valor);
+      if(f){ op.mes = f.getMonth()+1; op.anio = f.getFullYear(); }
+    }
   }
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
@@ -4380,8 +4399,8 @@ function procesarAccion(accion){
       ganancia_solum,
       fechaEsc: d.fechaEsc||'',
       estado,
-      mes: parseInt(d.mes)||new Date().getMonth()+1,
-      anio: parseInt(d.anio)||new Date().getFullYear(),
+      mes: (parseFechaDDMM(d.fechaEsc||'')||{}).getMonth ? parseFechaDDMM(d.fechaEsc).getMonth()+1 : (parseInt(d.mes)||new Date().getMonth()+1),
+      anio: (parseFechaDDMM(d.fechaEsc||'')||{}).getFullYear ? parseFechaDDMM(d.fechaEsc).getFullYear() : (parseInt(d.anio)||new Date().getFullYear()),
       planillaGenerada: estado==='Cobrada'
     };
     operaciones.push(newOp);
@@ -4499,15 +4518,18 @@ function guardarOperacion(){
   const precio = parseFloat(document.getElementById('mo-precio').value)||0;
   if(!prop||!precio){showToast('⚠️ Completá propiedad y precio','amber');return;}
   const now = new Date();
+  const fechaEscVal = document.getElementById('mo-fecha').value;
+  const fEsc = parseFechaDDMM(fechaEscVal);
   operaciones.push({
     id: operaciones.length+1,
     propiedad: prop,
     agente: document.getElementById('mo-agente').value,
     punta: document.getElementById('mo-punta').value,
     precio, comision: precio*0.03,
-    fechaEsc: document.getElementById('mo-fecha').value,
+    fechaEsc: fechaEscVal,
     estado: 'Por cobrar',
-    mes: now.getMonth()+1, anio: now.getFullYear()
+    mes: fEsc ? fEsc.getMonth()+1 : now.getMonth()+1,
+    anio: fEsc ? fEsc.getFullYear() : now.getFullYear()
   });
   closeModal('modalNuevaOp');
   renderOperaciones();
