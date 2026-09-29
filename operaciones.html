@@ -426,6 +426,8 @@ function guardarFechaAlerta(id){
   const nuevaFecha = document.getElementById('fecha-'+id).value.trim();
   if(!nuevaFecha) return;
   op.fechaEsc = nuevaFecha;
+  const fNueva = parseFecha(nuevaFecha);
+  if(fNueva){ op.mes = fNueva.getMonth()+1; op.anio = fNueva.getFullYear(); }
   guardarFila(op);
   registrarAccion(op, 'Prórroga', `Fecha de cobro cambiada de ${fechaAnterior} a ${nuevaFecha}`);
   showToast('✅ Fecha actualizada');
@@ -688,11 +690,16 @@ function actualizarCampo(id, campo, valor){
   } else {
     op[campo] = valor;
     if(campo==='estado' && valor==='Cobrada' && !op.rendicion) op.rendicion = 'pendiente_asesor';
+    if(campo==='fechaEsc'){
+      const f = parseFecha(valor);
+      if(f){ op.mes = f.getMonth()+1; op.anio = f.getFullYear(); }
+    }
   }
   guardarFila(op);
   registrarAccion(op, 'Edición', `Campo "${campo}" cambiado de "${valorAnterior}" a "${valor}"`);
   showToast('✅ Actualizado');
   renderAlertas();
+  renderTabla();
   renderRendicion();
 }
 
@@ -710,9 +717,17 @@ function renderTabla(){
   const anioVal = document.getElementById('op-anio').value;
   const agenteVal = document.getElementById('op-agente').value;
 
+  // El mes/año para filtrar se calcula siempre desde fechaEsc (la fecha real: de cobro si está
+  // Cobrada, de vencimiento si está Por cobrar), no desde las columnas mes/anio guardadas —
+  // esas pueden haber quedado desactualizadas en operaciones cargadas antes de este fix.
+  function mesAnioReales(o){
+    const f = parseFecha(o.fechaEsc);
+    return f ? {mes:f.getMonth()+1, anio:f.getFullYear()} : {mes:o.mes, anio:o.anio};
+  }
+
   let ops = operaciones;
-  if(anioVal!=='all') ops = ops.filter(o=>o.anio===parseInt(anioVal));
-  if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
+  if(anioVal!=='all') ops = ops.filter(o=>mesAnioReales(o).anio===parseInt(anioVal));
+  if(mes!=='all') ops = ops.filter(o=>mesAnioReales(o).mes===parseInt(mes));
   if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
   if(agenteVal!=='all') ops = ops.filter(o=>o.agente===agenteVal);
 
