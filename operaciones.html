@@ -376,7 +376,7 @@ function renderAlertas(){
           : `🟡 Vence en ${diasDif} día(s) — Deadline: ${fmtFechaCorta(o.fechaEsc)}`;
         return `
         <div class="alert-row">
-          <span><b>${o.propiedad}</b> — ${o.agente} — ${estadoTxt}</span>
+          <span><b>${o.propiedad}</b> — ${o.agente} — ${o.punta} — ${estadoTxt}</span>
           <input class="cell" style="width:100px;background:var(--card2);border:1px solid rgba(255,255,255,0.1)" id="fecha-${o.id}" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa">
           <button class="btn" style="background:var(--card3);color:var(--text2)" onclick="guardarFechaAlerta('${o.id}')">Guardar fecha</button>
           <button class="btn btn-prorroga" onclick="prorrogar('${o.id}')">Prorrogar</button>
@@ -518,9 +518,12 @@ function abrirModalPlanilla(id){
   if(!op) return;
   _opPlanillaActual = op;
   document.getElementById('modal-planilla-resumen').textContent = op.propiedad+' — '+op.agente+' — '+fmtUSD(op.precio);
-  document.getElementById('mp-cliente').value = '';
+  const matchNotas = /Cliente:\s*(.*?)(?:\s*—\s*Tel:\s*(.*))?$/.exec(op.notas||'');
+  const clientePrecargado = matchNotas && matchNotas[1] && matchNotas[1] !== '(sin nombre)' ? matchNotas[1].trim() : '';
+  const telefonoPrecargado = matchNotas && matchNotas[2] ? matchNotas[2].trim() : '';
+  document.getElementById('mp-cliente').value = clientePrecargado;
   document.getElementById('mp-cuit').value = '';
-  document.getElementById('mp-telefono').value = '';
+  document.getElementById('mp-telefono').value = telefonoPrecargado;
   document.getElementById('mp-mail').value = '';
   document.getElementById('mp-origen').value = '';
   document.getElementById('modal-planilla').classList.remove('hidden');
@@ -742,11 +745,11 @@ async function enviarChat(){
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 500,
-        system: `Sos el asistente de carga de reservas de SOLUMITOS. Josefina te va a describir una reserva en lenguaje natural, o te va a mandar una foto de la reserva (formulario, contrato, whatsapp, lo que sea) para que saques los datos vos misma. Datos que necesitás: propiedad, agente, punta, precio, % de comisión, fecha. Tu trabajo:
+        system: `Sos el asistente de carga de reservas de SOLUMITOS. Josefina te va a describir una reserva en lenguaje natural, o te va a mandar una foto de la reserva (formulario, contrato, whatsapp, lo que sea) para que saques los datos vos misma. Datos que necesitás: propiedad, agente, punta, precio, % de comisión, fecha, y nombre y teléfono del cliente (comprador o vendedor según la punta). Tu trabajo:
 1. Extraer los datos que puedas del texto y/o de la imagen.
-2. Si falta algún dato importante (propiedad, agente, punta o precio), preguntale específicamente por lo que falta, en texto plano, corto.
+2. Si falta algún dato importante (propiedad, agente, punta o precio), preguntale específicamente por lo que falta, en texto plano, corto. El nombre y teléfono del cliente pedilos también, pero no son obligatorios para cargar: si después de preguntar una vez no los tenés, seguí igual.
 3. Cuando tengas propiedad, agente, punta y precio, respondé EXCLUSIVAMENTE con un bloque JSON (nada de texto alrededor) con esta forma exacta:
-{"accion":"cargar_reserva","propiedad":"...","agente":"...","punta":"Comprador o Vendedor","precio":numero,"pctComision":numero_o_null,"fecha":"dd/mm/aaaa o null"}
+{"accion":"cargar_reserva","propiedad":"...","agente":"...","punta":"Comprador o Vendedor","precio":numero,"pctComision":numero_o_null,"fecha":"dd/mm/aaaa o null","clienteNombre":"...o null","clienteTelefono":"...o null"}
 Si pctComision no se menciona, usá null (se asume 3% después). Si la fecha no se menciona, usá null (se usa la fecha de hoy).
 Nombres de agentes válidos: Martina, Vicky, Manu, Marce, Kito, Cris, Ceci, Jose, Luli, Joaquin. Si menciona un nombre distinto (ej "Victoria"), mapealo al que corresponda.`,
         messages: chatHistory
@@ -783,9 +786,12 @@ async function cargarReservaDesdeChat(datos){
   const mes = partesFecha.length===3 ? parseInt(partesFecha[1]) : hoy.getMonth()+1;
   const anio = partesFecha.length===3 ? parseInt(partesFecha[2]) : hoy.getFullYear();
 
-  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, '', 'Por cobrar', mes, anio, false, '', 'pendiente_asesor'];
+  const notas = (datos.clienteNombre || datos.clienteTelefono)
+    ? `Cliente: ${datos.clienteNombre || '(sin nombre)'}${datos.clienteTelefono ? ' — Tel: '+datos.clienteTelefono : ''}`
+    : '';
+  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, '', 'Por cobrar', mes, anio, false, notas, 'pendiente_asesor'];
   await dbGuardar('operaciones', fila);
-  registrarAccion({id:nuevoId, propiedad:datos.propiedad, agente:datos.agente, punta:datos.punta, precio:datos.precio, comision, estado:'Por cobrar'}, 'Reserva cargada', 'Cargada por chat (Josefina)');
+  registrarAccion({id:nuevoId, propiedad:datos.propiedad, agente:datos.agente, punta:datos.punta, precio:datos.precio, comision, estado:'Por cobrar'}, 'Reserva cargada', 'Cargada por chat (Josefina)' + (notas ? ' — '+notas : ''));
 
   agregarMsg(`✅ Reserva cargada: ${datos.propiedad} — ${datos.agente} — ${datos.punta} — ${fmtUSD(datos.precio)} (comisión ${fmtUSD(comision)}). Ya está en la planilla como "Por cobrar".`, 'claude');
   chatHistory = []; // reiniciar conversación para la próxima carga
