@@ -332,33 +332,50 @@ function fmtFechaCorta(f){
   return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
 
-// ── Escalera de comisión por facturación del año calendario ANTERIOR ──
-// El % es fijo durante todo el año: lo determina cuánto facturó el agente el año pasado
-// (no lo que va facturando este año — eso solo define el nivel del año QUE VIENE).
+// ── Escalera de comisión: sube durante el año según lo facturado, nunca baja hasta el año que viene ──
+// El nivel con que arranca el año es el que tenía al 31/12 anterior (según lo facturado ESE año).
+// Durante el año en curso puede SUBIR de nivel a medida que acumula facturación (40k→60%, 50k→70%),
+// pero nunca cae por debajo del nivel de arranque hasta que empieza el año siguiente.
 // $0–40k → 50% · $40k–50k → 60% · $50k+ → 70%. Martina y Kito tienen % fijo siempre.
 function facturacionAnioDeAgente(agente, anio){
   return operaciones
     .filter(o=>o.agente===agente && o.anio===anio && o.estado==='Cobrada')
     .reduce((s,o)=>s+(o.comision||0),0);
 }
+function nivelPorFacturacion(facturacion){
+  if(facturacion>=50000) return 0.70;
+  if(facturacion>=40000) return 0.60;
+  return 0.50;
+}
+// Nivel con que el agente arranca el año (heredado del cierre del año calendario anterior)
+function nivelInicioAnio(agente, anio){
+  return nivelPorFacturacion(facturacionAnioDeAgente(agente, anio-1));
+}
+// Facturación acumulada del agente en ESTE año, antes de la operación actual (para saber si ya subió de nivel)
+function facturacionAcumuladaPrevia(agente, anio, operacionActual){
+  return operaciones
+    .filter(o=>o.agente===agente && o.anio===anio && o.estado==='Cobrada' && o.id!==operacionActual.id)
+    .filter(o=>(o.mes<operacionActual.mes) || (o.mes===operacionActual.mes && (o.id||0)<(operacionActual.id||0)))
+    .reduce((s,o)=>s+(o.comision||0),0);
+}
 function pctAsesorVigente(op){
   if(op.agente==='Martina') return 0.80;
   if(op.agente==='Kito') return 0.60;
-  const facturacionAnioAnterior = facturacionAnioDeAgente(op.agente, op.anio-1);
-  if(facturacionAnioAnterior>=50000) return 0.70;
-  if(facturacionAnioAnterior>=40000) return 0.60;
-  return 0.50;
+  const inicio = nivelInicioAnio(op.agente, op.anio);
+  const porAcumuladoEsteAnio = nivelPorFacturacion(facturacionAcumuladaPrevia(op.agente, op.anio, op));
+  return Math.max(inicio, porAcumuladoEsteAnio);
 }
 
 /**
  * Recorre TODAS las operaciones Cobradas y recalcula comision_vendedor/ganancia_martina/
- * ganancia_solum con el % que le correspondía a cada agente ESE año (fijo todo el año,
- * según lo que facturó el año calendario anterior). Corrige operaciones marcadas Cobrada
- * antes de que este cálculo existiera. Escribe en la misma hoja que leen operaciones.html
- * e index.html.
+ * ganancia_solum con el % que le correspondía a cada agente en el momento de esa operación:
+ * arranca el año en el nivel heredado del año anterior y sube según lo que va acumulando
+ * durante el año en curso (nunca baja hasta el año siguiente). Corrige operaciones marcadas
+ * Cobrada antes de que este cálculo existiera. Escribe en la misma hoja que leen
+ * operaciones.html e index.html.
  */
 async function recalcularComisiones(){
-  if(!confirm('Esto recalcula comision_vendedor, ganancia_martina y ganancia_solum de TODAS las operaciones Cobradas, con el % que correspondía a cada agente ese año según lo que facturó el año anterior.\n\n¿Continuar?')) return;
+  if(!confirm('Esto recalcula comision_vendedor, ganancia_martina y ganancia_solum de TODAS las operaciones Cobradas, con el % vigente de cada agente en el momento de cada operación (nivel heredado del año anterior + escalera del año en curso).\n\n¿Continuar?')) return;
   showToast('⏳ Recalculando comisiones...');
   const cobradas = operaciones.filter(o=>o.estado==='Cobrada');
   let corregidas = 0;

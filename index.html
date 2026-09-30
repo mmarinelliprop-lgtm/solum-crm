@@ -1555,25 +1555,45 @@ function facturacionAnioDeAgente(agente, anio){
     .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada')
     .reduce((s,o)=>s+(o.comision||0),0);
 }
-// % de comisión vigente para un agente durante TODO un año calendario:
-// se fija una sola vez según lo que facturó el año CALENDARIO ANTERIOR (no dentro del año en curso).
-function pctVigenteNivel(agente, anio){
+function nivelPorFacturacion(facturacion){
+  if(facturacion>=50000) return 0.70;
+  if(facturacion>=40000) return 0.60;
+  return 0.50;
+}
+// Nivel con que el agente arranca el año (heredado del cierre del año calendario anterior)
+function nivelInicioAnio(agente, anio){
   const n = normAgente(agente);
   if(n==='Martina') return COMISIONES['Martina']||0.80;
   if(n==='Kito') return COMISIONES['Kito']||0.60;
-  const facturacionAnioAnterior = facturacionAnioDeAgente(n, anio-1);
-  if(facturacionAnioAnterior>=50000) return 0.70;
-  if(facturacionAnioAnterior>=40000) return 0.60;
-  return 0.50;
+  return nivelPorFacturacion(facturacionAnioDeAgente(n, anio-1));
+}
+// Facturación acumulada del agente en ESTE año, antes de la operación actual
+function facturacionAcumuladaPrevia(agente, anio, operacionActual){
+  const n = normAgente(agente);
+  return operaciones
+    .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada' && o.id!==operacionActual.id)
+    .filter(o=>(o.mes<operacionActual.mes) || (o.mes===operacionActual.mes && (o.id||0)<(operacionActual.id||0)))
+    .reduce((s,o)=>s+(o.comision||0),0);
+}
+// % vigente para un agente en el momento de una operación puntual: arranca en el nivel heredado
+// del año anterior y sube durante el año en curso según lo que va acumulando (nunca baja hasta
+// que empieza el año siguiente).
+function pctVigenteNivel(agente, anio, operacionActual){
+  const n = normAgente(agente);
+  if(n==='Martina') return COMISIONES['Martina']||0.80;
+  if(n==='Kito') return COMISIONES['Kito']||0.60;
+  const inicio = nivelInicioAnio(n, anio);
+  const porAcumulado = nivelPorFacturacion(operacionActual ? facturacionAcumuladaPrevia(n, anio, operacionActual) : facturacionAnioDeAgente(n, anio));
+  return Math.max(inicio, porAcumulado);
 }
 function pctAsesorVigente(op){
-  return pctVigenteNivel(op.agente, op.anio);
+  return pctVigenteNivel(op.agente, op.anio, op);
 }
 // Estado actual de nivel/objetivo/viaje de un vendedor en un año (para mostrar en Seguimiento)
 function estadoNivelVendedor(agente, anio){
   const n = normAgente(agente);
   const facturacion = facturacionAnioDeAgente(n, anio);
-  const pctActual = pctVigenteNivel(n, anio);
+  const pctActual = pctVigenteNivel(n, anio, null);
   let objetivoActual, siguienteNivel;
   if(n==='Martina'){
     objetivoActual = null; siguienteNivel = null;
