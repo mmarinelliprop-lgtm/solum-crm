@@ -2491,6 +2491,50 @@ function abrirFichaAsesor(nombre){
     ? `Nivel actual ${pctNivel}% · faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))} para pasar a ${Math.round(est.siguienteNivel*100)}%`
     : `Nivel máximo alcanzado (${pctNivel}%)`;
 
+  // Facturación mensual (barras)
+  const mesActualF = anioF===new Date().getFullYear() ? new Date().getMonth()+1 : 12;
+  const factMensual = MESES_NOMBRES.slice(1).map((_,i)=>opsAgente.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0));
+  const maxFactMes = Math.max(1, ...factMensual);
+  const barrasHtml = factMensual.map((v,i)=>`
+    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+      <div style="width:100%;display:flex;align-items:flex-end;height:90px">
+        <div style="width:100%;background:${i+1<=mesActualF?'#d4bfa0':'rgba(255,255,255,0.08)'};border-radius:3px 3px 0 0;height:${Math.round(v/maxFactMes*100)}%"></div>
+      </div>
+      <div style="font-size:9px;color:#7a7468">${MESES_NOMBRES[i+1].slice(0,3)}</div>
+    </div>`).join('');
+
+  // Embudo real del año (llamadas/prospección → muestras → reservas → ventas)
+  const embFunnel = [
+    {label:'Prospección', val: act.real.p},
+    {label:'Muestras', val: act.real.m},
+    {label:'Reservas', val: act.real.r},
+    {label:'Ventas', val: act.real.v}
+  ];
+  const maxEmb = Math.max(1, embFunnel[0].val);
+  const embudoHtml = embFunnel.map((e,i)=>{
+    const w = Math.max(24, Math.round(e.val/maxEmb*100));
+    const inset = (100-w)/2;
+    return `<div style="margin:0 auto 4px;width:${w}%;clip-path:polygon(0 0,100% 0,${100-inset*0.3}% 100%,${inset*0.3}% 100%);background:${i===embFunnel.length-1?'#2ee6b8':'#2a4570'};padding:9px 0;text-align:center">
+      <span style="font-size:12.5px;font-weight:700;color:${i===embFunnel.length-1?'#0a1628':'#f0ece4'}">${e.label}: ${e.val}</span>
+    </div>`;
+  }).join('');
+
+  // Proyección de cierre de año (facturación bruta, estacional por trimestre)
+  let pesoTranscF = 0; for(let m=1;m<=mesActualF;m++) pesoTranscF += pesoMensual(m);
+  const estimAnualF = pesoTranscF>0 ? facturado/pesoTranscF : 0;
+  let proyFutF = 0; for(let m=mesActualF+1;m<=12;m++) proyFutF += estimAnualF*pesoMensual(m);
+  const proyCierreAnio = facturado + porCobrarMonto + proyFutF;
+
+  // Simulador: cuánto le falta exactamente para el próximo nivel de comisión
+  const simuladorHtml = est.objetivoActual
+    ? `Si factura <b>${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}</b> más este año, pasa de <b>${pctNivel}%</b> a <b>${Math.round(est.siguienteNivel*100)}%</b> de comisión.`
+    : `Ya alcanzó el nivel máximo de comisión (${pctNivel}%) para este año.`;
+
+  // Próximos pasos sugeridos (a partir de los desvíos por debajo del objetivo)
+  const proximosPasos = act.puntosAMejorar.length
+    ? act.puntosAMejorar.slice(0,3).map(d=>`<li>Reforzar <b>${d.label.toLowerCase()}</b>: va ${d.real} de ${d.obj} — sumar ${Math.max(1,Math.round((d.obj-d.real)/Math.max(1,12-act.mesActual+1)))} más por mes para llegar al objetivo.</li>`).join('')
+    : '<li>Mantener el ritmo actual — no hay métricas por debajo del objetivo.</li>';
+
   const html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Ficha — ${nombre}</title>
   <style>
     body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a1628;color:#f0ece4;padding:36px;max-width:860px;margin:0 auto}
@@ -2516,6 +2560,10 @@ function abrirFichaAsesor(nombre){
       <button class="btn btn-cerrar" onclick="window.close()">✕ Cerrar</button>
       <button class="btn" onclick="window.print()">Descargar / imprimir PDF</button>
     </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div style="width:38px;height:38px;background:#d4bfa0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#0f2240;font-family:Georgia,serif">S</div>
+      <div style="font-size:13px;letter-spacing:1px;color:#7a7468;text-transform:uppercase">SOLUM</div>
+    </div>
     <h1>Ficha de seguimiento — ${nombre}</h1>
     <div class="sub">Año ${anioF} (Ene–${MESES_NOMBRES[act.mesActual]}) · generado el ${new Date().toLocaleDateString('es-AR')}</div>
 
@@ -2525,6 +2573,25 @@ function abrirFichaAsesor(nombre){
       <div class="kpi"><div class="l">Tasa de caídas</div><div class="v" style="color:#ff6f91">${tasaCaida}% <span style="font-size:11px;color:#7a7468;font-weight:400">(${caidas.length} de ${opsAgente.length})</span></div></div>
       <div class="kpi"><div class="l">Nivel de comisión</div><div class="v" style="color:#2ee6b8">${nivelTexto}</div></div>
     </div>
+
+    <h3>Facturación mensual ${anioF}</h3>
+    <div class="box" style="display:flex;gap:6px;align-items:flex-end">${barrasHtml}</div>
+
+    <h3>Proyección y próximo nivel</h3>
+    <div class="cols2">
+      <div class="box">
+        <div style="font-size:10px;text-transform:uppercase;color:#7a7468;letter-spacing:.5px">Proyección de cierre de año</div>
+        <div style="font-size:22px;font-weight:800;color:#4a9eff;margin-top:6px">${fmtUSD(Math.round(proyCierreAnio))}</div>
+        <div class="sub">Cobrado + por cobrar + estacional por trimestre</div>
+      </div>
+      <div class="box">
+        <div style="font-size:10px;text-transform:uppercase;color:#7a7468;letter-spacing:.5px">Simulador de próximo nivel</div>
+        <div style="font-size:14px;margin-top:8px;line-height:1.5">${simuladorHtml}</div>
+      </div>
+    </div>
+
+    <h3>Embudo del año</h3>
+    <div class="box">${embudoHtml}</div>
 
     <h3>Actividad del año — real vs. objetivo</h3>
     <table><thead><tr><th>Métrica</th><th>Real</th><th>Objetivo</th><th>%</th></tr></thead><tbody>${filasActividad}</tbody></table>
@@ -2541,6 +2608,9 @@ function abrirFichaAsesor(nombre){
         <ul>${listaFortalezas}</ul>
       </div>
     </div>
+
+    <h3>Próximos pasos sugeridos</h3>
+    <div class="box"><ul>${proximosPasos}</ul></div>
 
     <h3>Operaciones cobradas ${anioF}</h3>
     <table><thead><tr><th>Propiedad</th><th>Punta</th><th>Precio</th><th>Comisión</th><th>Fecha</th></tr></thead><tbody>${filas}</tbody></table>
