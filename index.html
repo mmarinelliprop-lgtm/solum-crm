@@ -1602,10 +1602,11 @@ function estadoNivelVendedor(agente, anio){
   const facturacion = facturacionAnioDeAgente(n, anio);
   const pctActual = pctVigenteNivel(n, anio, null);
   let objetivoActual, siguienteNivel;
-  if(n==='Martina'){
-    objetivoActual = null; siguienteNivel = null;
-  } else if(n==='Kito'){
-    objetivoActual = null; siguienteNivel = null;
+  if(n==='Martina' || n==='Kito'){
+    // % de comisión fijo (no escala), pero sí tienen objetivo propio de facturación (para el viaje)
+    const objBase = objetivoBaseVendedor(n);
+    objetivoActual = facturacion < objBase ? objBase : null;
+    siguienteNivel = null;
   } else {
     // objetivoActual/siguienteNivel reflejan el progreso de ESTE año hacia el nivel del año QUE VIENE
     if(pctActual>=0.70){ objetivoActual=null; siguienteNivel=null; }
