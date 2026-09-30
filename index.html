@@ -1516,31 +1516,19 @@ function calcGanancia(op){
       solum: op.ganancia_solum || op.comision*0.30
     };
   }
-  // Calcular según estructura de comisiones
-  const pctAgente = COMISIONES[op.agente] || 0.50;
+  // Calcular según estructura de comisiones (escalera vigente por agente/año)
   if(op.agente==='Martina'){
     return {propia: op.comision*0.80, equipo:0, total:op.comision*0.80, solum:op.comision*0.20};
   }
-  // Agente al 50% → Martina 20%, SOLUM 30%
-  // Agente al 60% (Kito) → Martina 10%, SOLUM 30%
-  const pctMartina = pctAgente===0.60 ? 0.10 : 0.20;
-  const ganMartina = op.comision * pctMartina;
+  const pctAgente = pctAsesorVigente(op);
   const ganSolum = op.comision * 0.30;
+  const ganMartina = op.comision - (op.comision*pctAgente) - ganSolum;
   return {propia:0, equipo: ganMartina, total: ganMartina, solum: ganSolum};
 }
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 
-// Ganancia que se lleva el vendedor (o Martina en sus propias operaciones)
-function gananciaVendedor(op){
-  if(op.comision_vendedor!==undefined && op.comision_vendedor!==null && op.comision_vendedor>0) return op.comision_vendedor;
-  if(op.anio>=2026 && normAgente(op.agente)!=='Martina' && normAgente(op.agente)!=='Kito'){
-    return op.comision * pctVigenteNivel(op.agente, op.anio, op);
-  }
-  const pct = COMISIONES[op.agente] || COMISIONES[normAgente(op.agente)] || 0.50;
-  return op.comision*pct;
-}
-
-// ── Sistema de niveles por facturación acumulada (vigente desde 2026) ──
+// ── Sistema de niveles por facturación del año calendario ANTERIOR (vigente desde 2026) ──
+// El % de comisión es fijo durante todo el año: lo determina lo que el agente facturó el año pasado.
 // Vendedores del equipo (sin Martina, sin Kito): 50% hasta $40.000 → 60% hasta $50.000 → 70% en adelante
 // Kito: % fijo (60%), objetivo propio distinto
 const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000 }; // resto: 30000
@@ -1555,46 +1543,47 @@ function viajeUmbralVendedor(agente){
   const n = normAgente(agente);
   return VIAJE_UMBRAL_ESPECIAL[n] !== undefined ? VIAJE_UMBRAL_ESPECIAL[n] : 34000;
 }
-// Facturación bruta (comisión) cobrada por el vendedor ANTES que la operación actual (mismo año), para saber qué % le tocaba en ese momento
-function facturacionAcumuladaPrevia(agente, anio, operacionActual){
+// Ganancia que se lleva el vendedor (o Martina en sus propias operaciones)
+function gananciaVendedor(op){
+  if(op.comision_vendedor!==undefined && op.comision_vendedor!==null && op.comision_vendedor>0) return op.comision_vendedor;
+  return op.comision * pctAsesorVigente(op);
+}
+// Facturación (comisión bruta cobrada) de un agente en un año calendario dado
+function facturacionAnioDeAgente(agente, anio){
   const n = normAgente(agente);
   return operaciones
-    .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada' && o.id!==operacionActual.id)
-    .filter(o=>(o.mes<operacionActual.mes) || (o.mes===operacionActual.mes && (o.id||0)<(operacionActual.id||0)))
+    .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada')
     .reduce((s,o)=>s+(o.comision||0),0);
 }
-function pctVigenteNivel(agente, anio, operacionActual){
-  const previo = facturacionAcumuladaPrevia(agente, anio, operacionActual);
-  if(previo>=50000) return 0.70;
-  if(previo>=40000) return 0.60;
+// % de comisión vigente para un agente durante TODO un año calendario:
+// se fija una sola vez según lo que facturó el año CALENDARIO ANTERIOR (no dentro del año en curso).
+function pctVigenteNivel(agente, anio){
+  const n = normAgente(agente);
+  if(n==='Martina') return COMISIONES['Martina']||0.80;
+  if(n==='Kito') return COMISIONES['Kito']||0.60;
+  const facturacionAnioAnterior = facturacionAnioDeAgente(n, anio-1);
+  if(facturacionAnioAnterior>=50000) return 0.70;
+  if(facturacionAnioAnterior>=40000) return 0.60;
   return 0.50;
 }
-// % real que le corresponde al agente en ESTA operación: fijo para Martina/Kito, escalera de
-// facturación acumulada (50%→60% a los $40.000→70% a los $50.000) para el resto del equipo.
 function pctAsesorVigente(op){
-  const n = normAgente(op.agente);
-  if(n==='Martina') return 0.80;
-  if(n==='Kito') return 0.60;
-  return pctVigenteNivel(op.agente, op.anio, op);
+  return pctVigenteNivel(op.agente, op.anio);
 }
 // Estado actual de nivel/objetivo/viaje de un vendedor en un año (para mostrar en Seguimiento)
 function estadoNivelVendedor(agente, anio){
   const n = normAgente(agente);
-  const facturacion = operaciones
-    .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada')
-    .reduce((s,o)=>s+(o.comision||0),0);
-  let objetivoActual, pctActual, siguienteNivel;
+  const facturacion = facturacionAnioDeAgente(n, anio);
+  const pctActual = pctVigenteNivel(n, anio);
+  let objetivoActual, siguienteNivel;
   if(n==='Martina'){
-    objetivoActual = 75000; pctActual = COMISIONES['Martina']||0.80; siguienteNivel = null;
+    objetivoActual = null; siguienteNivel = null;
   } else if(n==='Kito'){
-    pctActual = COMISIONES['Kito']||0.60;
-    objetivoActual = facturacion<40000 ? 40000 : null;
-    siguienteNivel = null;
+    objetivoActual = null; siguienteNivel = null;
   } else {
-    if(facturacion>=50000){ objetivoActual=null; pctActual=0.70; siguienteNivel=null; }
-    else if(facturacion>=40000){ objetivoActual=50000; pctActual=0.60; siguienteNivel=0.70; }
-    else if(facturacion>=30000){ objetivoActual=40000; pctActual=0.50; siguienteNivel=0.60; }
-    else { objetivoActual=30000; pctActual=0.50; siguienteNivel=0.60; }
+    // objetivoActual/siguienteNivel reflejan el progreso de ESTE año hacia el nivel del año QUE VIENE
+    if(pctActual>=0.70){ objetivoActual=null; siguienteNivel=null; }
+    else if(pctActual>=0.60){ objetivoActual=50000; siguienteNivel=0.70; }
+    else { objetivoActual=40000; siguienteNivel=0.60; }
   }
   const umbralViaje = viajeUmbralVendedor(n);
   const viajeGanado = facturacion>=umbralViaje;
@@ -2004,7 +1993,7 @@ function generarPlanilla(id){
 function renderPlanillaStep(op){
   const container = document.getElementById('planillaSteps');
   const g = calcGanancia(op);
-  const pctAgente = COMISIONES[op.agente] || 0.50;
+  const pctAgente = pctAsesorVigente(op);
 
   // Construir steps dinámicos según datos disponibles
   const steps = [
@@ -2554,13 +2543,12 @@ function renderOperaciones(){
     return s + (o.ganancia_solum || g.solum || o.comision*0.30);
   },0);
   const totVendedores = ops.filter(o=>o.agente!=='Martina').reduce((s,o)=>{
-    const pct = COMISIONES[o.agente]||0.50;
-    return s + o.comision*pct;
+    return s + o.comision*pctAsesorVigente(o);
   },0);
 
   document.getElementById('ops-tabla').innerHTML = ops.map(o=>{
     const g = calcGanancia(o);
-    const solumOp = o.agente==='Martina' ? o.comision*0.20 : o.comision*(1-(COMISIONES[o.agente]||0.5))-g.equipo;
+    const solumOp = o.agente==='Martina' ? o.comision*0.20 : o.comision*(1-pctAsesorVigente(o))-g.equipo;
     const estadoCls = o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':'cobrar';
     const inputStyle = 'background:transparent;border:none;color:inherit;font-size:inherit;font-weight:inherit;outline:none;width:100%;cursor:pointer;';
     const inputFocus = 'onfocus="this.style.background=\'var(--card2)\';this.style.border=\'1px solid var(--gold3)\';this.style.borderRadius=\'4px\';this.style.padding=\'2px 4px\'"';
@@ -4391,12 +4379,12 @@ function procesarAccion(accion){
     // Calcular ganancia si no viene en el JSON
     const agNorm = normAgente(d.agente)||d.agente||'Martina';
     const esMartinaProp = agNorm==='Martina'||d.agente==='propia'||d.agente==='Martina';
-    const pctMartina = esMartinaProp ? 0.80 : (agNorm==='Kito') ? 0.10 : 0.20;
-    const pctAsesor = esMartinaProp ? 0.80 : COMISIONES[agNorm] || 0.50;
+    const anioOp = (parseFechaDDMM(d.fechaEsc||'')||{}).getFullYear ? parseFechaDDMM(d.fechaEsc).getFullYear() : (parseInt(d.anio)||new Date().getFullYear());
+    const pctAsesor = esMartinaProp ? 0.80 : pctAsesorVigente({agente:agNorm, anio:anioOp});
     const comision = parseFloat(d.comision) || parseFloat(d.precio||0)*0.03;
-    const ganancia_martina = parseFloat(d.ganancia_martina) || Math.round(comision*pctMartina*100)/100;
-    const ganancia_solum = parseFloat(d.ganancia_solum) || Math.round(comision*0.30*100)/100;
+    const ganancia_solum = parseFloat(d.ganancia_solum) || Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
     const comision_vendedor = parseFloat(d.comision_vendedor) || Math.round(comision*pctAsesor*100)/100;
+    const ganancia_martina = parseFloat(d.ganancia_martina) || Math.round((comision - comision_vendedor - (esMartinaProp?0:ganancia_solum))*100)/100;
 
     const newOp = {
       id: d.id || operaciones.length+1,
