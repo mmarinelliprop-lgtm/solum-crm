@@ -2475,6 +2475,42 @@ function abrirFichaAsesor(nombre){
 
   const filas = cobradas.map(o=>`<tr><td>${o.propiedad||''}</td><td>${o.punta||''}</td><td>${fmtUSD(o.precio||0)}</td><td>${fmtUSD(o.comision||0)}</td><td>${o.fechaEsc||''}</td></tr>`).join('') || '<tr><td colspan="5" style="color:#888">Sin operaciones cobradas este año</td></tr>';
 
+  // Ticket promedio y desglose por punta
+  const ticketProm = opsAgente.length ? opsAgente.reduce((s,o)=>s+(o.precio||0),0)/opsAgente.length : 0;
+  const opsVendedor = opsAgente.filter(o=>o.punta==='Vendedor').length;
+  const opsComprador = opsAgente.filter(o=>o.punta==='Comprador').length;
+
+  // Listado de "Por cobrar" con fecha estimada
+  const filasPorCobrar = porCobrar.map(o=>`<tr><td>${o.propiedad||''}</td><td>${fmtUSD(o.comision||0)}</td><td>${o.fechaEsc||'sin fecha estimada'}</td></tr>`).join('')
+    || '<tr><td colspan="3" style="color:#888">Sin operaciones por cobrar</td></tr>';
+
+  // Listado completo de operaciones del año (todos los estados)
+  const filasCompleto = opsAgente.slice().sort((a,b)=>(a.mes||0)-(b.mes||0)).map(o=>{
+    const color = o.estado==='Cobrada'?'#2ee6b8':o.estado==='Caída'?'#ff6f91':o.estado==='Pendiente'?'#b8b0a4':'#ffd36e';
+    return `<tr><td>${o.propiedad||''}</td><td>${o.punta||''}</td><td>${fmtUSD(o.comision||0)}</td><td>${o.fechaEsc||''}</td><td style="color:${color};font-weight:700">${o.estado}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" style="color:#888">Sin operaciones este año</td></tr>';
+
+  // Comparación vs. objetivo de facturación anual propio
+  const objFacturacion = objetivoBaseVendedor(nombre);
+  const pctObjFacturacion = Math.min(100, Math.round(facturado/objFacturacion*100));
+
+  // Progreso hacia el viaje/premio especial
+  const umbralViajeF = viajeUmbralVendedor(nombre);
+  const viajeGanadoF = facturado >= umbralViajeF;
+  const pctViajeF = Math.min(100, Math.round(facturado/umbralViajeF*100));
+
+  // Logros del año: meses en los que fue #1 en facturación del equipo visible
+  const mesesEnQueFuePrimero = [];
+  for(let m=1; m<=act.mesActual; m++){
+    const rankMes = AGENTES_EQUIPO_VISIBLE.map(a=>({
+      a, fact: operaciones.filter(o=>normAgente(o.agente)===a && o.anio===anioF && o.mes===m && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0)
+    })).sort((x,y)=>y.fact-x.fact);
+    if(rankMes[0] && rankMes[0].fact>0 && rankMes[0].a===nombre) mesesEnQueFuePrimero.push(MESES_NOMBRES[m]);
+  }
+  const logrosHtml = mesesEnQueFuePrimero.length
+    ? mesesEnQueFuePrimero.map(m=>`<li>Vendedor/a del mes en <b>${m}</b> (mayor facturación del equipo)</li>`).join('')
+    : '<li>Todavía no fue el/la primero/a del equipo en facturación mensual este año.</li>';
+
   const filasActividad = act.desvios.map(d=>{
     const color = d.pct>=100?'#2ee6b8':d.pct>=70?'#ffd36e':'#ff6f91';
     return `<tr><td>${d.label}</td><td>${d.real}</td><td>${d.obj}</td><td style="color:${color};font-weight:700">${d.pct}%</td></tr>`;
@@ -2574,6 +2610,33 @@ function abrirFichaAsesor(nombre){
       <div class="kpi"><div class="l">Nivel de comisión</div><div class="v" style="color:#2ee6b8">${nivelTexto}</div></div>
     </div>
 
+    <h3>Objetivo, viaje y ticket</h3>
+    <div class="grid">
+      <div class="kpi">
+        <div class="l">Objetivo de facturación anual</div>
+        <div class="v" style="color:#d4bfa0">${pctObjFacturacion}%</div>
+        <div class="sub">${fmtUSD(facturado)} / ${fmtUSD(objFacturacion)}</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Viaje / premio especial</div>
+        <div class="v" style="color:${viajeGanadoF?'#2ee6b8':'#f0ece4'}">${viajeGanadoF?'¡Ganado!':pctViajeF+'%'}</div>
+        <div class="sub">${viajeGanadoF?'Superó el umbral de '+fmtUSD(umbralViajeF):'Faltan '+fmtUSD(Math.max(0,umbralViajeF-facturado))+' de '+fmtUSD(umbralViajeF)}</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Ticket promedio</div>
+        <div class="v">${fmtUSD(Math.round(ticketProm))}</div>
+        <div class="sub">Por operación (todos los estados)</div>
+      </div>
+      <div class="kpi">
+        <div class="l">Por punta</div>
+        <div class="v">${opsVendedor} V · ${opsComprador} C</div>
+        <div class="sub">Vendedor / Comprador</div>
+      </div>
+    </div>
+
+    <h3>Logros del año</h3>
+    <div class="box"><ul>${logrosHtml}</ul></div>
+
     <h3>Facturación mensual ${anioF}</h3>
     <div class="box" style="display:flex;gap:6px;align-items:flex-end">${barrasHtml}</div>
 
@@ -2612,9 +2675,12 @@ function abrirFichaAsesor(nombre){
     <h3>Próximos pasos sugeridos</h3>
     <div class="box"><ul>${proximosPasos}</ul></div>
 
-    <h3>Operaciones cobradas ${anioF}</h3>
-    <table><thead><tr><th>Propiedad</th><th>Punta</th><th>Precio</th><th>Comisión</th><th>Fecha</th></tr></thead><tbody>${filas}</tbody></table>
-    <div class="sub" style="margin-top:6px">Por cobrar: ${fmtUSD(porCobrarMonto)} en ${porCobrar.length} operaciones</div>
+    <h3>Por cobrar — fecha estimada</h3>
+    <table><thead><tr><th>Propiedad</th><th>Comisión</th><th>Fecha estimada</th></tr></thead><tbody>${filasPorCobrar}</tbody></table>
+    <div class="sub" style="margin-top:6px">Total por cobrar: ${fmtUSD(porCobrarMonto)} en ${porCobrar.length} operaciones</div>
+
+    <h3>Listado completo de operaciones ${anioF}</h3>
+    <table><thead><tr><th>Propiedad</th><th>Punta</th><th>Comisión</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>${filasCompleto}</tbody></table>
 
     <div style="margin-top:26px"><button class="btn" onclick="window.print()">Descargar / imprimir como PDF</button></div>
   </body></html>`;
