@@ -801,7 +801,11 @@ function actualizarCampo(id, campo, valor){
 function poblarFiltroAgentes(){
   const sel = document.getElementById('op-agente');
   const actual = sel.value;
-  const agentes = [...new Set(operaciones.map(o=>o.agente).filter(Boolean))].sort();
+  // Roster completo del equipo (aunque todavía no tengan operaciones cargadas) + cualquier
+  // otro valor de agente presente en los datos que no esté en el roster.
+  const roster = ['Martina','Vicky','Manu','Marce','Kito','Ceci','Joaquin','Luli'];
+  const enDatos = [...new Set(operaciones.map(o=>o.agente).filter(Boolean))];
+  const agentes = [...new Set([...roster, ...enDatos])].sort();
   sel.innerHTML = '<option value="all">Todos</option>' + agentes.map(a=>`<option value="${a}">${a}</option>`).join('');
   if(agentes.includes(actual)) sel.value = actual;
 }

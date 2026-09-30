@@ -120,6 +120,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
 .status-cobrar{background:var(--amberbg);color:var(--amber);}
 .status-cobrada{background:var(--greenbg);color:var(--green);}
 .status-caida{background:var(--redbg);color:var(--red);}
+.status-pendiente{background:rgba(255,255,255,0.08);color:var(--text2);}
 .status::before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor;}
 
 /* ── RANKING ── */
@@ -395,6 +396,7 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="Cris">Cris (Cristian)</option>
         <option value="Ceci">Ceci (Cecilia)</option>
         <option value="Joaquin">Joaquín</option>
+        <option value="Luli">Luli</option>
       </select>
     </div>
   </div>
@@ -484,6 +486,9 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
             <input type="checkbox" value="Joaquin" checked onchange="renderOperaciones()" style="cursor:pointer"> Joaquín
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Luli" checked onchange="renderOperaciones()" style="cursor:pointer"> Luli
+          </label>
         </div>
       </div>
     </div>
@@ -499,6 +504,9 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
           <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosEstados(false)">Deseleccionar</button>
         </div>
         <div id="op-estado-checks" style="display:flex;flex-direction:column;gap:2px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Pendiente" onchange="renderOperaciones()" style="cursor:pointer"> Pendiente
+          </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
             <input type="checkbox" value="Por cobrar" checked onchange="renderOperaciones()" style="cursor:pointer"> Por cobrar
           </label>
@@ -938,8 +946,9 @@ tr:hover td{background:rgba(255,255,255,0.02);color:var(--text);}
         <option value="Martina">Operación propia (Martina)</option>
         <option value="M. Victoria">M. Victoria</option><option value="Manuela">Manuela</option>
         <option value="Marce">Marce</option><option value="Esteban">Kito</option>
-        <option value="Cristian">Cristian</option><option value="Cecilia">Cecilia</option>
+        <option value="Cecilia">Cecilia</option>
         <option value="Joaquin">Joaquín</option>
+        <option value="Luli">Luli</option>
       </select>
     </div>
     <div class="modal-field"><label class="modal-label">Punta</label>
@@ -2498,9 +2507,15 @@ function abrirFichaAsesor(nombre){
     .cols2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
     ul{margin:8px 0 0 18px;padding:0;font-size:13px;line-height:1.6}
     .box{background:#152238;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px}
-    .btn{margin-top:26px;padding:10px 18px;background:#d4bfa0;color:#0f2240;border:none;border-radius:8px;font-weight:700;cursor:pointer}
-    @media print{.btn{display:none}}
+    .btn{padding:10px 18px;background:#d4bfa0;color:#0f2240;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px}
+    .btn-cerrar{background:transparent;color:#f0ece4;border:1px solid rgba(255,255,255,0.25)}
+    .topbar{position:sticky;top:0;display:flex;justify-content:flex-end;gap:8px;background:#0a1628;padding:10px 0;margin:-10px 0 10px;z-index:10}
+    @media print{.btn,.topbar{display:none}}
   </style></head><body>
+    <div class="topbar">
+      <button class="btn btn-cerrar" onclick="window.close()">✕ Cerrar</button>
+      <button class="btn" onclick="window.print()">Descargar / imprimir PDF</button>
+    </div>
     <h1>Ficha de seguimiento — ${nombre}</h1>
     <div class="sub">Año ${anioF} (Ene–${MESES_NOMBRES[act.mesActual]}) · generado el ${new Date().toLocaleDateString('es-AR')}</div>
 
@@ -2531,7 +2546,7 @@ function abrirFichaAsesor(nombre){
     <table><thead><tr><th>Propiedad</th><th>Punta</th><th>Precio</th><th>Comisión</th><th>Fecha</th></tr></thead><tbody>${filas}</tbody></table>
     <div class="sub" style="margin-top:6px">Por cobrar: ${fmtUSD(porCobrarMonto)} en ${porCobrar.length} operaciones</div>
 
-    <button class="btn" onclick="window.print()">Descargar / imprimir como PDF</button>
+    <div style="margin-top:26px"><button class="btn" onclick="window.print()">Descargar / imprimir como PDF</button></div>
   </body></html>`;
 
   const w = window.open('', '_blank');
@@ -2710,7 +2725,7 @@ function renderOperaciones(){
   document.getElementById('ops-tabla').innerHTML = ops.map(o=>{
     const g = calcGanancia(o);
     const solumOp = o.agente==='Martina' ? o.comision*0.20 : o.comision*(1-pctAsesorVigente(o))-g.equipo;
-    const estadoCls = o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':'cobrar';
+    const estadoCls = o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':o.estado==='Pendiente'?'pendiente':'cobrar';
     const inputStyle = 'background:transparent;border:none;color:inherit;font-size:inherit;font-weight:inherit;outline:none;width:100%;cursor:pointer;';
     const inputFocus = 'onfocus="this.style.background=\'var(--card2)\';this.style.border=\'1px solid var(--gold3)\';this.style.borderRadius=\'4px\';this.style.padding=\'2px 4px\'"';
     const inputBlur = (field, id) => `onblur="this.style.background='transparent';this.style.border='none';actualizarOp(${id},'${field}',this.value)"`;
@@ -2723,9 +2738,10 @@ function renderOperaciones(){
           <option value="Manu" ${normAgente(o.agente)==='Manu'?'selected':''}>Manu</option>
           <option value="Marce" ${normAgente(o.agente)==='Marce'?'selected':''}>Marce</option>
           <option value="Kito" ${normAgente(o.agente)==='Kito'?'selected':''}>Kito</option>
-          <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
           <option value="Ceci" ${normAgente(o.agente)==='Ceci'?'selected':''}>Ceci</option>
           <option value="Joaquin" ${normAgente(o.agente)==='Joaquin'?'selected':''}>Joaquín</option>
+          <option value="Luli" ${normAgente(o.agente)==='Luli'?'selected':''}>Luli</option>
+          <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
         </select>
       </td>
       <td>
@@ -2750,6 +2766,7 @@ function renderOperaciones(){
       <td><input style="${inputStyle}" value="${fmtFecha(o.fechaEsc)}" placeholder="—" ${inputFocus} ${inputBlur('fechaEsc', o.id)}></td>
       <td>
         <select style="${inputStyle}" onchange="actualizarOp(${o.id},'estado',this.value)">
+          <option value="Pendiente" ${o.estado==='Pendiente'?'selected':''}>Pendiente</option>
           <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Por cobrar</option>
           <option value="Cobrada" ${o.estado==='Cobrada'?'selected':''}>Cobrada</option>
           <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
@@ -3561,13 +3578,17 @@ function renderSeguimiento(){
   const opsCobradasVendedor = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Cobrada');
   const totGananciaVendedor = opsCobradasVendedor.reduce((s,o)=>s+gananciaVendedor(o),0);
   const comisionPromedio = opsCobradasVendedor.length ? opsCobradasVendedor.reduce((s,o)=>s+(o.comision||0),0)/opsCobradasVendedor.length : 0;
+  // facPorCobrarSeg: facturación de operaciones YA cargadas como "Por cobrar" (getSegMes().f solo
+  // suma Cobradas, así que si no se suma acá la proyección ignora lo que ya está confirmado pero
+  // todavía no cobrado)
+  const facPorCobrarSeg = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
   // Proyección de FACTURACIÓN BRUTA del vendedor seleccionado (no ganancia de Martina) — misma estacionalidad trimestral que Operaciones
   let pesoTranscurridoSeg = 0;
   for(let mm=1; mm<=mesActual; mm++) pesoTranscurridoSeg += pesoMensual(mm);
   const estimadoAnualFact = pesoTranscurridoSeg>0 ? totFac/pesoTranscurridoSeg : 0;
   let proyFuturaFact = 0;
   for(let mm=mesActual+1; mm<=12; mm++) proyFuturaFact += estimadoAnualFact*pesoMensual(mm);
-  const proyAnual = totFac + proyFuturaFact;
+  const proyAnual = totFac + facPorCobrarSeg + proyFuturaFact;
 
   const totalesEl = document.getElementById('seg-totales');
   if(totalesEl) totalesEl.innerHTML = `
@@ -3578,7 +3599,7 @@ function renderSeguimiento(){
     <div class="kpi" style="flex:1;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
       <div class="kpi-label">Proyección anual</div>
       <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
-      <div class="kpi-sub">Estacional por trimestre (20/22,5/25,5/32%)</div>
+      <div class="kpi-sub">Cobrado + por cobrar + estacional (20/22,5/25,5/32%)</div>
     </div>`;
 
   // ── Gráficos de embudo (forma real, dos embudos lado a lado) ──
