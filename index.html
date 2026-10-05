@@ -22,9 +22,9 @@ document.documentElement.setAttribute('data-theme',t);})();
   --gold:#E3C98A;--gold2:#E3C98A;--gold3:rgba(227,201,138,.55);
   --on-gold:#0b1a26;
   --bg:#0b1a26;--bg2:#10222f;--bg3:#16303f;
-  --card:rgba(18,32,48,.58);--card2:rgba(var(--w),.06);--card3:rgba(var(--w),.10);
+  --card:rgba(18,32,48,.58);--card2:rgba(255,255,255,.06);--card3:rgba(255,255,255,.10);
   --pop:#13273a;
-  --border:rgba(var(--w),.14);--edge:rgba(var(--w),.14);
+  --border:rgba(255,255,255,.14);--edge:rgba(255,255,255,.14);
   --text:#ffffff;--text2:#cbd5e1;--text3:#94A3B8;
   --green:#2DD4C4;--greenbg:rgba(45,212,196,.15);
   --amber:#D9B25C;--amberbg:rgba(217,178,92,.16);
@@ -33,7 +33,7 @@ document.documentElement.setAttribute('data-theme',t);})();
   --lila:#A596C4;--bronce:#B9794A;
   --radius:12px;--radius2:20px;
   --glass-blur:blur(18px) saturate(140%);
-  --glass-shadow:inset 0 1px 0 rgba(var(--w),.12),0 10px 30px rgba(0,0,0,.35);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.35);
   --bokeh-a:linear-gradient(135deg,#0a1b27 0%,#12303c 45%,#0c1822 100%);
   --bokeh-op:.55;
   /* Personal */
@@ -45,7 +45,7 @@ document.documentElement.setAttribute('data-theme',t);})();
   --p-lila:#bfaee0;--p-lilabg:rgba(191,174,224,.12);
   --p-red:#E39A8B;--p-redbg:rgba(227,154,139,.12);
   --p-text:var(--text);--p-text2:var(--text2);--p-text3:var(--text3);
-  --ct-t2:#cbd5e1;--ct-t3:#94A3B8;--ct-grid:rgba(var(--w),.07);
+  --ct-t2:#cbd5e1;--ct-t3:#94A3B8;--ct-grid:rgba(255,255,255,.07);
 }
 :root[data-theme="light"]{
   color-scheme:light;
@@ -54,18 +54,18 @@ document.documentElement.setAttribute('data-theme',t);})();
   --gold:#A8832F;--gold2:#8f6d22;--gold3:rgba(168,131,47,.5);
   --on-gold:#ffffff;
   --bg:#e9f0f5;--bg2:#f1f5f9;--bg3:#e4ecf3;
-  --card:rgba(var(--w),.62);--card2:rgba(var(--w),.55);--card3:rgba(var(--w),.8);
+  --card:rgba(255,255,255,.82);--card2:rgba(20,45,80,.045);--card3:rgba(20,45,80,.08);
   --pop:#ffffff;
-  --border:rgba(15,35,60,.14);--edge:rgba(var(--w),.85);
-  --text:#14233a;--text2:#3d4f66;--text3:#64748b;
+  --border:rgba(15,35,60,.12);--edge:rgba(15,35,60,.09);
+  --text:#0f1f35;--text2:#34465e;--text3:#5b6b80;
   --green:#0e9f90;--greenbg:rgba(14,159,144,.14);
   --amber:#a77a0f;--amberbg:rgba(201,152,30,.16);
   --red:#c25643;--redbg:rgba(194,86,67,.12);
   --blue:#3d6396;--bluebg:rgba(61,99,150,.12);
   --lila:#7d6ba3;--bronce:#9a5f33;
-  --glass-shadow:inset 0 1px 0 rgba(var(--w),.9),0 8px 28px rgba(40,70,110,.14);
-  --bokeh-a:linear-gradient(135deg,#eef4f8 0%,#dfeaf1 45%,#f3eee6 100%);
-  --bokeh-op:.5;
+  --glass-shadow:inset 0 1px 0 #fff,0 6px 22px rgba(40,70,110,.08);
+  --bokeh-a:linear-gradient(135deg,#f6f3ec 0%,#eaf0f5 50%,#f1ede4 100%);
+  --bokeh-op:.3;
   --p-rosa:#c2587f;--p-celeste:#1f8a99;--p-amarillo:#9a7d0c;--p-verde:#3f8a5c;--p-lila:#7d5fb0;--p-red:#c25643;
   --ct-t2:#3d4f66;--ct-t3:#64748b;--ct-grid:rgba(15,35,60,.08);
 }
@@ -333,7 +333,8 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 :root[data-theme="light"] .bokeh i{filter:blur(34px);}
 .header,.tabs-bar,.main{position:relative;z-index:1;}
 .header{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--edge);box-shadow:var(--glass-shadow);}
-.header-logo{background:linear-gradient(145deg,var(--gold),var(--bronce));color:var(--on-gold);border-radius:10px;}
+.header-logo{background:transparent;color:var(--gold);width:42px;height:42px;padding:3px;}
+.header-logo svg{width:100%;height:100%;display:block;}
 .header-name{color:var(--text);letter-spacing:.1em;font-weight:800;}
 .header-name::after{content:' CRM';color:var(--gold2);font-weight:600;}
 .tabs-bar{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--edge);}
@@ -395,7 +396,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 .bar div{height:100%;transition:width .5s;}
 .s-cobr{background:linear-gradient(180deg,#6ff3e6,#14a99c);}
 .s-porc{background:linear-gradient(180deg,#f3e2b3,#c9a85a);}
-.s-pend{background:linear-gradient(180deg,#f0b4a6,#c4705f);}
+.s-pend{background:linear-gradient(180deg,#c9bde3,#8c7bb0);}
+.caidas-mini{margin-left:auto;font-size:11px;font-weight:600;color:var(--red);background:var(--redbg);border-radius:10px;padding:3px 10px;white-space:nowrap;}
 .scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);margin-top:5px;}
 .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
 .lg{display:flex;align-items:center;gap:8px;background:rgba(var(--w),.05);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:11.5px;color:var(--text2);}
@@ -441,10 +443,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 <!-- HEADER -->
 <div class="header">
   <div class="header-brand">
-    <div class="header-logo">SOL</div>
+    <div class="header-logo"><svg viewBox="0 0 720 600" fill="none" stroke="currentColor" stroke-width="34" stroke-linejoin="miter" aria-label="Solum"><path d="M50 566V432L302 52L452 202L215 555"/><path d="M122 555V440L302 178L682 555"/><path d="M39 555H692"/></svg></div>
     <div>
       <div class="header-name">SOLUMITOS</div>
-      <div class="header-sub">SOLUM Negocios Inmobiliarios · Rosario</div>
+      <div class="header-sub">SOLUM Negocios Inmobiliarios</div>
     </div>
   </div>
   <div class="header-right">
@@ -481,6 +483,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
   <div class="section-header">
     <div><div class="section-title">Dashboard del Equipo</div><div class="section-sub">Resumen de actividad y facturación</div></div>
     <div class="filters">
+      <button class="btn btn-outline btn-sm" id="dash-martina-btn" onclick="toggleDashMartina()" style="align-self:flex-end">+ Incluir mis números</button>
       <select class="filter-select" id="dash-mes" onchange="renderDashboard()">
         <option value="all" selected>Año completo</option>
         <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
@@ -503,6 +506,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <div class="hero-head">
           <h2>Cobrado</h2>
           <svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+          <span class="caidas-mini" id="dg-caidas"></span>
         </div>
         <div class="big" id="dg-big"></div>
         <div class="bar-wrap">
@@ -511,7 +515,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
             <div class="s-porc" id="dg-b2"></div>
             <div class="s-pend" id="dg-b3"></div>
           </div>
-          <div class="scale"><span>0</span><span>Total facturación</span></div>
+          <div class="scale"><span>0</span><span id="dg-scale"></span></div>
           <div class="legend" id="dg-legend"></div>
         </div>
       </div>
@@ -534,6 +538,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <div class="cleg">
           <span><i style="background:#2DD4C4"></i>Cobrada</span>
           <span><i style="background:#D9B25C"></i>Por cobrar</span>
+          <span><i style="background:#A596C4"></i>Pendiente</span>
           <span><i style="background:#E39A8B"></i>Caída</span>
         </div>
       </div>
@@ -543,6 +548,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <div class="cleg">
           <span><i style="background:#2DD4C4"></i>Cobrada</span>
           <span><i style="background:#D9B25C"></i>Por cobrar</span>
+          <span><i style="background:#A596C4"></i>Pendiente</span>
           <span><i style="background:#E39A8B"></i>Caída</span>
         </div>
         <div class="callout"><div id="dg-capt"></div></div>
@@ -2540,11 +2546,25 @@ function mapAgenteToSeg(agente) {
   return map[agente] || map[agente?.trim()] || agente;
 }
 
-const AV_COLORS = {Vicky:'#E3C98A',Manu:'#2DD4C4',Marce:'#A596C4',Kito:'#E39A8B',Cris:'#7FC8A9',Ceci:'#5F7FA6',Joaco:'#D9B25C',Luli:'#94A3B8',Jose:'#7FC8A9'};
+const AV_COLORS = {Martina:'#B9794A',Joaquin:'#7FC8A9',Vicky:'#E3C98A',Manu:'#2DD4C4',Marce:'#A596C4',Kito:'#E39A8B',Cris:'#7FC8A9',Ceci:'#5F7FA6',Joaco:'#D9B25C',Luli:'#94A3B8',Jose:'#7FC8A9'};
+let dashInclMartina = false;
+try{ dashInclMartina = localStorage.getItem("solum-dash-martina")==="1"; }catch(e){}
+function syncDashMartinaBtn(){
+  const b = document.getElementById("dash-martina-btn"); if(!b) return;
+  b.textContent = dashInclMartina ? "✓ Incluyendo mis números" : "+ Incluir mis números";
+  b.classList.toggle("btn-gold", dashInclMartina); b.classList.toggle("btn-outline", !dashInclMartina);
+}
+function toggleDashMartina(){
+  dashInclMartina = !dashInclMartina;
+  try{ localStorage.setItem("solum-dash-martina", dashInclMartina?"1":"0"); }catch(e){}
+  renderDashboard();
+}
 function renderDashboard(){
+  syncDashMartinaBtn();
   const mes = document.getElementById('dash-mes').value;
   const anio = parseInt(document.getElementById('dash-anio').value);
-  const ops = operaciones.filter(o => o.anio===anio && (mes==='all'||o.mes===parseInt(mes)));
+  const esDash = o => AGENTES_EQUIPO_VISIBLE.includes(normAgente(o.agente)) || (dashInclMartina && normAgente(o.agente)==='Martina');
+  const ops = operaciones.filter(o => esDash(o) && o.anio===anio && (mes==='all'||o.mes===parseInt(mes)));
 
   const totalFact = ops.reduce((s,o)=>s+o.comision,0);
   const cobradas = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
@@ -2573,43 +2593,51 @@ function renderDashboard(){
 
   // Objetivo de equipo (facturación bruta anual, sin Martina) — sistema vigente desde 2026
   const anioObjEquipo = 2026;
-  const factEquipoAnual = operaciones.filter(o=>o.anio===anioObjEquipo && o.estado==='Cobrada' && AGENTES_EQUIPO_VISIBLE.includes(normAgente(o.agente))).reduce((s,o)=>s+(o.comision||0),0);
+  const factEquipoAnual = operaciones.filter(o=>o.anio===anioObjEquipo && o.estado==='Cobrada' && esDash(o)).reduce((s,o)=>s+(o.comision||0),0);
   const pctEquipo = Math.min(100, Math.round(factEquipoAnual/OBJETIVO_EQUIPO_ANUAL*100));
 
   const fmtN = n => Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0});
   const cobradasN = ops.filter(o=>o.estado==='Cobrada').length;
-  const sumaTot = cobradas + montoPorCobrar + montoCaidas;
-  const pc = v => sumaTot>0 ? (v/sumaTot*100) : 0;
-
+  const opsPend = ops.filter(o=>o.estado==='Pendiente');
+  const montoPend = opsPend.reduce((s,o)=>s+(o.comision||0),0);
+  const objetivo = OBJETIVO_EQUIPO_ANUAL || 1;
+  const pc = v => Math.min(100, v/objetivo*100);
+  const pctCobrado = Math.round(cobradas/objetivo*100);
+  const pctConProy = Math.round((cobradas+montoPorCobrar+montoPend)/objetivo*100);
 
   document.getElementById('dg-big').innerHTML = `$ ${fmtN(cobradas)}<small>USD</small>`;
-  document.getElementById('dg-b1').style.width = pc(cobradas)+'%';
-  document.getElementById('dg-b2').style.width = pc(montoPorCobrar)+'%';
-  document.getElementById('dg-b3').style.width = pc(montoCaidas)+'%';
+  const b1=pc(cobradas), b2=Math.min(100-b1,pc(montoPorCobrar)), b3=Math.min(100-b1-b2,pc(montoPend));
+  document.getElementById('dg-b1').style.width = b1+'%';
+  document.getElementById('dg-b2').style.width = b2+'%';
+  document.getElementById('dg-b3').style.width = b3+'%';
+  document.getElementById('dg-scale').textContent = `Objetivo: $ ${fmtN(objetivo)} USD · ${pctCobrado}% cobrado`;
+  document.getElementById('dg-caidas').textContent = `Caídas: ${cantCaidas} · $ ${fmtN(montoCaidas)}`;
   document.getElementById('dg-legend').innerHTML = `
     <div class="lg"><i class="s-cobr"></i>Cobrado (${cobradasN} ops): <b>$ ${fmtN(cobradas)} USD</b></div>
-    <div class="lg"><i class="s-porc"></i>Por cobrar (${reservasPendientes} reservas): <b>$ ${fmtN(montoPorCobrar)} USD</b></div>
-    <div class="lg"><i class="s-pend"></i>Caídas (${cantCaidas}): <b>$ ${fmtN(montoCaidas)} USD</b></div>`;
+    <div class="lg"><i class="s-porc"></i>Por cobrar (${reservasPendientes}): <b>$ ${fmtN(montoPorCobrar)} USD</b></div>
+    <div class="lg" title="Reservas hechas pero todavía no aceptadas por ambas partes"><i class="s-pend"></i>Pendiente (${opsPend.length}): <b>$ ${fmtN(montoPend)} USD</b></div>`;
   document.getElementById('dg-periodo').textContent = (mes==='all' ? 'Año' : MESES_NOMBRES[parseInt(mes)]) + ' ' + anio;
-  document.getElementById('dg-ring').style.background = `conic-gradient(var(--green) 0 ${pctEquipo}%,rgba(var(--w),.12) ${pctEquipo}% 100%)`;
+  document.getElementById('dg-ring').style.background = `conic-gradient(var(--green) 0 ${Math.min(100,pctCobrado)}%,rgba(var(--w),.12) ${Math.min(100,pctCobrado)}% 100%)`;
+  const faltan = Math.max(0, objetivo - cobradas);
   document.getElementById('dg-hud').innerHTML = `
     <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--green)"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></div>
-      <div><div class="m-l">Objetivo equipo ${anioObjEquipo} (sin Martina)</div><div class="m-v">$ ${fmtN(OBJETIVO_EQUIPO_ANUAL)}<small>USD · ${pctEquipo}% logrado</small></div></div></div>
+      <div><div class="m-l">Objetivo anual</div><div class="m-v">$ ${fmtN(objetivo)}<small>USD</small></div></div></div>
     <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--green)"><path d="M6 18L18 6"/><path d="M9 6h9v9"/></svg></div>
-      <div><div class="m-l">Proyectado del equipo (sin Martina)</div><div class="m-v" id="dg-proy"></div></div></div>
-    <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--red)"><path d="M12 3L2 20h20L12 3z"/><path d="M12 10v5"/><path d="M12 17.5v.5"/></svg></div>
-      <div><div class="m-l">Caídas / riesgo perdido</div><div class="m-v" style="color:var(--red)">$ ${fmtN(montoCaidas)}<small>USD</small></div></div></div>`;
+      <div><div class="m-l">Proyectado de cierre</div><div class="m-v" id="dg-proy"></div></div></div>
+    <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--amber)"><path d="M5 4h14M5 20h14M7 4v3l5 5-5 5v3M17 4v3l-5 5 5 5v3"/></svg></div>
+      <div><div class="m-l">Falta para el objetivo</div><div class="m-v">$ ${fmtN(faltan)}<small>USD</small></div></div></div>`;
   document.getElementById('dg-capt').textContent = `Captaciones publicadas: ${segCaptTot} · Reservas: ${segReservasTot}`;
 
   // Chart facturación mensual (apilado)
   destroyChart('chartFacturacion');
   const mesesLabel = MESES_NOMBRES.slice(1).map(m=>m.slice(0,3));
-  const serie = est => mesesLabel.map((_,i)=>operaciones.filter(o=>o.anio===anio&&o.mes===i+1&&o.estado===est).reduce((s,o)=>s+o.comision,0));
+  const serie = est => mesesLabel.map((_,i)=>operaciones.filter(o=>esDash(o)&&o.anio===anio&&o.mes===i+1&&o.estado===est).reduce((s,o)=>s+o.comision,0));
   charts['chartFacturacion'] = new Chart(document.getElementById('chartFacturacion'),{
     type:'bar',
     data:{labels:mesesLabel,datasets:[
       {label:'Cobrada',data:serie('Cobrada'),backgroundColor:'#2DD4C4',borderRadius:3},
       {label:'Por cobrar',data:serie('Por cobrar'),backgroundColor:'#D9B25C',borderRadius:3},
+      {label:'Pendiente',data:serie('Pendiente'),backgroundColor:'#A596C4',borderRadius:3},
       {label:'Caída',data:serie('Caída'),backgroundColor:'#E39A8B',borderRadius:3}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -2624,21 +2652,21 @@ function renderDashboard(){
   destroyChart('chartEstados');
   const cnt = {cobrada:cobradasN, cobrar:reservasPendientes, caida:cantCaidas};
   charts['chartEstados'] = new Chart(document.getElementById('chartEstados'),{
-    type:'doughnut', data:{labels:['Cobrada','Por cobrar','Caída'],datasets:[{data:[cnt.cobrada,cnt.cobrar,cnt.caida],backgroundColor:['#2DD4C4','#D9B25C','#E39A8B'],borderWidth:0}]},
+    type:'doughnut', data:{labels:['Cobrada','Por cobrar','Pendiente','Caída'],datasets:[{data:[cnt.cobrada,cnt.cobrar,opsPend.length,cnt.caida],backgroundColor:['#2DD4C4','#D9B25C','#A596C4','#E39A8B'],borderWidth:0}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}
   });
 
   // normAgente es función global — definida abajo
   // Solo operaciones cobradas para el ranking (excluye Jose/Cris: no aparecen de cara al equipo)
   const opsCobradas = ops.filter(o=>o.estado==='Cobrada');
-  const rankData = AGENTES_EQUIPO_VISIBLE.map(a=>{
+  const rankData = AGENTES_EQUIPO_VISIBLE.concat(dashInclMartina?['Martina']:[]).map(a=>{
     const aops = opsCobradas.filter(o=>normAgente(o.agente)===a);
     return {nombre:a, fact:aops.reduce((s,o)=>s+o.comision,0), ops:aops.length};
   }).sort((a,b)=>b.fact-a.fact);
 
   // Proyectado del equipo (sin Martina, sin Jose/Cris) — misma estacionalidad trimestral que Operaciones
   const anioProyEquipo = anio;
-  const opsEquipoAnio = operaciones.filter(o=>o.anio===anioProyEquipo && AGENTES_EQUIPO_VISIBLE.includes(normAgente(o.agente)));
+  const opsEquipoAnio = operaciones.filter(o=>o.anio===anioProyEquipo && esDash(o));
   const factEquipoCobradoYTD = opsEquipoAnio.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
   const factEquipoPorCobrar = opsEquipoAnio.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
   const tasaCaidaEquipo = opsEquipoAnio.length>0 ? opsEquipoAnio.filter(o=>o.estado==='Caída').length/opsEquipoAnio.length : 0;
