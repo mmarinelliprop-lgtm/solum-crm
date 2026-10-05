@@ -543,14 +543,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         </div>
       </div>
       <div class="chart-card">
-        <div class="eyebrow">Estados de operaciones</div>
-        <div class="chart-wrap"><canvas id="chartEstados"></canvas></div>
-        <div class="cleg">
-          <span><i style="background:#2DD4C4"></i>Cobrada</span>
-          <span><i style="background:#D9B25C"></i>Por cobrar</span>
-          <span><i style="background:#A596C4"></i>Pendiente</span>
-          <span><i style="background:#E39A8B"></i>Caída</span>
-        </div>
+        <div class="eyebrow">Captaciones por vendedor</div>
+        <div class="chart-wrap"><canvas id="chartCaptaciones"></canvas></div>
+        <div class="cleg" id="dg-capt-leg"></div>
         <div class="callout"><div id="dg-capt"></div></div>
       </div>
     </div>
@@ -2594,13 +2589,13 @@ function renderDashboard(){
   // Objetivo de equipo (facturación bruta anual, sin Martina) — sistema vigente desde 2026
   const anioObjEquipo = 2026;
   const factEquipoAnual = operaciones.filter(o=>o.anio===anioObjEquipo && o.estado==='Cobrada' && esDash(o)).reduce((s,o)=>s+(o.comision||0),0);
-  const pctEquipo = Math.min(100, Math.round(factEquipoAnual/OBJETIVO_EQUIPO_ANUAL*100));
+  const pctEquipo = Math.min(100, Math.round(factEquipoAnual/(OBJETIVO_EQUIPO_ANUAL+(dashInclMartina?OBJETIVOS_VENDEDOR_BASE.Martina:0))*100));
 
   const fmtN = n => Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0});
   const cobradasN = ops.filter(o=>o.estado==='Cobrada').length;
   const opsPend = ops.filter(o=>o.estado==='Pendiente');
   const montoPend = opsPend.reduce((s,o)=>s+(o.comision||0),0);
-  const objetivo = OBJETIVO_EQUIPO_ANUAL || 1;
+  const objetivo = (OBJETIVO_EQUIPO_ANUAL + (dashInclMartina ? OBJETIVOS_VENDEDOR_BASE.Martina : 0)) || 1;
   const pc = v => Math.min(100, v/objetivo*100);
   const pctCobrado = Math.round(cobradas/objetivo*100);
   const pctConProy = Math.round((cobradas+montoPorCobrar+montoPend)/objetivo*100);
@@ -2626,7 +2621,6 @@ function renderDashboard(){
       <div><div class="m-l">Proyectado de cierre</div><div class="m-v" id="dg-proy"></div></div></div>
     <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--amber)"><path d="M5 4h14M5 20h14M7 4v3l5 5-5 5v3M17 4v3l-5 5 5 5v3"/></svg></div>
       <div><div class="m-l">Falta para el objetivo</div><div class="m-v">$ ${fmtN(faltan)}<small>USD</small></div></div></div>`;
-  document.getElementById('dg-capt').textContent = `Captaciones publicadas: ${segCaptTot} · Reservas: ${segReservasTot}`;
 
   // Chart facturación mensual (apilado)
   destroyChart('chartFacturacion');
@@ -2648,12 +2642,26 @@ function renderDashboard(){
       }}
   });
 
-  // Chart estados (donut)
-  destroyChart('chartEstados');
-  const cnt = {cobrada:cobradasN, cobrar:reservasPendientes, caida:cantCaidas};
-  charts['chartEstados'] = new Chart(document.getElementById('chartEstados'),{
-    type:'doughnut', data:{labels:['Cobrada','Por cobrar','Pendiente','Caída'],datasets:[{data:[cnt.cobrada,cnt.cobrar,opsPend.length,cnt.caida],backgroundColor:['#2DD4C4','#D9B25C','#A596C4','#E39A8B'],borderWidth:0}]},
-    options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false}}}
+  // Chart captaciones publicadas por vendedor (apilado por mes)
+  destroyChart('chartCaptaciones');
+  const vendCapt = AGENTES_EQUIPO_VISIBLE.concat(dashInclMartina?['Martina']:[]);
+  const captPorMes = v => MESES_NOMBRES.slice(1).map((_,i)=>getSegMes(v,i+1,anio).cp||0);
+  const captData = vendCapt.map(v=>({v, data:captPorMes(v)}));
+  const captTotal = captData.reduce((s,d)=>s+d.data.reduce((a,b)=>a+b,0),0);
+  const captMes = mesNum ? captData.reduce((s,d)=>s+d.data[mesNum-1],0) : captTotal;
+  document.getElementById('dg-capt-leg').innerHTML = vendCapt.map(v=>`<span><i style="background:${AV_COLORS[v]||'#94A3B8'}"></i>${v}</span>`).join('');
+  document.getElementById('dg-capt').textContent = mesNum
+    ? `${MESES_NOMBRES[mesNum]}: ${captMes} captaciones · Año: ${captTotal}`
+    : `Total equipo: ${captTotal} propiedades cargadas`;
+  charts['chartCaptaciones'] = new Chart(document.getElementById('chartCaptaciones'),{
+    type:'bar',
+    data:{labels:mesesLabel,datasets:captData.map(d=>({label:d.v,data:d.data,backgroundColor:AV_COLORS[d.v]||'#94A3B8',borderRadius:2}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{stacked:true,ticks:{color:CT.t3,font:{size:10}},grid:{display:false}},
+        y:{stacked:true,ticks:{color:CT.t3,font:{size:10},precision:0},grid:{color:CT.grid}}
+      }}
   });
 
   // normAgente es función global — definida abajo
@@ -2677,7 +2685,8 @@ function renderDashboard(){
   let proyFuturaEquipo = 0;
   for(let m=mesActualDash+1;m<=12;m++) proyFuturaEquipo += estimadoAnualEquipo*pesoMensual(m)*(1-tasaCaidaEquipo);
   const proyEquipoAnual = factEquipoCobradoYTD + factEquipoPorCobrar + proyFuturaEquipo;
-  const pctProy = OBJETIVO_EQUIPO_ANUAL ? Math.round((proyEquipoAnual/OBJETIVO_EQUIPO_ANUAL-1)*1000)/10 : 0;
+  const objProy = OBJETIVO_EQUIPO_ANUAL + (dashInclMartina ? OBJETIVOS_VENDEDOR_BASE.Martina : 0);
+  const pctProy = objProy ? Math.round((proyEquipoAnual/objProy-1)*1000)/10 : 0;
   document.getElementById('dg-proy').innerHTML = `$ ${fmtN(Math.round(proyEquipoAnual))}<span class="pill" title="Cobrado + por cobrar + estacional, según ritmo actual" style="${pctProy<0?'background:var(--amberbg);color:var(--amber)':''}">${pctProy>=0?'+':''}${pctProy}%</span>`;
 
   document.getElementById('rankingList').innerHTML = rankData.map((r,i)=>`
