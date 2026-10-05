@@ -53,14 +53,27 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
 .est-cobrada{background:var(--greenbg);color:var(--green);}
 .est-caida{background:var(--redbg);color:var(--red);}
 /* Chat */
-.chat-wrap{max-width:700px;margin:0 auto;display:flex;flex-direction:column;height:78vh;}
-.chat-msgs{flex:1;overflow-y:auto;background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.05);padding:16px;display:flex;flex-direction:column;gap:10px;}
-.msg{max-width:85%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;}
-.msg.user{align-self:flex-end;background:var(--gold);color:var(--navy3);}
-.msg.claude{align-self:flex-start;background:var(--card2);color:var(--text);}
-.chat-input-row{display:flex;gap:8px;margin-top:12px;}
-.chat-input-row input{flex:1;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:10px 14px;border-radius:10px;font-size:13px;outline:none;}
-.chat-input-row button{background:var(--gold);color:var(--navy3);border:none;padding:0 18px;border-radius:10px;font-weight:700;cursor:pointer;}
+.chat-wrap{display:flex;flex-direction:column;max-width:900px;margin:0 auto;height:calc(100vh - 220px);}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.msg{max-width:80%;padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.5;}
+.msg-user{background:var(--navy2);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px;}
+.msg-claude{background:var(--card2);color:var(--text2);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid rgba(255,255,255,0.06);}
+.msg-system{background:rgba(46,230,184,0.08);color:var(--green);align-self:center;font-size:11px;padding:6px 14px;border-radius:20px;border:1px solid rgba(46,230,184,0.2);}
+.chat-input-area{padding:16px;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:10px;align-items:flex-end;}
+.chat-input{flex:1;background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:12px 16px;border-radius:10px;font-size:13px;resize:none;outline:none;min-height:44px;max-height:120px;font-family:inherit;}
+.chat-input:focus{border-color:var(--gold3);}
+.chat-input-actions{display:flex;gap:8px;align-items:center;}
+.upload-btn{background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text3);padding:10px;border-radius:8px;cursor:pointer;font-size:16px;}
+.upload-btn:hover{border-color:var(--gold3);color:var(--gold2);}
+.send-btn{background:var(--gold);color:var(--navy3);border:none;padding:10px 18px;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;}
+.send-btn:hover{background:var(--gold2);}
+.send-btn:disabled{opacity:.4;cursor:not-allowed;}
+.file-preview{background:var(--card2);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;}
+.typing{display:flex;gap:4px;padding:4px 0;}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:bounce .8s infinite;}
+.typing span:nth-child(2){animation-delay:.15s;}
+.typing span:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
 .hidden{display:none!important;}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card2);color:var(--text);padding:10px 18px;border-radius:10px;font-size:12px;border:1px solid rgba(255,255,255,0.1);z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
@@ -130,24 +143,23 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
 
   <div id="rendicion-container" style="margin-top:20px"></div>
 </div>
-
 <div class="content hidden" id="tab-chat">
   <div class="chat-wrap">
-    <div class="chat-msgs" id="chat-msgs">
-      <div class="msg claude">Hola Josefina 👋 Contame los datos de la reserva (propiedad, agente, punta, precio, % de comisión) y la cargo directo a Operaciones.</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg msg-claude">Hola Josefina 👋 Podés subir una foto de planilla, oferta, contraoferta o boleto, o escribirme directamente. Voy a leer todo y te consulto antes de cargar nada al sistema.</div>
     </div>
-    <div id="chat-img-preview" style="display:none;margin-top:8px;position:relative;width:fit-content">
-      <img id="chat-img-preview-src" style="max-height:100px;border-radius:8px;display:block">
-      <button onclick="quitarImagenChat()" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer">✕</button>
-    </div>
-    <div class="chat-input-row">
-      <label style="background:var(--card2);border:1px solid rgba(255,255,255,0.08);color:var(--text2);padding:0 14px;border-radius:10px;display:flex;align-items:center;cursor:pointer;font-size:16px">
-        📷<input type="file" accept="image/*" id="chat-img-input" style="display:none" onchange="previsualizarImagenChat(event)">
-      </label>
-      <input type="text" id="chat-input" placeholder="Ej: Reserva de Santiago 60 bis, agente Vicky, punta comprador, precio 140000, comisión 3%" onkeydown="if(event.key==='Enter') enviarChat()">
-      <button onclick="enviarChat()">Enviar</button>
+    <div id="filePreviewArea"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chatInput" placeholder="Escribí acá o subí un archivo..." rows="1" onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+      <div class="chat-input-actions">
+        <label class="upload-btn" title="Subir archivo">
+          📎 <input type="file" id="fileUpload" accept="image/*,.pdf" style="display:none" onchange="handleFileUpload(event)">
+        </label>
+        <button class="send-btn" id="sendBtn" onclick="sendChat()">Enviar</button>
+      </div>
     </div>
   </div>
+</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -854,115 +866,446 @@ function renderTabla(){
   }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
 }
 
-// ── Chat para cargar reservas ──
-let chatHistory = [];
-let _imagenChatBase64 = null, _imagenChatMediaType = null;
+// ═══════════════════════════════════════════════
+// CHAT / CLAUDE API — mismo chat que SOLUMITOS (index.html)
+// ═══════════════════════════════════════════════
+function autoResize(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight,120)+'px';}
+function handleChatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
 
-function previsualizarImagenChat(e){
+let chatHistory = [];
+let pendingFile = null;
+
+function handleFileUpload(e){
   const file = e.target.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    const resultado = ev.target.result; // data:image/jpeg;base64,....
-    _imagenChatMediaType = file.type;
-    _imagenChatBase64 = resultado.split(',')[1];
-    document.getElementById('chat-img-preview-src').src = resultado;
-    document.getElementById('chat-img-preview').style.display = 'block';
-  };
-  reader.readAsDataURL(file);
+  pendingFile = file;
+  document.getElementById('filePreviewArea').innerHTML = `
+    <div style="padding:8px 16px">
+      <div class="file-preview">📎 ${file.name} (${(file.size/1024).toFixed(1)} KB)
+        <button onclick="clearFile()" style="background:none;border:none;color:var(--text3);cursor:pointer;margin-left:auto">✕</button>
+      </div>
+    </div>`;
 }
-function quitarImagenChat(){
-  _imagenChatBase64 = null; _imagenChatMediaType = null;
-  document.getElementById('chat-img-preview').style.display = 'none';
-  document.getElementById('chat-img-input').value = '';
+function clearFile(){pendingFile=null;document.getElementById('filePreviewArea').innerHTML='';document.getElementById('fileUpload').value='';}
+
+function addMsg(text, role){
+  const el = document.createElement('div');
+  el.className = `msg msg-${role}`;
+  el.textContent = text;
+  document.getElementById('chatMessages').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+  return el;
+}
+function addTyping(){
+  const el = document.createElement('div');
+  el.className='msg msg-claude';
+  el.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+  document.getElementById('chatMessages').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+  return el;
 }
 
-async function enviarChat(){
-  const input = document.getElementById('chat-input');
-  const texto = input.value.trim();
-  if(!texto && !_imagenChatBase64) return;
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    // Si es imagen, comprimir antes de enviar
+    if(file.type.startsWith('image/')){
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        // Máximo 800px en el lado más largo
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if(w > MAX || h > MAX){
+          if(w > h){ h = Math.round(h*MAX/w); w = MAX; }
+          else { w = Math.round(w*MAX/h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        // Comprimir a JPEG 0.60
+        const b64 = canvas.toDataURL('image/jpeg', 0.60).split(',')[1];
+        URL.revokeObjectURL(url);
+        res(b64);
+      };
+      img.onerror = () => rej(new Error('Error cargando imagen'));
+      img.src = url;
+    } else {
+      // PDF: sin compresión
+      const r = new FileReader();
+      r.onload = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('Error leyendo archivo'));
+      r.readAsDataURL(file);
+    }
+  });
+}
 
-  agregarMsg(texto || '📷 (foto de la reserva)', 'user');
-  input.value = '';
+const CHAT_SYSTEM_PROMPT = `Sos el asistente de Martina Marinelli (Mat. 2543), corredora bajo SOLUM Negocios Inmobiliarios, Rosario y Cañada de Gómez. Trabajás en el CRM SOLUMITOS. Todo en USD.
 
-  // Armar el contenido del mensaje: texto + imagen si hay
-  const contentBlocks = [];
-  if(_imagenChatBase64){
-    contentBlocks.push({type:'image', source:{type:'base64', media_type:_imagenChatMediaType, data:_imagenChatBase64}});
-  }
-  contentBlocks.push({type:'text', text: texto || 'Te mando la foto de la reserva, sacá los datos que puedas y preguntame lo que falte.'});
-  quitarImagenChat();
+═══════════════════════════════════════════════
+ESTRUCTURA DE COMISIONES
+═══════════════════════════════════════════════
+Comisión al cliente: siempre 3% del precio/monto de oferta.
 
-  chatHistory.push({role:'user', content:contentBlocks});
+Agentes y porcentajes:
+- Vicky (M. Victoria, Maria Victoria Saire): agente 50% / Martina 20% / SOLUM 30%
+- Manu (Manuela, Manuela Pellegrini): agente 50% / Martina 20% / SOLUM 30%
+- Marce (Marcela, Marcela Corsalini): agente 50% / Martina 20% / SOLUM 30%
+- Cris (Cristian, Cristian Ruiz Diaz): agente 50% / Martina 20% / SOLUM 30%
+- Ceci (Cecilia, Cecilia Bruno): agente 50% / Martina 20% / SOLUM 30%
+- Kito (Esteban, Esteban Romero): agente 60% / Martina 10% / SOLUM 30%
+- Propia (Martina sola): Martina 80% / SOLUM 20%
 
-  try{
-    const resp = await fetch('/.netlify/functions/claude', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 500,
-        system: `Sos el asistente de carga de reservas de SOLUMITOS. Josefina te va a describir una reserva en lenguaje natural, o te va a mandar una foto de la reserva (formulario, contrato, whatsapp, lo que sea) para que saques los datos vos misma. Datos que necesitás: propiedad, agente, punta, precio, % de comisión, fecha, y nombre y teléfono del cliente (comprador o vendedor según la punta). Tu trabajo:
-1. Extraer los datos que puedas del texto y/o de la imagen.
-2. Si falta algún dato importante (propiedad, agente, punta o precio), preguntale específicamente por lo que falta, en texto plano, corto. El nombre y teléfono del cliente pedilos también, pero no son obligatorios para cargar: si después de preguntar una vez no los tenés, seguí igual.
-3. Cuando tengas propiedad, agente, punta y precio, respondé EXCLUSIVAMENTE con un bloque JSON (nada de texto alrededor) con esta forma exacta:
-{"accion":"cargar_reserva","propiedad":"...","agente":"...","punta":"Comprador o Vendedor","precio":numero,"pctComision":numero_o_null,"fecha":"dd/mm/aaaa o null","clienteNombre":"...o null","clienteTelefono":"...o null"}
-Si pctComision no se menciona, usá null (se asume 3% después). Si la fecha no se menciona, usá null (se usa la fecha de hoy).
-Nombres de agentes válidos: Martina, Vicky, Manu, Marce, Kito, Cris, Ceci, Jose, Luli, Joaquin. Si menciona un nombre distinto (ej "Victoria"), mapealo al que corresponda.`,
-        messages: chatHistory
-      })
-    });
-    const data = await resp.json();
-    const reply = data.content?.[0]?.text || 'No pude procesar eso, ¿podés reformularlo?';
+Fórmulas:
+- Comisión bruta = monto oferta × 3%
+- Ganancia Martina = comisión bruta × % Martina según agente
+- Ganancia SOLUM = comisión bruta × 30%
 
-    // ¿Es un JSON de carga?
-    const jsonMatch = reply.match(/\{[\s\S]*"accion"\s*:\s*"cargar_reserva"[\s\S]*\}/);
-    if(jsonMatch){
-      try{
-        const datos = JSON.parse(jsonMatch[0]);
-        await cargarReservaDesdeChat(datos);
+═══════════════════════════════════════════════
+MAPEO DE ESTADOS
+═══════════════════════════════════════════════
+- Vendida → Cobrada
+- Conformada → Por cobrar
+- Pendiente (reserva hecha pero todavía no aceptada por ambas partes) → Pendiente
+- Rechazada → Caída
+
+═══════════════════════════════════════════════
+MAPEO DE COLUMNAS DE PLANILLAS
+═══════════════════════════════════════════════
+- nombre = agente
+- punta = Compradora/Vendedora → Comprador/Vendedor
+- monto oferta = precio de venta
+- comisión BRUT = comisión bruta (verificar = monto × 3%)
+- sistema 70% = agente al 50% (Martina 20%)
+- sistema 80% = operación propia Martina (80%)
+- sistema 60% = Kito (60%, Martina 10%)
+- fecha operación = fecha de cobro: la del boleto o la de la escritura, la que ocurra primero (determina el mes/año)
+- compartida, pox, Column 20 = ignorar
+
+═══════════════════════════════════════════════
+LÓGICA DE CARGA
+═══════════════════════════════════════════════
+Cuando analizás una foto o planilla:
+1. Identificá el agente → si no está claro, preguntá
+2. Identificá la punta (Comprador/Vendedor) → si no está clara, preguntá
+3. Calculá comisión bruta (monto × 3%) y verificá contra lo que figura
+4. Determiná el estado según el mapeo
+5. Usá la fecha de cobro (boleto o escritura, la que ocurra primero) para el mes/año
+6. Mostrá resumen antes de cargar y esperá confirmación
+
+Si hay dos puntas (comprador Y vendedor) → son DOS operaciones separadas.
+
+Duplicados: si ves misma dirección + misma punta → alertar antes de cargar.
+
+═══════════════════════════════════════════════
+CUANDO TE MANDAN UNA FOTO DE RESERVA/BOLETO
+═══════════════════════════════════════════════
+Extraé TODOS estos campos:
+
+OPERACIÓN:
+1. Dirección/propiedad → "propiedad"
+2. Precio de venta → "precio" (en USD)
+3. Agente → quién firma o está asignado. Si no figura → preguntá con lista
+4. Punta → Vendedor o Comprador. Si no está claro → preguntá
+5. Fecha de cobro → "fechaEsc": fecha del boleto o de la escritura, la que ocurra primero. Si el documento no la indica, preguntá.
+5b. Fecha de reserva → "fechaReserva": la fecha escrita al pie de la reserva, que es el día en que se firma. Si no figura, preguntá.
+6. Estado → reserva nueva = "Por cobrar"
+7. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
+8. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
+
+DATOS DEL CLIENTE (para la planilla de facturación):
+9. Nombre completo del cliente → "cliente"
+10. DNI o CUIT/CUIL → "cuit"
+11. Mail → "mail"
+12. Teléfono → "telefono" (si figura)
+
+Al generar el ACCION, incluí los datos del cliente:
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaReserva":"","fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0,"cliente":"","cuit":"","mail":"","telefono":"","pct_comision":0.03}}
+
+Si falta el precio → preguntá.
+Si falta el agente → preguntá siempre.
+Si hay dos puntas → DOS acciones ACCION separadas.
+
+Mostrá resumen antes de cargar y esperá confirmación.
+
+═══════════════════════════════════════════════
+CRUCES AUTOMÁTICOS
+═══════════════════════════════════════════════
+Al cargar una operación:
+- Por cobrar → +1 Reservas del agente ese mes en Seguimiento
+- Cobrada → +1 Ventas + suma Facturación del agente + suma Ingresos de Martina en Finanzas
+
+═══════════════════════════════════════════════
+FORMATO DE PREGUNTAS — OBLIGATORIO
+═══════════════════════════════════════════════
+SIEMPRE preguntá con este formato exacto, UNA pregunta a la vez:
+
+[PREGUNTA: texto de la pregunta]
+1. opción uno
+2. opción dos
+3. opción tres
+
+NUNCA uses markdown (##, **, listas con guión, <details>). Solo texto plano.
+
+═══════════════════════════════════════════════
+ACCIONES JSON
+═══════════════════════════════════════════════
+Para cargar operación:
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaReserva":"","fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0}}
+
+Para exchange:
+ACCION:{"tipo":"exchange","datos":{"mes":0,"anio":0,"usd":0,"cotiz":0}}
+
+Para gasto:
+ACCION:{"tipo":"gasto","datos":{"fecha":"","concepto":"","categoria":"","importe":0}}
+
+Cuando cargás múltiples operaciones de una planilla, generá todos los ACCION:{} uno después del otro al final del mensaje, sin límite de cantidad.`;
+
+async function sendChat(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text && !pendingFile) return;
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+
+  // Mostrar mensaje usuario
+  addMsg(text||(pendingFile?`[Archivo: ${pendingFile.name}]`:''), 'user');
+
+  // Si el usuario pegó ACCIONes directamente, procesarlas sin mandar a Claude
+  if(text && text.includes('ACCION:{')){
+    const acciones = extraerAcciones(text);
+    if(acciones.length > 0){
+      input.value = ''; input.style.height='auto';
+      const n = await procesarAcciones(acciones);
+      if(n > 0){
+        addMsg(`✅ ${n} operación(es) cargada(s) correctamente.`, 'system');
+        showToast(`✅ ${n} operación(es) cargada(s)`);
+        btn.disabled = false;
         return;
-      }catch(e){ /* si no parsea, seguir como texto normal */ }
+      }
+    }
+  }
+  input.value = ''; input.style.height='auto';
+
+  // Typing indicator
+  const typingEl = addTyping();
+
+  try {
+    let content = [];
+
+    if(pendingFile){
+      const b64 = await fileToBase64(pendingFile);
+      const isImg = pendingFile.type.startsWith('image/');
+      if(isImg){
+        content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}});
+      } else {
+        content.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
+      }
     }
 
-    agregarMsg(reply, 'claude');
-    chatHistory.push({role:'assistant', content:reply});
-  }catch(e){
-    agregarMsg('Error al conectar. Probá de nuevo en un momento.', 'claude');
+    if(text) content.push({type:'text',text});
+
+    // Resumen de operaciones ya cargadas para contexto de Claude
+    const resumenOps = operaciones.length > 0 ?
+      `\n\nOPERACIONES YA CARGADAS EN EL SISTEMA (${operaciones.length} total):\n` +
+      operaciones.map(o=>`ID ${o.id}: ${o.propiedad} | ${o.agente} | ${o.punta} | ${o.estado}`).join('\n') +
+      '\n\nANTES DE CARGAR UNA OPERACION, verificá que el ID no esté en esta lista. Si ya existe, NO la cargues de nuevo.'
+      : '\n\nNo hay operaciones cargadas aún.';
+
+    chatHistory.push({role:'user',content});
+
+    const resp = await fetch('/.netlify/functions/claude',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:CHAT_SYSTEM_PROMPT+resumenOps,messages:chatHistory})
+    });
+    const data = await resp.json();
+    const reply = data.content?.[0]?.text||'Error al conectar con Claude.';
+
+    chatHistory.push({role:'assistant',content:reply});
+    // Guardar mensajes en Sheets
+    dbGuardar('chat', [Date.now(), 'user', text||'[archivo]']);
+    dbGuardar('chat', [Date.now()+1, 'assistant', reply.substring(0,500)]);
+    typingEl.remove();
+    addMsg(reply,'claude');
+
+    // Procesar TODAS las acciones — sin límite
+    const acciones = extraerAcciones(reply);
+    if(acciones.length > 0){
+      const n = await procesarAcciones(acciones);
+      if(n > 0) showToast('✅ ' + n + ' operación(es) cargada(s)');
+    }
+
+    clearFile();
+  } catch(err){
+    typingEl.remove();
+    addMsg('Error al conectar con Claude. Verificá la API key.','claude');
+    console.error(err);
   }
+  btn.disabled = false;
 }
 
-async function cargarReservaDesdeChat(datos){
-  const nuevoId = Date.now();
+function extraerAcciones(text){
+  // Extrae todos los bloques ACCION:{...} sin límite, manejando JSON anidado
+  const acciones = [];
+  let i = text.indexOf('ACCION:');
+  while(i !== -1){
+    let start = text.indexOf('{', i);
+    if(start === -1) break;
+    let depth = 0, j = start, inStr = false, escape = false;
+    while(j < text.length){
+      const c = text[j];
+      if(escape){ escape=false; }
+      else if(c==='\\'){ escape=true; }
+      else if(c==='"' && !escape){ inStr=!inStr; }
+      else if(!inStr){
+        if(c==='{') depth++;
+        else if(c==='}'){
+          depth--;
+          if(depth===0){
+            try{
+              const obj = JSON.parse(text.slice(start, j+1));
+              acciones.push(obj);
+            }catch(e){}
+            break;
+          }
+        }
+      }
+      j++;
+    }
+    i = text.indexOf('ACCION:', i+7);
+  }
+  return acciones;
+}
+
+const AGENTE_ALIAS = {'Martina Marinelli':'Martina','Propia':'Martina','propia':'Martina','':'Martina',
+  'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky',
+  'Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky','Manuela':'Manu','Manuela Pellegrini':'Manu',
+  'Marcela':'Marce','Marcela Corsalini':'Marce','Esteban':'Kito','Esteban Romero':'Kito',
+  'Cristian':'Cris','Cristian Ruiz Diaz':'Cris','Cristian Ruiz Díaz':'Cris','Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+  'Josefina':'Jose','Joaquín':'Joaquin'};
+
+// Arma la fila de una operación igual que lo hace el chat de SOLUMITOS. Devuelve null si es duplicada.
+function armarOperacionDesdeAccion(accion, idx){
+  if(accion.tipo!=='operacion') return null;
+  const d = accion.datos||{};
+  if(d.id && operaciones.find(o=>String(o.id)===String(d.id))) return null;
+  const agente = (()=>{ const a = String(d.agente||'Martina').trim(); return AGENTE_ALIAS[a] || a; })();
+  const punta = d.punta||'Vendedor';
+  const propiedad = d.propiedad||'Sin nombre';
+  if(operaciones.find(o=>o.propiedad===propiedad&&o.agente===agente&&o.punta===punta)) return null;
+
+  const estadoMap = {'Cobrada':'Cobrada','Por cobrar':'Por cobrar','Caída':'Caída','Pendiente':'Pendiente',
+                     'cobrada':'Cobrada','por cobrar':'Por cobrar','caída':'Caída','caida':'Caída','pendiente':'Pendiente'};
+  const estado = estadoMap[d.estado] || 'Por cobrar';
+
+  const fEsc = parseFecha(d.fechaEsc||'');
   const hoy = new Date();
+  const anio = fEsc ? fEsc.getFullYear() : (parseInt(d.anio)||hoy.getFullYear());
+  const mes = fEsc ? fEsc.getMonth()+1 : (parseInt(d.mes)||hoy.getMonth()+1);
+  const esMartinaProp = agente==='Martina';
+  const pctAsesor = esMartinaProp ? 0.80 : pctAsesorVigente({agente, anio, mes, id:Date.now()+idx});
+  const pctCom = parseFloat(d.pct_comision)||0.03;
+  const precio = parseFloat(d.precio)||0;
+  const comision = parseFloat(d.comision) || precio*pctCom;
+  const ganancia_solum = parseFloat(d.ganancia_solum) || Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
+  const comision_vendedor = parseFloat(d.comision_vendedor) || Math.round(comision*pctAsesor*100)/100;
+  const ganancia_martina = parseFloat(d.ganancia_martina) || Math.round((esMartinaProp ? comision - ganancia_solum : comision - comision_vendedor - ganancia_solum)*100)/100;
+
+  const partesCliente = [];
+  if(d.cliente) partesCliente.push('Cliente: '+d.cliente);
+  if(d.cuit) partesCliente.push('DNI/CUIT: '+d.cuit);
+  if(d.telefono) partesCliente.push('Tel: '+d.telefono);
+  if(d.mail) partesCliente.push('Mail: '+d.mail);
+  const notas = partesCliente.join(' — ');
+
   const fechaHoy = String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
-  const pct = datos.pctComision ? datos.pctComision/100 : 0.03;
-  const comision = Math.round(datos.precio*pct);
-  const fecha = datos.fecha || fechaHoy;
-  const partesFecha = fecha.split('/');
-  const mes = partesFecha.length===3 ? parseInt(partesFecha[1]) : hoy.getMonth()+1;
-  const anio = partesFecha.length===3 ? parseInt(partesFecha[2]) : hoy.getFullYear();
-
-  const notas = (datos.clienteNombre || datos.clienteTelefono)
-    ? `Cliente: ${datos.clienteNombre || '(sin nombre)'}${datos.clienteTelefono ? ' — Tel: '+datos.clienteTelefono : ''}`
-    : '';
-  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, '', 'Por cobrar', mes, anio, false, notas, 'pendiente_asesor'];
-  await dbGuardar('operaciones', fila);
-  registrarAccion({id:nuevoId, propiedad:datos.propiedad, agente:datos.agente, punta:datos.punta, precio:datos.precio, comision, estado:'Por cobrar'}, 'Reserva cargada', 'Cargada por chat (Josefina)' + (notas ? ' — '+notas : ''));
-
-  agregarMsg(`✅ Reserva cargada: ${datos.propiedad} — ${datos.agente} — ${datos.punta} — ${fmtUSD(datos.precio)} (comisión ${fmtUSD(comision)}). Ya está en la planilla como "Por cobrar".`, 'claude');
-  chatHistory = []; // reiniciar conversación para la próxima carga
-  await cargarOperaciones();
+  return {
+    id: d.id || (Date.now()+idx), propiedad, agente, punta, precio, comision, comision_vendedor,
+    ganancia_martina, ganancia_solum, fechaEsc: d.fechaEsc||'', fechaReserva: d.fechaReserva||fechaHoy,
+    estado, mes, anio, planillaGenerada: estado==='Cobrada', notas, rendicion:'pendiente_asesor'
+  };
 }
 
-function agregarMsg(texto, tipo){
-  const cont = document.getElementById('chat-msgs');
-  const div = document.createElement('div');
-  div.className = 'msg '+tipo;
-  div.textContent = texto;
-  cont.appendChild(div);
-  cont.scrollTop = cont.scrollHeight;
+// Procesa todas las acciones, las guarda en lote en Sheets y refresca la planilla. Devuelve cuántas se cargaron.
+// Datos de Seguimiento y Exchange (se leen una sola vez, la primera vez que hace falta cruzar)
+let segData = null, historicoExchange = null;
+async function cargarDatosCruce(){
+  if(segData && historicoExchange) return;
+  segData = {}; historicoExchange = {};
+  const segRows = await dbLeer('seguimiento');
+  segRows.slice(1).forEach(r=>{
+    const v=r[1], m=parseInt(r[2]), key=String(r[3]), val=parseFloat(r[4])||0;
+    if(key.startsWith('obj_')) return;
+    if(!segData[v]) segData[v]={};
+    if(!segData[v][m]) segData[v][m]={};
+    segData[v][m][key]=val;
+  });
+  const exRows = await dbLeer('exchange');
+  exRows.slice(1).forEach(r=>{
+    const a=parseInt(r[0]), m=parseInt(r[1]);
+    if(!historicoExchange[a]) historicoExchange[a]={};
+    historicoExchange[a][m]={usd:parseFloat(r[2])||0, cotiz:parseFloat(r[3])||0};
+  });
 }
+
+async function procesarAcciones(acciones){
+  await cargarDatosCruce();
+  const nuevas = [];
+  let otras = 0;
+  acciones.forEach((a,i)=>{
+    try{
+      if(a.tipo==='exchange'){
+        const d = a.datos;
+        if(!historicoExchange[d.anio]) historicoExchange[d.anio]={};
+        historicoExchange[d.anio][d.mes]={usd:d.usd,cotiz:d.cotiz};
+        dbGuardar('exchange', [d.anio, d.mes, d.usd, d.cotiz]);
+        addMsg(`✅ Exchange cargado: USD ${d.usd} a $${d.cotiz}`,'system');
+        otras++;
+      } else if(a.tipo==='gasto'){
+        const d = a.datos;
+        const f = new Date(d.fecha);
+        const exc = historicoExchange[f.getFullYear()]?.[f.getMonth()+1];
+        dbGuardar('gastos', [d.fecha, d.concepto, d.categoria, d.importe, exc?.cotiz||0]);
+        addMsg(`✅ Gasto registrado: ${d.concepto} $${Number(d.importe||0).toLocaleString('es-AR')}`,'system');
+        otras++;
+      } else {
+        const op = armarOperacionDesdeAccion(a, i);
+        if(op){
+          operaciones.push(op); nuevas.push(op);
+          // Cruce con Seguimiento: reserva nueva → +1 "r" del agente ese mes (igual que SOLUMITOS)
+          if(op.estado==='Por cobrar'){
+            if(!segData[op.agente]) segData[op.agente]={};
+            if(!segData[op.agente][op.mes]) segData[op.agente][op.mes]={};
+            segData[op.agente][op.mes].r = (segData[op.agente][op.mes].r||0)+1;
+            dbGuardar('seguimiento', [Date.now()+i, op.agente, op.mes, 'r', segData[op.agente][op.mes].r]);
+          }
+        }
+      }
+    }catch(e){ console.error('Parse error', e, a); }
+  });
+  if(!nuevas.length) return otras;
+  const filas = nuevas.map(op=>[op.id,op.propiedad,op.agente,op.punta,op.precio,op.comision,op.comision_vendedor||0,
+    op.ganancia_martina,op.ganancia_solum,op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
+    op.notas||'',op.rendicion||'pendiente_asesor']);
+  const ok = await dbGuardarLote('operaciones', filas);
+  showToast(ok ? '✅ '+nuevas.length+' operaciones guardadas en Sheets' : '⚠️ Cargadas en pantalla pero error en Sheets');
+  nuevas.forEach(op=>registrarAccion(op, 'Reserva cargada', 'Cargada por chat'+(op.notas?' — '+op.notas:'')));
+  poblarFiltroAgentes();
+  renderAlertas();
+  renderTabla();
+  renderRendicion();
+  return nuevas.length;
+}
+
+async function dbGuardarLote(tipo, filas){
+  try{
+    const resp = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'guardar_lote',filas})});
+    const d = await resp.json();
+    return d.ok;
+  }catch(e){ console.error('dbGuardarLote error:', e); return false; }
+}
+
 
 cargarOperaciones();
 </script>

@@ -1140,7 +1140,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <option value="Vendedor">Vendedor</option><option value="Comprador">Comprador</option>
       </select>
     </div>
-    <div class="modal-field"><label class="modal-label">Fecha estimada de escritura</label><input class="modal-input" id="mo-fecha" type="date"></div>
+    <div class="modal-field"><label class="modal-label">Fecha de reserva (la de la firma)</label><input class="modal-input" id="mo-fecha-reserva" type="date"></div>
+    <div class="modal-field"><label class="modal-label">Fecha de cobro (boleto o escritura, lo que ocurra primero)</label><input class="modal-input" id="mo-fecha" type="date"></div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('modalNuevaOp')">Cancelar</button>
       <button class="btn btn-gold" onclick="guardarOperacion()">Guardar operación</button>
@@ -1286,6 +1287,29 @@ async function dbGuardar(tipo, fila) {
       body: JSON.stringify({tipo, accion:'guardar', fila})
     });
   } catch(e) { console.error('dbGuardar error:', e); }
+}
+
+// ═══════════════════════════════════════════════
+// FILA DE OPERACIONES EN SHEETS — un único formato (17 columnas), el mismo que lee cargarDesdeSheets
+// y usa operaciones.html: id, propiedad, agente, punta, precio, comision, comision_vendedor,
+// ganancia_martina, ganancia_solum, fechaEsc, fechaReserva, estado, mes, anio, planillaGenerada, notas, rendicion
+// ═══════════════════════════════════════════════
+function filaOperacion(op){
+  return [op.id, op.propiedad, op.agente==='propia'?'Martina':op.agente, op.punta,
+    op.precio, op.comision, op.comision_vendedor||0, op.ganancia_martina||0, op.ganancia_solum||0,
+    op.fechaEsc||'', op.fechaReserva||'', op.estado, op.mes, op.anio, op.planillaGenerada||false,
+    op.notas||'', op.rendicion||'pendiente_asesor'];
+}
+let _ultimoIdOp = 0;
+function nuevoIdOperacion(){ _ultimoIdOp = Math.max(Date.now(), _ultimoIdOp+1); return _ultimoIdOp; }
+function fechaHoyDDMM(){ const h=new Date(); return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear(); }
+function notasDesdeCliente(d){
+  const p=[];
+  if(d.cliente) p.push('Cliente: '+d.cliente);
+  if(d.cuit) p.push('DNI/CUIT: '+d.cuit);
+  if(d.telefono) p.push('Tel: '+d.telefono);
+  if(d.mail) p.push('Mail: '+d.mail);
+  return p.join(' — ');
 }
 
 async function dbGuardarLote(tipo, filas) {
@@ -4762,7 +4786,7 @@ MAPEO DE ESTADOS
 ═══════════════════════════════════════════════
 - Vendida → Cobrada
 - Conformada → Por cobrar
-- Pendiente → Por cobrar
+- Pendiente (reserva hecha pero todavía no aceptada por ambas partes) → Pendiente
 - Rechazada → Caída
 
 ═══════════════════════════════════════════════
@@ -4775,7 +4799,7 @@ MAPEO DE COLUMNAS DE PLANILLAS
 - sistema 70% = agente al 50% (Martina 20%)
 - sistema 80% = operación propia Martina (80%)
 - sistema 60% = Kito (60%, Martina 10%)
-- fecha operación = fecha escritura estimada (determina el mes/año)
+- fecha operación = fecha de cobro: la del boleto o la de la escritura, la que ocurra primero (determina el mes/año)
 - compartida, pox, Column 20 = ignorar
 
 ═══════════════════════════════════════════════
@@ -4786,7 +4810,7 @@ Cuando analizás una foto o planilla:
 2. Identificá la punta (Comprador/Vendedor) → si no está clara, preguntá
 3. Calculá comisión bruta (monto × 3%) y verificá contra lo que figura
 4. Determiná el estado según el mapeo
-5. Usá la fecha de escritura/operación para el mes/año
+5. Usá la fecha de cobro (boleto o escritura, la que ocurra primero) para el mes/año
 6. Mostrá resumen antes de cargar y esperá confirmación
 
 Si hay dos puntas (comprador Y vendedor) → son DOS operaciones separadas.
@@ -4803,7 +4827,8 @@ OPERACIÓN:
 2. Precio de venta → "precio" (en USD)
 3. Agente → quién firma o está asignado. Si no figura → preguntá con lista
 4. Punta → Vendedor o Comprador. Si no está claro → preguntá
-5. Fecha escritura estimada → fecha de escritura, posesión o vencimiento
+5. Fecha de cobro → "fechaEsc": fecha del boleto o de la escritura, la que ocurra primero. Si el documento no la indica, preguntá.
+5b. Fecha de reserva → "fechaReserva": la fecha escrita al pie de la reserva, que es el día en que se firma. Si no figura, preguntá.
 6. Estado → reserva nueva = "Por cobrar"
 7. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
 8. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
@@ -4815,7 +4840,7 @@ DATOS DEL CLIENTE (para la planilla de facturación):
 12. Teléfono → "telefono" (si figura)
 
 Al generar el ACCION, incluí los datos del cliente:
-ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0,"cliente":"","cuit":"","mail":"","telefono":"","pct_comision":0.03}}
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaReserva":"","fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0,"cliente":"","cuit":"","mail":"","telefono":"","pct_comision":0.03}}
 
 Si falta el precio → preguntá.
 Si falta el agente → preguntá siempre.
@@ -4846,7 +4871,7 @@ NUNCA uses markdown (##, **, listas con guión, <details>). Solo texto plano.
 ACCIONES JSON
 ═══════════════════════════════════════════════
 Para cargar operación:
-ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0}}
+ACCION:{"tipo":"operacion","datos":{"propiedad":"","agente":"","punta":"","precio":0,"comision":0,"ganancia_martina":0,"ganancia_solum":0,"fechaReserva":"","fechaEsc":"","estado":"Por cobrar","mes":0,"anio":0}}
 
 Para exchange:
 ACCION:{"tipo":"exchange","datos":{"mes":0,"anio":0,"usd":0,"cotiz":0}}
@@ -4954,7 +4979,7 @@ function procesarAccion(accion){
       return;
     }
     // Respetar el estado que viene en el JSON
-    const estadoMap = {'Cobrada':'Cobrada','Por cobrar':'Por cobrar','Caída':'Caída',
+    const estadoMap = {'Cobrada':'Cobrada','Por cobrar':'Por cobrar','Caída':'Caída','Pendiente':'Pendiente','pendiente':'Pendiente',
                        'cobrada':'Cobrada','por cobrar':'Por cobrar','caída':'Caída','caida':'Caída'};
     const estado = estadoMap[d.estado] || 'Por cobrar';
 
@@ -4966,10 +4991,10 @@ function procesarAccion(accion){
     const comision = parseFloat(d.comision) || parseFloat(d.precio||0)*0.03;
     const ganancia_solum = parseFloat(d.ganancia_solum) || Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
     const comision_vendedor = parseFloat(d.comision_vendedor) || Math.round(comision*pctAsesor*100)/100;
-    const ganancia_martina = parseFloat(d.ganancia_martina) || Math.round((comision - comision_vendedor - (esMartinaProp?0:ganancia_solum))*100)/100;
+    const ganancia_martina = parseFloat(d.ganancia_martina) || Math.round((esMartinaProp ? comision - ganancia_solum : comision - comision_vendedor - ganancia_solum)*100)/100;
 
     const newOp = {
-      id: d.id || operaciones.length+1,
+      id: d.id || nuevoIdOperacion(),
       propiedad: d.propiedad||'Sin nombre',
       agente: (()=>{
         const a = String(d.agente||'Martina').trim();
@@ -4990,15 +5015,16 @@ function procesarAccion(accion){
       estado,
       mes: (parseFechaDDMM(d.fechaEsc||'')||{}).getMonth ? parseFechaDDMM(d.fechaEsc).getMonth()+1 : (parseInt(d.mes)||new Date().getMonth()+1),
       anio: (parseFechaDDMM(d.fechaEsc||'')||{}).getFullYear ? parseFechaDDMM(d.fechaEsc).getFullYear() : (parseInt(d.anio)||new Date().getFullYear()),
-      planillaGenerada: estado==='Cobrada'
+      planillaGenerada: estado==='Cobrada',
+      fechaReserva: d.fechaReserva || fechaHoyDDMM(),
+      notas: notasDesdeCliente(d),
+      rendicion: 'pendiente_asesor'
     };
     operaciones.push(newOp);
 
     // Acumular en buffer para guardar en lote
     if(!window._opBuffer) window._opBuffer = [];
-    window._opBuffer.push([newOp.id, newOp.propiedad, newOp.agente==='propia'?'Martina':newOp.agente, newOp.punta,
-      newOp.precio, newOp.comision, newOp.comision_vendedor||0, newOp.ganancia_martina, newOp.ganancia_solum,
-      newOp.fechaEsc, newOp.estado, newOp.mes, newOp.anio, newOp.planillaGenerada]);
+    window._opBuffer.push(filaOperacion(newOp));
 
     // Cruzar con seguimiento del agente
     const agSeg = mapAgenteToSeg(newOp.agente);
@@ -5107,19 +5133,29 @@ function guardarOperacion(){
   const precio = parseFloat(document.getElementById('mo-precio').value)||0;
   if(!prop||!precio){showToast('⚠️ Completá propiedad y precio','amber');return;}
   const now = new Date();
-  const fechaEscVal = document.getElementById('mo-fecha').value;
+  const isoToDDMM = v => { const m = String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3]+'/'+m[2]+'/'+m[1] : (v||''); };
+  const fechaEscVal = isoToDDMM(document.getElementById('mo-fecha').value);
+  const fechaResVal = isoToDDMM(document.getElementById('mo-fecha-reserva').value);
   const fEsc = parseFechaDDMM(fechaEscVal);
-  operaciones.push({
-    id: operaciones.length+1,
-    propiedad: prop,
-    agente: document.getElementById('mo-agente').value,
+  const agente = normAgente(document.getElementById('mo-agente').value) || document.getElementById('mo-agente').value;
+  const mes = fEsc ? fEsc.getMonth()+1 : now.getMonth()+1;
+  const anio = fEsc ? fEsc.getFullYear() : now.getFullYear();
+  const esMartinaProp = agente==='Martina';
+  const comision = precio*0.03;
+  const pctAsesor = esMartinaProp ? 0.80 : pctAsesorVigente({agente, anio});
+  const ganancia_solum = Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
+  const comision_vendedor = Math.round(comision*pctAsesor*100)/100;
+  const ganancia_martina = Math.round((esMartinaProp ? comision - ganancia_solum : comision - comision_vendedor - ganancia_solum)*100)/100;
+  const op = {
+    id: nuevoIdOperacion(),
+    propiedad: prop, agente,
     punta: document.getElementById('mo-punta').value,
-    precio, comision: precio*0.03,
-    fechaEsc: fechaEscVal,
-    estado: 'Por cobrar',
-    mes: fEsc ? fEsc.getMonth()+1 : now.getMonth()+1,
-    anio: fEsc ? fEsc.getFullYear() : now.getFullYear()
-  });
+    precio, comision, comision_vendedor, ganancia_martina, ganancia_solum,
+    fechaEsc: fechaEscVal, fechaReserva: fechaResVal || fechaHoyDDMM(),
+    estado: 'Por cobrar', mes, anio, planillaGenerada: false, notas: '', rendicion: 'pendiente_asesor'
+  };
+  operaciones.push(op);
+  dbGuardar('operaciones', filaOperacion(op));
   closeModal('modalNuevaOp');
   renderOperaciones();
   showToast('✅ Operación cargada');
