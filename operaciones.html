@@ -121,7 +121,7 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
         <tr>
           <th>Propiedad</th><th>Agente</th><th>Punta</th><th>Precio venta</th><th>% Com.</th>
           <th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>🤝 Vendedor</th>
-          <th>Fecha</th><th>Estado</th>
+          <th>Fecha reserva</th><th>Fecha cobro</th><th>Estado</th>
         </tr>
       </thead>
       <tbody id="tabla-body"></tbody>
@@ -362,7 +362,11 @@ function pctAsesorVigente(op){
   if(op.agente==='Martina') return 0.80;
   if(op.agente==='Kito') return 0.60;
   const inicio = nivelInicioAnio(op.agente, op.anio);
-  const porAcumuladoEsteAnio = nivelPorFacturacion(facturacionAcumuladaPrevia(op.agente, op.anio, op));
+  // Si la operación ya tiene id/mes (existente), toma la facturación previa a ESA operación;
+  // si no (operación nueva que todavía no tiene posición en la planilla), usa el total del año.
+  const porAcumuladoEsteAnio = nivelPorFacturacion(
+    (op.id!==undefined && op.mes!==undefined) ? facturacionAcumuladaPrevia(op.agente, op.anio, op) : facturacionAnioDeAgente(op.agente, op.anio)
+  );
   return Math.max(inicio, porAcumuladoEsteAnio);
 }
 
@@ -782,13 +786,16 @@ function actualizarCampo(id, campo, valor){
   } else if(campo==='pctComision'){
     const pct = parseFloat(valor)/100 || 0.03;
     op.comision = Math.round(op.precio*pct);
-  } else {
-    op[campo] = valor;
-    if(campo==='estado' && valor==='Cobrada' && !op.rendicion) op.rendicion = 'pendiente_asesor';
+  } else if(campo==='fechaEsc' || campo==='fechaReserva'){
+    // Siempre se guarda como texto dd/mm/aaaa, nunca como Date/ISO
+    op[campo] = fmtFechaCorta(valor) || valor;
     if(campo==='fechaEsc'){
       const f = parseFecha(valor);
       if(f){ op.mes = f.getMonth()+1; op.anio = f.getFullYear(); }
     }
+  } else {
+    op[campo] = valor;
+    if(campo==='estado' && valor==='Cobrada' && !op.rendicion) op.rendicion = 'pendiente_asesor';
   }
   guardarFila(op);
   registrarAccion(op, 'Edición', `Campo "${campo}" cambiado de "${valorAnterior}" a "${valor}"`);
@@ -842,6 +849,7 @@ function renderTabla(){
       <td>${fmtUSD(o.ganancia_martina)}</td>
       <td>${fmtUSD(o.ganancia_solum)}</td>
       <td>${fmtUSD(o.comision_vendedor)}</td>
+      <td><input class="cell" value="${fmtFechaCorta(o.fechaReserva)}" placeholder="dd/mm/aaaa" onchange="actualizarCampo('${o.id}','fechaReserva',this.value)"></td>
       <td><input class="cell" value="${fmtFechaCorta(o.fechaEsc)}" placeholder="dd/mm/aaaa" onchange="actualizarCampo('${o.id}','fechaEsc',this.value)"></td>
       <td>
         <select class="cell estado-badge ${estadoClass[o.estado]||''}" onchange="actualizarCampo('${o.id}','estado',this.value)">
@@ -851,7 +859,7 @@ function renderTabla(){
         </select>
       </td>
     </tr>`;
-  }).join('') : '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
+  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
 }
 
 // ── Chat para cargar reservas ──
@@ -932,8 +940,13 @@ Nombres de agentes válidos: Martina, Vicky, Manu, Marce, Kito, Cris, Ceci, Jose
   }
 }
 
+// Próximo ID correlativo de operación (el anterior usaba Date.now(), un número larguísimo e ilegible)
+function siguienteIdOperacion(){
+  return operaciones.length ? Math.max(...operaciones.map(o=>Number(o.id)||0))+1 : 1;
+}
+
 async function cargarReservaDesdeChat(datos){
-  const nuevoId = Date.now();
+  const nuevoId = siguienteIdOperacion();
   const hoy = new Date();
   const fechaHoy = String(hoy.getDate()).padStart(2,'0')+'/'+String(hoy.getMonth()+1).padStart(2,'0')+'/'+hoy.getFullYear();
   const pct = datos.pctComision ? datos.pctComision/100 : 0.03;
@@ -946,7 +959,20 @@ async function cargarReservaDesdeChat(datos){
   const notas = (datos.clienteNombre || datos.clienteTelefono)
     ? `Cliente: ${datos.clienteNombre || '(sin nombre)'}${datos.clienteTelefono ? ' — Tel: '+datos.clienteTelefono : ''}`
     : '';
-  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, 0, 0, 0, fecha, '', 'Por cobrar', mes, anio, false, notas, 'pendiente_asesor'];
+  // Calcular el reparto de comisión (mía, de SOLUM, del asesor) — antes quedaba todo en 0
+  let comVendedor, ganMartina, ganSolum;
+  if(datos.agente==='Martina'){
+    comVendedor = 0;
+    ganMartina = Math.round(comision*0.80);
+    ganSolum = comision - ganMartina;
+  } else {
+    const pct = pctAsesorVigente({agente:datos.agente, anio});
+    comVendedor = Math.round(comision*pct);
+    ganSolum = Math.round(comision*0.30);
+    ganMartina = comision - comVendedor - ganSolum;
+  }
+
+  const fila = [nuevoId, datos.propiedad, datos.agente, datos.punta, datos.precio, comision, comVendedor, ganMartina, ganSolum, fecha, '', 'Por cobrar', mes, anio, false, notas, 'pendiente_asesor'];
   await dbGuardar('operaciones', fila);
   registrarAccion({id:nuevoId, propiedad:datos.propiedad, agente:datos.agente, punta:datos.punta, precio:datos.precio, comision, estado:'Por cobrar'}, 'Reserva cargada', 'Cargada por chat (Josefina)' + (notas ? ' — '+notas : ''));
 
