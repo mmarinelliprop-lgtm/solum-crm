@@ -441,6 +441,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 .fact-bar-fill{height:100%;border-radius:9px 0 0 9px;background:linear-gradient(90deg,#6ff3e6,#14a99c);box-shadow:0 0 10px rgba(45,212,196,.35);}
 .fact-marker{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--gold);box-shadow:0 0 6px var(--gold);z-index:2;}
 .fact-marker-lbl{position:absolute;top:-16px;transform:translateX(-50%);font-size:8px;color:var(--gold2);font-weight:700;white-space:nowrap;}
+.fact-marker.done{background:var(--green);box-shadow:0 0 6px var(--green);}
+.fact-marker-lbl.done{color:var(--green);}
 
 /* Hitos del vendedor: primer objetivo, cambio de nivel de comisión, viaje */
 .hito-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
@@ -1125,14 +1127,17 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     </div>
   </div>
 
-  <!-- Nivel / objetivo de facturación del vendedor seleccionado -->
-  <div id="seg-nivel-vendedor" style="margin-bottom:20px;"></div>
+  <!-- Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) -->
+  <div id="seg-hitos" style="margin-bottom:20px;"></div>
 
   <!-- Vista: Tabla anual -->
   <div id="seg-vista-tabla">
     <div class="table-wrap" style="overflow-x:auto;margin-bottom:24px">
       <table id="seg-tabla-anual" style="white-space:nowrap" style="min-width:1100px"></table>
     </div>
+
+    <!-- Tarjeta de facturación con próximas metas -->
+    <div id="seg-nivel-vendedor" style="margin-bottom:20px;"></div>
 
     <!-- Totales anuales -->
     <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap" id="seg-totales"></div>
@@ -4178,9 +4183,10 @@ function renderSeguimiento(){
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
   const anioSeg = new Date().getFullYear();
 
-  // ── Tarjeta de nivel / objetivo de facturación (sistema vigente desde 2026) ──
+  // ── Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) — solo los logrados ──
+  const hitosCont = document.getElementById('seg-hitos');
   const nivelCont = document.getElementById('seg-nivel-vendedor');
-  if(nivelCont){
+  if(hitosCont && nivelCont){
     const est = estadoNivelVendedor(vendedor, anioSeg);
     const pctFact = est.objetivoActual ? Math.min(100, Math.round(est.facturacion/est.objetivoActual*100)) : 100;
     const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
@@ -4188,50 +4194,58 @@ function renderSeguimiento(){
     // Hitos del año: primer objetivo de nivel, cambio de nivel de comisión, viaje — en base a estadoNivelVendedor
     const tieneNiveles = est.siguienteNivel !== null || est.objetivoActual === null; // false para Martina/Kito (% fijo)
     const hito1Done = tieneNiveles ? (est.objetivoActual !== 40000) : (est.objetivoActual === null);
-    const hito2Done = tieneNiveles ? (est.objetivoActual === null) : null; // null = no aplica (comisión fija)
-    const hitosHTML = `
-      <div class="hito-row">
-        <div class="hito-card ${hito1Done?'done':'locked'}">
-          <div class="hito-ico">🥇</div>
-          <div><div class="hito-l">${hito1Done?'Hito cumplido':'Próximo hito'}</div>
-            <div class="hito-v">Primer objetivo de facturación${tieneNiveles?' ($40.000)':''}${hito1Done?'':'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Faltan '+fmtUSD(Math.max(0,(tieneNiveles?40000:est.objetivoActual||0)-est.facturacion))+'</span>'}</div>
-          </div>
-        </div>
-        ${hito2Done===null ? `
-        <div class="hito-card locked" style="opacity:.4">
-          <div class="hito-ico">⚡</div>
-          <div><div class="hito-l">No aplica</div><div class="hito-v">Comisión fija<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">No escala por nivel</span></div></div>
-        </div>` : `
-        <div class="hito-card ${hito2Done?'done':'locked'}">
-          <div class="hito-ico">⚡</div>
-          <div><div class="hito-l">${hito2Done?'Hito cumplido':'Próximo hito'}</div>
-            <div class="hito-v">Cambio de nivel de comisión${hito2Done?'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Próximo año: '+Math.round((est.siguienteNivel||0.7)*100)+'%</span>':'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Faltan '+fmtUSD(Math.max(0,50000-est.facturacion))+'</span>'}</div>
-          </div>
-        </div>`}
-        <div class="hito-card ${est.viajeGanado?'done':'locked'}">
-          <div class="hito-ico">✈️</div>
-          <div><div class="hito-l">${est.viajeGanado?'Hito cumplido':'Próximo hito'}</div>
-            <div class="hito-v">Viaje${est.viajeGanado?'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">¡Ganado! 🎉</span>':'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Faltan '+fmtUSD(Math.max(0,est.umbralViaje-est.facturacion))+'</span>'}</div>
-          </div>
-        </div>
-      </div>`;
+    const hito2Done = tieneNiveles ? (est.objetivoActual === null) : false; // false = no aplica (comisión fija), igual que "no cumplido" a efectos de ocultarlo
 
-    nivelCont.innerHTML = hitosHTML + `
-      <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div class="kpi" style="flex:1.4;min-width:260px">
-          <div class="kpi-label">Facturación bruta ${anioSeg}</div>
-          <div class="kpi-value" style="color:var(--text);font-size:30px">${fmtUSD(est.facturacion)}</div>
-          <div class="fact-bar-wrap">
-            <div class="fact-bar-fill" style="width:${pctFact}%"></div>
-            ${est.objetivoActual ? `<div class="fact-marker" style="left:100%"></div><div class="fact-marker-lbl" style="left:100%;transform:translateX(-100%)">Objetivo ${fmtUSD(est.objetivoActual)}</div>` : ''}
-          </div>
-          <div class="kpi-sub" style="margin-top:14px">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
+    const hitosLogrados = [];
+    if(hito1Done) hitosLogrados.push({ico:'🥇', v:'Primer objetivo de facturación alcanzado'});
+    if(hito2Done) hitosLogrados.push({ico:'⚡', v:`Cambió de nivel de comisión — este año: ${Math.round((est.siguienteNivel||0.7)*100)}%`});
+    if(est.viajeGanado) hitosLogrados.push({ico:'✈️', v:'¡Viaje ganado! 🎉'});
+
+    hitosCont.innerHTML = hitosLogrados.length ? `
+      <div class="hito-row" style="grid-template-columns:repeat(${hitosLogrados.length},1fr)">
+        ${hitosLogrados.map(h=>`
+        <div class="hito-card done">
+          <div class="hito-ico">${h.ico}</div>
+          <div><div class="hito-l">Hito cumplido</div><div class="hito-v">${h.v}</div></div>
+        </div>`).join('')}
+      </div>` : '';
+
+    // Próximas metas: los objetivos que todavía NO se cumplieron, dentro de la tarjeta de facturación
+    const proximasMetas = [];
+    if(!hito1Done && tieneNiveles) proximasMetas.push(`Primer objetivo ($40.000) — faltan ${fmtUSD(Math.max(0,40000-est.facturacion))}`);
+    if(!hito2Done && tieneNiveles) proximasMetas.push(`Cambio de nivel (${Math.round((est.siguienteNivel||0.7)*100)}%) — faltan ${fmtUSD(Math.max(0,(est.objetivoActual===40000?50000:est.objetivoActual)-est.facturacion))}`);
+    if(!est.viajeGanado) proximasMetas.push(`Viaje — faltan ${fmtUSD(Math.max(0,est.umbralViaje-est.facturacion))}`);
+    if(est.objetivoActual) proximasMetas.push(`Próximo objetivo ${fmtUSD(est.objetivoActual)} — faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}`);
+
+    // Línea de tiempo de hitos sobre la misma barra: cada umbral (alcanzado o no) marcado a su posición real
+    const hitosTimeline = [];
+    if(tieneNiveles){
+      hitosTimeline.push({v:40000, label:'1er objetivo', done:est.facturacion>=40000});
+      hitosTimeline.push({v:50000, label:'Cambio de nivel', done:est.facturacion>=50000});
+    } else if(est.objetivoActual){
+      hitosTimeline.push({v:est.objetivoActual, label:'Objetivo', done:false});
+    }
+    hitosTimeline.push({v:est.umbralViaje, label:'Viaje', done:est.viajeGanado});
+    const scaleMax = Math.max(est.facturacion, ...hitosTimeline.map(h=>h.v)) || 1;
+    const pctFactScale = Math.min(100, Math.round(est.facturacion/scaleMax*100));
+
+    nivelCont.innerHTML = `
+      <div class="kpi" style="min-width:260px">
+        <div class="kpi-label">Facturación bruta ${anioSeg}</div>
+        <div class="kpi-value" style="color:var(--text);font-size:30px">${fmtUSD(est.facturacion)}</div>
+        <div class="fact-bar-wrap" style="margin-top:20px">
+          <div class="fact-bar-fill" style="width:${pctFactScale}%"></div>
+          ${hitosTimeline.map(h=>{
+            const left = Math.min(100, Math.round(h.v/scaleMax*100));
+            return `<div class="fact-marker${h.done?' done':''}" style="left:${left}%"></div><div class="fact-marker-lbl${h.done?' done':''}" style="left:${left}%;${left>90?'transform:translateX(-100%)':''}">${h.label} ${fmtUSD(h.v)}</div>`;
+          }).join('')}
         </div>
-        <div class="kpi" style="flex:1;min-width:160px">
-          <div class="kpi-label">Próximo objetivo</div>
-          <div class="kpi-value green">${est.objetivoActual ? fmtUSD(est.objetivoActual) : '¡Nivel máximo!'}</div>
-          <div class="kpi-sub">${est.objetivoActual ? `Faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}` : 'Nivel máximo alcanzado'}</div>
-        </div>
+        <div class="kpi-sub" style="margin-top:14px">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
+        ${proximasMetas.length ? `
+        <div style="margin-top:14px;border-top:1px solid rgba(var(--w),0.08);padding-top:10px">
+          <div class="kpi-label" style="margin-bottom:6px">Próximas metas</div>
+          ${proximasMetas.map(m=>`<div style="font-size:11px;color:var(--text2);padding:3px 0">🎯 ${m}</div>`).join('')}
+        </div>` : `<div class="kpi-sub" style="margin-top:14px;color:var(--green)">🏁 Todos los objetivos del año cumplidos</div>`}
       </div>`;
   }
 
