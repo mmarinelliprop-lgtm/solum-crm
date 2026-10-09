@@ -435,6 +435,23 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
   .dg .hero{flex-direction:column;}
 }
 @media (max-width:700px){.dg .bottom{grid-template-columns:1fr;} .big{font-size:32px;}}
+
+/* Facturación como barra con marcador de objetivo (ficha por asesor) */
+.fact-bar-wrap{position:relative;height:16px;border-radius:9px;background:rgba(var(--w),.08);border:1px solid rgba(var(--w),.14);margin-top:8px;}
+.fact-bar-fill{height:100%;border-radius:9px 0 0 9px;background:linear-gradient(90deg,#6ff3e6,#14a99c);box-shadow:0 0 10px rgba(45,212,196,.35);}
+.fact-marker{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--gold);box-shadow:0 0 6px var(--gold);z-index:2;}
+.fact-marker-lbl{position:absolute;top:-16px;transform:translateX(-50%);font-size:8px;color:var(--gold2);font-weight:700;white-space:nowrap;}
+
+/* Hitos del vendedor: primer objetivo, cambio de nivel de comisión, viaje */
+.hito-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.hito-card{background:var(--card);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;border:1px solid rgba(var(--w),0.06);}
+.hito-card.done{border-color:rgba(227,201,138,.55);box-shadow:0 0 18px rgba(227,201,138,.16);}
+.hito-card.locked{opacity:.55;}
+.hito-ico{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(var(--w),.05);}
+.hito-card.done .hito-ico{background:radial-gradient(circle,rgba(227,201,138,.3),transparent);}
+.hito-l{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--text3);font-weight:700;}
+.hito-v{font-size:12px;font-weight:700;margin-top:2px;line-height:1.3;}
+.hito-card.done .hito-v{color:var(--gold2);}
 </style>
 </head>
 <body>
@@ -3908,38 +3925,53 @@ function renderSeguimiento(){
     const est = estadoNivelVendedor(vendedor, anioSeg);
     const pctFact = est.objetivoActual ? Math.min(100, Math.round(est.facturacion/est.objetivoActual*100)) : 100;
     const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
-    nivelCont.innerHTML = `
+
+    // Hitos del año: primer objetivo de nivel, cambio de nivel de comisión, viaje — en base a estadoNivelVendedor
+    const tieneNiveles = est.siguienteNivel !== null || est.objetivoActual === null; // false para Martina/Kito (% fijo)
+    const hito1Done = tieneNiveles ? (est.objetivoActual !== 40000) : (est.objetivoActual === null);
+    const hito2Done = tieneNiveles ? (est.objetivoActual === null) : null; // null = no aplica (comisión fija)
+    const hitosHTML = `
+      <div class="hito-row">
+        <div class="hito-card ${hito1Done?'done':'locked'}">
+          <div class="hito-ico">🥇</div>
+          <div><div class="hito-l">${hito1Done?'Hito cumplido':'Próximo hito'}</div>
+            <div class="hito-v">Primer objetivo de facturación${tieneNiveles?' ($40.000)':''}${hito1Done?'':'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Faltan '+fmtUSD(Math.max(0,(tieneNiveles?40000:est.objetivoActual||0)-est.facturacion))+'</span>'}</div>
+          </div>
+        </div>
+        ${hito2Done===null ? `
+        <div class="hito-card locked" style="opacity:.4">
+          <div class="hito-ico">⚡</div>
+          <div><div class="hito-l">No aplica</div><div class="hito-v">Comisión fija<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">No escala por nivel</span></div></div>
+        </div>` : `
+        <div class="hito-card ${hito2Done?'done':'locked'}">
+          <div class="hito-ico">⚡</div>
+          <div><div class="hito-l">${hito2Done?'Hito cumplido':'Próximo hito'}</div>
+            <div class="hito-v">Cambio de nivel de comisión${hito2Done?'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Próximo año: '+Math.round((est.siguienteNivel||0.7)*100)+'%</span>':'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Faltan '+fmtUSD(Math.max(0,50000-est.facturacion))+'</span>'}</div>
+          </div>
+        </div>`}
+        <div class="hito-card ${est.viajeGanado?'done':'locked'}">
+          <div class="hito-ico">✈️</div>
+          <div><div class="hito-l">${est.viajeGanado?'Hito cumplido':'Próximo hito'}</div>
+            <div class="hito-v">Viaje${est.viajeGanado?'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">¡Ganado! 🎉</span>':'<br><span style="color:var(--text3);font-weight:500;font-size:10.5px">Faltan '+fmtUSD(Math.max(0,est.umbralViaje-est.facturacion))+'</span>'}</div>
+          </div>
+        </div>
+      </div>`;
+
+    nivelCont.innerHTML = hitosHTML + `
       <div style="display:flex;gap:12px;flex-wrap:wrap">
-        <div class="kpi" style="flex:1;min-width:160px">
+        <div class="kpi" style="flex:1.4;min-width:260px">
           <div class="kpi-label">Facturación bruta ${anioSeg}</div>
-          <div class="kpi-value" style="color:var(--text)">${fmtUSD(est.facturacion)}</div>
-          <div class="kpi-sub">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
+          <div class="kpi-value" style="color:var(--text);font-size:30px">${fmtUSD(est.facturacion)}</div>
+          <div class="fact-bar-wrap">
+            <div class="fact-bar-fill" style="width:${pctFact}%"></div>
+            ${est.objetivoActual ? `<div class="fact-marker" style="left:100%"></div><div class="fact-marker-lbl" style="left:100%;transform:translateX(-100%)">Objetivo ${fmtUSD(est.objetivoActual)}</div>` : ''}
+          </div>
+          <div class="kpi-sub" style="margin-top:14px">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
         </div>
         <div class="kpi" style="flex:1;min-width:160px">
           <div class="kpi-label">Próximo objetivo</div>
           <div class="kpi-value green">${est.objetivoActual ? fmtUSD(est.objetivoActual) : '¡Nivel máximo!'}</div>
           <div class="kpi-sub">${est.objetivoActual ? `Faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}` : 'Nivel máximo alcanzado'}</div>
-        </div>
-        ${true ? `
-        <div class="kpi" style="flex:1;min-width:160px;border:1px solid ${est.viajeGanado?'rgba(46,230,184,0.35)':'rgba(var(--w),0.08)'};background:${est.viajeGanado?'rgba(46,230,184,0.08)':'transparent'}">
-          <div class="kpi-label" style="display:flex;align-items:center;gap:6px">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.85;flex-shrink:0">
-              <path d="M10.5 3.5 3 12l3 1 2-1.5 1 3.5-1.5 1.5 3 .8L12 21l2-4.2 3-.8-1.5-1.5 1-3.5 2 1.5 3-1-7.5-8.5-1.5-4.5a1 1 0 0 0-1.9 0z" stroke-linejoin="round"/>
-            </svg>
-            Viaje
-          </div>
-          <div class="kpi-value" style="color:${est.viajeGanado?'var(--green)':'var(--text3)'}">${est.viajeGanado?'¡Ganado! 🎉':fmtUSD(est.umbralViaje)}</div>
-          <div style="background:rgba(var(--w),0.06);border-radius:8px;height:6px;margin-top:8px;overflow:hidden">
-            <div style="height:100%;width:${Math.min(100,Math.round(est.facturacion/est.umbralViaje*100))}%;background:var(--green);border-radius:8px"></div>
-          </div>
-          <div class="kpi-sub" style="margin-top:6px">${est.viajeGanado?'Ya superó el umbral':'Faltan '+fmtUSD(Math.max(0,est.umbralViaje-est.facturacion))}</div>
-        </div>` : ''}
-        <div class="kpi" style="flex:1;min-width:160px">
-          <div class="kpi-label">Progreso al objetivo</div>
-          <div style="background:rgba(var(--w),0.06);border-radius:8px;height:8px;margin-top:8px;overflow:hidden">
-            <div style="height:100%;width:${pctFact}%;background:var(--gold);border-radius:8px"></div>
-          </div>
-          <div class="kpi-sub" style="margin-top:6px">${pctFact}%</div>
         </div>
       </div>`;
   }
