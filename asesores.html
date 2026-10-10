@@ -143,13 +143,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 // Cada asesor ve y edita ÚNICAMENTE lo suyo (filtrado por agente === sesión activa).
 // ═══════════════════════════════════════════════
 const DB_URL = '/.netlify/functions/sheets';
-const ASESORES = ['Vicky','Manu','Marce','Kito','Ceci','Luli','Joaquin'];
+// value = nombre con el que se guarda el dato (debe coincidir con el "agente" usado en index.html);
+// label = cómo se muestra en el selector de login.
+const ASESORES = [
+  {value:'Kito',    label:'Kito'},
+  {value:'Vicky',   label:'Vicky'},
+  {value:'Manu',    label:'Manu'},
+  {value:'Marce',   label:'Marce'},
+  {value:'Ceci',    label:'Ceci'},
+  {value:'Luli',    label:'Lulita'},
+  {value:'Joaquin', label:'Nano'},
+];
 // PINs de arranque — cualquiera de los 7 puede pedirle a Martina que se los cambie.
-const PINES = {Vicky:'1001',Manu:'1002',Marce:'1003',Kito:'1004',Ceci:'1005',Luli:'1006',Joaquin:'1007'};
+const PINES = {Kito:'1001',Vicky:'1002',Manu:'1003',Marce:'1004',Ceci:'1005',Luli:'1006',Joaquin:'1007'};
 const MESES_NOMBRES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 let sesionActiva = null;
 
-document.getElementById('login-nombre').innerHTML = ASESORES.map(a=>`<option value="${a}">${a}</option>`).join('');
+document.getElementById('login-nombre').innerHTML = ASESORES.map(a=>`<option value="${a.value}">${a.label}</option>`).join('');
+function labelDe(value){ return ASESORES.find(a=>a.value===value)?.label || value; }
 
 function showToast(msg){
   const t = document.getElementById('toast');
@@ -191,7 +202,7 @@ function salir(){
 async function entrarApp(){
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
-  document.getElementById('header-greeting').textContent = `Hola ${sesionActiva} 👋`;
+  document.getElementById('header-greeting').textContent = `Hola ${labelDe(sesionActiva)} 👋`;
   const mesHoy = new Date().getMonth()+1;
   const selMes = document.getElementById('sem-mes-sel');
   selMes.innerHTML = MESES_NOMBRES.slice(1).map((m,i)=>`<option value="${i+1}" ${i+1===mesHoy?'selected':''}>${m}</option>`).join('');
@@ -519,7 +530,7 @@ function renderBusquedas(){
 // Sesión persistida en esta pestaña (no entre dispositivos, por simplicidad)
 (function(){
   const prev = sessionStorage.getItem('asesorSesion');
-  if(prev && ASESORES.includes(prev)){
+  if(prev && ASESORES.some(a=>a.value===prev)){
     sesionActiva = prev;
     entrarApp();
   }
