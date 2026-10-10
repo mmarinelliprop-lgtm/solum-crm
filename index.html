@@ -1215,9 +1215,13 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     <!-- Captaciones y búsquedas/consultas del vendedor seleccionado -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:15px;font-weight:700;color:var(--text)">📋 Captaciones en curso</div>
+      <span class="fc-chip" onclick="nuevaCaptacionDesdeVendedor()">+ Nueva captación</span>
     </div>
-    <div class="capt-grid" id="seg-v-captaciones" style="margin-bottom:20px"></div>
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">🔎 Búsquedas y consultas</div>
+    <div id="seg-v-captaciones" style="margin-bottom:20px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--text)">🔎 Búsquedas y consultas</div>
+      <span class="fc-chip" onclick="nuevaBusquedaDesdeVendedor()">+ Nueva consulta</span>
+    </div>
     <div class="capt-grid" id="seg-v-busquedas" style="margin-bottom:20px"></div>
 
     <!-- Análisis de Inteligencia Empresarial -->
@@ -5228,7 +5232,28 @@ function nuevaCaptacion(clienteId){
     estado:'activa', fechaCierre:'', motivoCierre:''};
   captaciones.push(cap);
   guardarCaptacion(cap);
-  renderFichaCliente(clienteId);
+  refrescarCaptBusq(clienteId);
+}
+// Busca un cliente por nombre (case-insensitive) o lo crea si no existe. Usado al cargar
+// captaciones/búsquedas directamente desde la ficha del vendedor, sin pasar por el modal de cliente.
+function resolverClientePorNombre(){
+  const nombre = (prompt('Nombre del cliente/propietario:') || '').trim();
+  if(!nombre) return null;
+  let c = clientes.find(x=>(x.nombre||'').toLowerCase()===nombre.toLowerCase());
+  if(!c){
+    c = {id:'c'+Date.now(), nombre, cuit:'', mail:'', telefono:'', agente:segVendedorActivo||'Martina', fechaAlta:fechaHoyDDMM(), notas:''};
+    clientes.push(c);
+    guardarCliente(c);
+  }
+  return c;
+}
+function nuevaCaptacionDesdeVendedor(){
+  const c = resolverClientePorNombre();
+  if(c) nuevaCaptacion(c.id);
+}
+function nuevaBusquedaDesdeVendedor(){
+  const c = resolverClientePorNombre();
+  if(c) nuevaBusqueda(c.id);
 }
 function toggleEtapaCaptacion(capId, etapa){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
@@ -5268,7 +5293,7 @@ function nuevaBusqueda(clienteId){
     muestras:[], estado:'en_proceso', fechaReserva:'', fechaEscritura:'', fechaDescarte:'', motivoDescarte:''};
   busquedas.push(b);
   guardarBusqueda(b);
-  renderFichaCliente(clienteId);
+  refrescarCaptBusq(clienteId);
 }
 function agregarMuestraBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
