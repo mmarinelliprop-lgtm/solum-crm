@@ -1788,11 +1788,12 @@ async function cargarDatosDB() {
     if(busqRows && busqRows.length > 1){
       const porId = {};
       busqRows.slice(1).forEach(r=>{
-        const [id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestrasJSON,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte] = r;
+        const [id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestrasJSON,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte,tipo,zona,precioUSD,dormitorios] = r;
         if(!id) return;
         let muestras = [];
         try{ muestras = JSON.parse(muestrasJSON||'[]'); }catch(e){ muestras = []; }
-        porId[id] = {id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestras,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte};
+        porId[id] = {id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestras,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte,
+          tipo:tipo||'', zona:zona||'', precioUSD:parseFloat(precioUSD)||0, dormitorios:parseInt(dormitorios)||0};
       });
       busquedas = Object.values(porId);
     }
@@ -5010,7 +5011,8 @@ function filaCaptacion(c){
 }
 function filaBusqueda(b){
   return [b.id, b.clienteId, b.agente||'', b.tipoPunta||'Búsqueda', b.propiedadRelacionada||'', b.criterios||'',
-    JSON.stringify(b.muestras||[]), b.estado||'en_proceso', b.fechaReserva||'', b.fechaEscritura||'', b.fechaDescarte||'', b.motivoDescarte||''];
+    JSON.stringify(b.muestras||[]), b.estado||'en_proceso', b.fechaReserva||'', b.fechaEscritura||'', b.fechaDescarte||'', b.motivoDescarte||'',
+    b.tipo||'', b.zona||'', b.precioUSD||0, b.dormitorios||0];
 }
 function guardarCliente(c){ dbGuardar('clientes', filaCliente(c)); }
 function guardarCaptacion(c){ dbGuardar('captaciones', filaCaptacion(c)); }
@@ -5136,7 +5138,7 @@ function busqCardsHTML(busqs){
     return `
     <div class="consulta-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div style="font-weight:700;font-size:13px">${b.propiedadRelacionada||b.criterios||'Sin detalle'}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${b.agente||''}</div></div>
+        <div><div style="font-weight:700;font-size:13px">${b.propiedadRelacionada||b.criterios||'Sin detalle'}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${b.agente||''}${b.tipo||b.zona||b.precioUSD?' · '+[b.tipo,b.zona,b.precioUSD?'USD '+b.precioUSD.toLocaleString('es-AR'):'',b.dormitorios?b.dormitorios+' dorm.':''].filter(Boolean).join(' · '):''}</div></div>
         <span class="fc-tag ${tagClass}">${b.tipoPunta}</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
@@ -5242,8 +5244,13 @@ function cerrarCaptacion(capId, resultado){
 function nuevaBusqueda(clienteId){
   const tipoPunta = prompt('Tipo: Propiedad, Búsqueda o Ambas', 'Búsqueda') || 'Búsqueda';
   const detalle = prompt(tipoPunta==='Propiedad' ? 'Propiedad por la que consulta:' : 'Qué busca (criterios):') || '';
+  const tipo = prompt('Tipo de propiedad que busca (Casa/Depto/Local), opcional:') || '';
+  const zona = prompt('Zona/barrio que busca, opcional:') || '';
+  const precioUSD = parseFloat(prompt('Presupuesto USD, opcional:', '0')) || 0;
+  const dormitorios = parseInt(prompt('Dormitorios, opcional:', '0')) || 0;
   const b = {id:'b'+Date.now(), clienteId, agente:segVendedorActivo||'Martina', tipoPunta,
     propiedadRelacionada: tipoPunta!=='Búsqueda' ? detalle : '', criterios: tipoPunta==='Búsqueda' ? detalle : '',
+    tipo, zona, precioUSD, dormitorios,
     muestras:[], estado:'en_proceso', fechaReserva:'', fechaEscritura:'', fechaDescarte:'', motivoDescarte:''};
   busquedas.push(b);
   guardarBusqueda(b);
