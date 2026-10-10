@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLUMITOS — Mi Seguimiento</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2317355B%22/><text x=%2250%22 y=%2268%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22%23B6A284%22 font-family=%22Georgia,serif%22>S</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --navy:#17355B;--navy2:#1e3f6e;--navy3:#0f2240;
+  --gold:#B6A284;--gold2:#d4bfa0;--gold3:#8a7562;
+  --bg:#0a1628;--bg2:#0f1e38;--bg3:#142444;
+  --card:#152238;--card2:#1a2d4a;--card3:#1f3455;
+  --text:#f0ece4;--text2:#b8b0a4;--text3:#7a7468;
+  --green:#2ee6b8;--greenbg:rgba(46,230,184,0.14);
+  --amber:#ffd36e;--amberbg:rgba(255,211,110,0.15);
+  --red:#ff4d97;--redbg:rgba(255,77,151,0.14);
+  --blue:#4a9eff;--bluebg:rgba(74,158,255,0.12);
+  --radius:10px;--radius2:14px;
+}
+*{scrollbar-width:thin;scrollbar-color:var(--gold3) var(--bg2);}
+*::-webkit-scrollbar{height:9px;width:9px;}
+*::-webkit-scrollbar-track{background:var(--bg2);border-radius:6px;}
+*::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:6px;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+.header{background:var(--bg2);border-bottom:1px solid rgba(255,255,255,0.06);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
+.header-name{font-size:18px;font-weight:800;color:var(--gold2);}
+.header-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;}
+.btn-gold{background:var(--gold);color:var(--navy3);}
+.btn-outline{background:transparent;border:1px solid rgba(255,255,255,0.12);color:var(--text2);}
+.tabs{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid rgba(255,255,255,0.06);}
+.tab-btn{padding:12px 20px;background:none;border:none;color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;}
+.tab-btn.active{color:var(--gold2);border-bottom-color:var(--gold);}
+.content{padding:20px;max-width:900px;margin:0 auto;}
+.hidden{display:none!important;}
+.card{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.06);padding:18px;margin-bottom:16px;}
+.card-title{font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:12px;}
+.filter-select,.inp{background:var(--card2);border:1px solid rgba(255,255,255,0.1);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;width:100%;}
+.filter-select:focus,.inp:focus{border-color:var(--gold3);}
+.login-box{max-width:360px;margin:80px auto;background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.08);padding:28px;text-align:center;}
+.login-box .logo{font-size:30px;margin-bottom:10px;}
+.login-box label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;text-align:left;}
+.week-card{background:var(--card2);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.week-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.week-range{font-size:11px;color:var(--text3);}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
+.metric-tile label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;}
+.metric-tile input{width:100%;background:var(--card3);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:7px 9px;border-radius:6px;font-size:14px;font-weight:700;text-align:center;}
+.accion-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;}
+.accion-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;}
+.accion-item.done span{color:var(--text3);text-decoration:line-through;}
+.accion-add{display:flex;gap:6px;margin-top:8px;}
+.accion-add input{flex:1;}
+.chip{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;border-radius:14px;font-size:10.5px;font-weight:700;border:1px solid rgba(255,255,255,0.12);color:var(--text3);background:var(--card3);cursor:pointer;}
+.chip.on{background:var(--green);color:#06241f;border-color:var(--green);}
+.capt-card,.consulta-card{background:var(--card2);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:10px;}
+.tag{font-size:9px;font-weight:700;padding:3px 9px;border-radius:10px;}
+.tag.prop{background:var(--bluebg);color:var(--blue);}
+.tag.busq{background:var(--amberbg);color:var(--amber);}
+.tag.ambas{background:rgba(165,150,196,.2);color:#a596c4;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card2);color:var(--text);padding:10px 18px;border-radius:10px;font-size:12px;border:1px solid rgba(255,255,255,0.1);z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
+.toast.show{opacity:1;}
+.err{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;}
+</style>
+</head>
+<body>
+
+<div id="screen-login">
+  <div class="login-box">
+    <div class="logo">🏠</div>
+    <div style="font-size:17px;font-weight:800;color:var(--gold2)">SOLUMITOS</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px">Mi seguimiento semanal</div>
+    <label>Tu nombre</label>
+    <select class="filter-select" id="login-nombre"></select>
+    <label>PIN (4 dígitos)</label>
+    <input class="inp" id="login-pin" type="password" inputmode="numeric" maxlength="4" placeholder="••••">
+    <div class="err" id="login-err"></div>
+    <button class="btn btn-gold" style="width:100%;margin-top:14px" onclick="intentarLogin()">Entrar</button>
+  </div>
+</div>
+
+<div id="screen-app" class="hidden">
+  <div class="header">
+    <div><div class="header-name" id="header-greeting"></div><div class="header-sub">Cargá tu semana, tus captaciones y tus búsquedas — solo vos ves esto</div></div>
+    <button class="btn btn-outline" onclick="salir()">Salir</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-semana-btn" onclick="switchTab('semana')">📅 Mi semana</button>
+    <button class="tab-btn" id="tab-capt-btn" onclick="switchTab('capt')">📋 Mis captaciones</button>
+    <button class="tab-btn" id="tab-busq-btn" onclick="switchTab('busq')">🔎 Mis búsquedas</button>
+  </div>
+
+  <div class="content" id="content-semana">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div class="card-title" style="margin-bottom:0">Mes</div>
+        <select class="filter-select" id="sem-mes-sel" style="width:auto" onchange="renderSemana()"></select>
+      </div>
+    </div>
+    <div id="semanas-wrap"></div>
+  </div>
+
+  <div class="content hidden" id="content-capt">
+    <div class="card">
+      <div class="card-title">+ Nueva captación</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <input class="inp" id="nc-cliente" placeholder="Nombre del propietario">
+        <input class="inp" id="nc-direccion" placeholder="Dirección">
+        <input class="inp" id="nc-tipo" placeholder="Tipo (Casa/Depto/Local)">
+        <input class="inp" id="nc-zona" placeholder="Zona/barrio">
+        <input class="inp" id="nc-precio" type="number" placeholder="Precio USD">
+      </div>
+      <button class="btn btn-gold" style="margin-top:10px" onclick="crearCaptacionAsesor()">Agregar captación</button>
+    </div>
+    <div id="capt-wrap"></div>
+  </div>
+
+  <div class="content hidden" id="content-busq">
+    <div class="card">
+      <div class="card-title">+ Nueva búsqueda / consulta</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <input class="inp" id="nb-cliente" placeholder="Nombre del cliente">
+        <select class="inp" id="nb-tipo">
+          <option value="Búsqueda">Búsqueda</option>
+          <option value="Propiedad">De Propiedad</option>
+          <option value="Ambas">Ambas (punta doble)</option>
+        </select>
+      </div>
+      <input class="inp" id="nb-detalle" placeholder="Qué busca / propiedad por la que consulta" style="margin-top:10px">
+      <button class="btn btn-gold" style="margin-top:10px" onclick="crearBusquedaAsesor()">Agregar búsqueda</button>
+    </div>
+    <div id="busq-wrap"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// Mismo backend y mismas estructuras de datos que index.html (app principal).
+// Cada asesor ve y edita ÚNICAMENTE lo suyo (filtrado por agente === sesión activa).
+// ═══════════════════════════════════════════════
+const DB_URL = '/.netlify/functions/sheets';
+const ASESORES = ['Vicky','Manu','Marce','Kito','Ceci','Luli','Joaquin'];
+// PINs de arranque — cualquiera de los 7 puede pedirle a Martina que se los cambie.
+const PINES = {Vicky:'1001',Manu:'1002',Marce:'1003',Kito:'1004',Ceci:'1005',Luli:'1006',Joaquin:'1007'};
+const MESES_NOMBRES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+let sesionActiva = null;
+
+document.getElementById('login-nombre').innerHTML = ASESORES.map(a=>`<option value="${a}">${a}</option>`).join('');
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+async function dbGuardar(tipo, fila){
+  try{ await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'guardar',fila})}); }
+  catch(e){ console.error('dbGuardar error:', e); }
+}
+async function dbLeer(tipo){
+  try{
+    const r = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'leer'})});
+    const d = await r.json();
+    return (d.ok && d.datos) ? d.datos : [];
+  }catch(e){ return []; }
+}
+function fechaHoyDDMM(){ const h=new Date(); return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear(); }
+
+function intentarLogin(){
+  const nombre = document.getElementById('login-nombre').value;
+  const pin = document.getElementById('login-pin').value.trim();
+  if(pin !== PINES[nombre]){
+    document.getElementById('login-err').textContent = 'PIN incorrecto';
+    return;
+  }
+  sesionActiva = nombre;
+  sessionStorage.setItem('asesorSesion', nombre);
+  entrarApp();
+}
+function salir(){
+  sesionActiva = null;
+  sessionStorage.removeItem('asesorSesion');
+  document.getElementById('screen-app').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('hidden');
+  document.getElementById('login-pin').value = '';
+}
+async function entrarApp(){
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-app').classList.remove('hidden');
+  document.getElementById('header-greeting').textContent = `Hola ${sesionActiva} 👋`;
+  const mesHoy = new Date().getMonth()+1;
+  const selMes = document.getElementById('sem-mes-sel');
+  selMes.innerHTML = MESES_NOMBRES.slice(1).map((m,i)=>`<option value="${i+1}" ${i+1===mesHoy?'selected':''}>${m}</option>`).join('');
+  await cargarTodo();
+  renderSemana();
+  renderCaptaciones();
+  renderBusquedas();
+}
+
+function switchTab(tab){
+  ['semana','capt','busq'].forEach(t=>{
+    document.getElementById('tab-'+t+'-btn').classList.toggle('active', t===tab);
+    document.getElementById('content-'+t).classList.toggle('hidden', t!==tab);
+  });
+}
+
+// ── Carga inicial: semanas propias, captaciones propias, búsquedas propias, clientes ──
+let segData = {}; // {mes: {semanas:[{fecha,vals}]}}  — solo del asesor logueado
+let segAcciones = {}; // {mes: {semIdx: {accionId:{texto,cumplida}}}}
+let clientes = [];
+let captaciones = [];
+let busquedas = [];
+
+async function cargarTodo(){
+  const [semRows, accRows, clienteRows, captRows, busqRows] = await Promise.all([
+    dbLeer('seguimiento_semanal'), dbLeer('seguimiento_acciones'), dbLeer('clientes'), dbLeer('captaciones'), dbLeer('busquedas')
+  ]);
+
+  if(semRows.length>1) semRows.slice(1).forEach(r=>{
+    const vendedor=r[1], mes=parseInt(r[2]), semIdx=parseInt(r[3]), key=r[4], val=parseFloat(r[5])||0;
+    if(vendedor!==sesionActiva || isNaN(mes) || isNaN(semIdx) || !key) return;
+    if(!segData[mes]) segData[mes]={semanas:[]};
+    while(segData[mes].semanas.length<=semIdx) segData[mes].semanas.push({fecha:'',vals:{}});
+    if(key==='fecha') segData[mes].semanas[semIdx].fecha = val;
+    else segData[mes].semanas[semIdx].vals[key] = val;
+  });
+
+  if(accRows.length>1) accRows.slice(1).forEach(r=>{
+    const [ts,vendedor,mes,semIdx,accionId,texto,cumplida] = r;
+    if(vendedor!==sesionActiva || !accionId) return;
+    if(!segAcciones[mes]) segAcciones[mes]={};
+    if(!segAcciones[mes][semIdx]) segAcciones[mes][semIdx]={};
+    if(texto===''||texto===undefined) delete segAcciones[mes][semIdx][accionId];
+    else segAcciones[mes][semIdx][accionId] = {texto, cumplida: cumplida===true||cumplida==='true'};
+  });
+
+  if(clienteRows.length>1){
+    const porId={};
+    clienteRows.slice(1).forEach(r=>{ const [id,nombre,cuit,mail,telefono,agente,fechaAlta,notas]=r; if(id) porId[id]={id,nombre,cuit,mail,telefono,agente,fechaAlta,notas}; });
+    clientes = Object.values(porId);
+  }
+  if(captRows.length>1){
+    const porId={};
+    captRows.slice(1).forEach(r=>{
+      const [id,clienteId,agente,direccion,tipo,zona,precioUSD,dormitorios,fechaInicio,fechaPublicacion,prelisting,acm,documentacion,fotos,publicacion,estado,fechaCierre,motivoCierre]=r;
+      if(!id || agente!==sesionActiva) return;
+      porId[id]={id,clienteId,agente,direccion,tipo,zona,precioUSD:parseFloat(precioUSD)||0,fechaInicio,fechaPublicacion,
+        prelisting:prelisting===true||prelisting==='true', acm:acm===true||acm==='true', documentacion:documentacion===true||documentacion==='true',
+        fotos:fotos===true||fotos==='true', publicacion:publicacion===true||publicacion==='true', estado:estado||'activa', fechaCierre, motivoCierre};
+    });
+    captaciones = Object.values(porId);
+  }
+  if(busqRows.length>1){
+    const porId={};
+    busqRows.slice(1).forEach(r=>{
+      const [id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestrasJSON,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte]=r;
+      if(!id || agente!==sesionActiva) return;
+      let muestras=[]; try{ muestras=JSON.parse(muestrasJSON||'[]'); }catch(e){}
+      porId[id]={id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestras,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte};
+    });
+    busquedas = Object.values(porId);
+  }
+}
+
+// ── Semana: igual lógica que getSemanasMes/getSemanas de index.html ──
+function getSemanasMes(anio, mes){
+  const semanas = [];
+  const primerDia = new Date(anio, mes-1, 1);
+  const ultimoDia = new Date(anio, mes, 0);
+  let dia = new Date(primerDia);
+  const diaSemanaInicio = dia.getDay();
+  if(diaSemanaInicio>=2 && diaSemanaInicio<=5){
+    const inicioParcial = new Date(dia);
+    const finParcial = new Date(dia);
+    while(finParcial.getDay()!==0 && finParcial < ultimoDia) finParcial.setDate(finParcial.getDate()+1);
+    const finReal = finParcial <= ultimoDia ? finParcial : ultimoDia;
+    semanas.push({lunes: inicioParcial.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}), viernes: finReal.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+    dia = new Date(finReal); dia.setDate(dia.getDate()+1);
+  } else {
+    while(dia.getDay()!==1) dia.setDate(dia.getDate()+1);
+  }
+  while(dia <= ultimoDia){
+    const lunes = new Date(dia);
+    const viernes = new Date(dia); viernes.setDate(dia.getDate()+4);
+    semanas.push({lunes: lunes.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}), viernes: (viernes<=ultimoDia?viernes:ultimoDia).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+    dia.setDate(dia.getDate()+7);
+  }
+  return semanas;
+}
+const SEM_METRICAS = [
+  {label:'Prospección', key:'p'}, {label:'Entrevistas captación', key:'ec'}, {label:'ACM', key:'acm'},
+  {label:'Promo', key:'pr'}, {label:'Consultas', key:'cg'}, {label:'Muestras', key:'m'}
+];
+
+function renderSemana(){
+  const mes = parseInt(document.getElementById('sem-mes-sel').value);
+  const anio = new Date().getFullYear();
+  const semanas = getSemanasMes(anio, mes);
+  const semData = segData[mes]?.semanas || [];
+
+  document.getElementById('semanas-wrap').innerHTML = semanas.map((sem,i)=>{
+    const vals = semData[i]?.vals || {};
+    const acciones = segAcciones?.[mes]?.[i] || {};
+    const items = Object.entries(acciones).sort((a,b)=>a[0]-b[0]);
+    return `
+    <div class="week-card">
+      <div class="week-head">
+        <div style="font-weight:700;font-size:13px">Semana ${i+1}</div>
+        <div class="week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
+      </div>
+      <div class="metric-grid">
+        ${SEM_METRICAS.map(({label,key})=>`
+          <div class="metric-tile">
+            <label>${label}</label>
+            <input type="number" value="${vals[key]??''}" placeholder="0"
+              onchange="guardarMetricaSemana(${mes},${i},'${key}',this.value)">
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Acciones a cumplir esta semana</div>
+        ${items.map(([id,a])=>`
+          <div class="accion-item ${a.cumplida?'done':''}">
+            <input type="checkbox" ${a.cumplida?'checked':''} onchange="toggleAccion(${mes},${i},'${id}',this.checked)">
+            <span>${a.texto}</span>
+          </div>`).join('') || '<div style="font-size:11px;color:var(--text3)">Sin acciones cargadas</div>'}
+        <div class="accion-add">
+          <input type="text" placeholder="Nueva acción..." id="nueva-accion-${mes}-${i}" onkeydown="if(event.key==='Enter') agregarAccion(${mes},${i})">
+          <button class="btn btn-outline" onclick="agregarAccion(${mes},${i})">+ Agregar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function guardarMetricaSemana(mes, semIdx, key, val){
+  if(!segData[mes]) segData[mes]={semanas:[]};
+  while(segData[mes].semanas.length<=semIdx) segData[mes].semanas.push({fecha:'',vals:{}});
+  segData[mes].semanas[semIdx].vals[key] = parseFloat(val)||0;
+  dbGuardar('seguimiento_semanal', [Date.now(), sesionActiva, mes, semIdx, key, parseFloat(val)||0]);
+  showToast('Guardado');
+}
+function agregarAccion(mes, semIdx){
+  const input = document.getElementById(`nueva-accion-${mes}-${semIdx}`);
+  const texto = (input?.value||'').trim();
+  if(!texto) return;
+  const accionId = 'a'+Date.now();
+  if(!segAcciones[mes]) segAcciones[mes]={};
+  if(!segAcciones[mes][semIdx]) segAcciones[mes][semIdx]={};
+  segAcciones[mes][semIdx][accionId] = {texto, cumplida:false};
+  dbGuardar('seguimiento_acciones', [Date.now(), sesionActiva, mes, semIdx, accionId, texto, false]);
+  renderSemana();
+}
+function toggleAccion(mes, semIdx, accionId, cumplida){
+  const a = segAcciones?.[mes]?.[semIdx]?.[accionId];
+  if(!a) return;
+  a.cumplida = cumplida;
+  dbGuardar('seguimiento_acciones', [Date.now(), sesionActiva, mes, semIdx, accionId, a.texto, cumplida]);
+  showToast('Guardado');
+}
+
+// ── Captaciones propias ──
+function filaCliente(c){ return [c.id, c.nombre||'', c.cuit||'', c.mail||'', c.telefono||'', c.agente||'', c.fechaAlta||'', c.notas||'']; }
+function filaCaptacion(c){
+  return [c.id, c.clienteId, c.agente||'', c.direccion||'', c.tipo||'', c.zona||'', c.precioUSD||0, c.dormitorios||0,
+    c.fechaInicio||'', c.fechaPublicacion||'', !!c.prelisting, !!c.acm, !!c.documentacion, !!c.fotos, !!c.publicacion,
+    c.estado||'activa', c.fechaCierre||'', c.motivoCierre||''];
+}
+function filaBusqueda(b){
+  return [b.id, b.clienteId, b.agente||'', b.tipoPunta||'Búsqueda', b.propiedadRelacionada||'', b.criterios||'',
+    JSON.stringify(b.muestras||[]), b.estado||'en_proceso', b.fechaReserva||'', b.fechaEscritura||'', b.fechaDescarte||'', b.motivoDescarte||''];
+}
+function resolverClientePorNombre(nombre){
+  let c = clientes.find(x=>(x.nombre||'').toLowerCase()===nombre.toLowerCase());
+  if(!c){
+    c = {id:'c'+Date.now(), nombre, cuit:'', mail:'', telefono:'', agente:sesionActiva, fechaAlta:fechaHoyDDMM(), notas:''};
+    clientes.push(c);
+    dbGuardar('clientes', filaCliente(c));
+  }
+  return c;
+}
+
+const FC_ETAPAS = [['prelisting','Prelisting'],['acm','ACM'],['documentacion','Documentación'],['fotos','Fotos'],['publicacion','Publicación']];
+const CAPT_RESULTADO_LABEL = {vendida_propia:'Vendido por mí', vendida_otro:'Vendido por otro', baja:'Baja', descartada:'Descartada'};
+
+function crearCaptacionAsesor(){
+  const nombreCliente = (document.getElementById('nc-cliente').value||'').trim();
+  const direccion = (document.getElementById('nc-direccion').value||'').trim();
+  if(!nombreCliente || !direccion){ showToast('Falta nombre o dirección'); return; }
+  const c = resolverClientePorNombre(nombreCliente);
+  const cap = {id:'cap'+Date.now(), clienteId:c.id, agente:sesionActiva,
+    direccion, tipo:document.getElementById('nc-tipo').value||'', zona:document.getElementById('nc-zona').value||'',
+    precioUSD: parseFloat(document.getElementById('nc-precio').value)||0,
+    fechaInicio:fechaHoyDDMM(), fechaPublicacion:'', prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:false,
+    estado:'activa', fechaCierre:'', motivoCierre:''};
+  captaciones.push(cap);
+  dbGuardar('captaciones', filaCaptacion(cap));
+  ['nc-cliente','nc-direccion','nc-tipo','nc-zona','nc-precio'].forEach(id=>document.getElementById(id).value='');
+  renderCaptaciones();
+  showToast('Captación agregada');
+}
+function toggleEtapaCaptacion(capId, etapa){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  cap[etapa] = !cap[etapa];
+  if(etapa==='publicacion') cap.fechaPublicacion = cap.publicacion ? fechaHoyDDMM() : '';
+  dbGuardar('captaciones', filaCaptacion(cap));
+  renderCaptaciones();
+}
+function descartarCaptacion(capId){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  const motivo = prompt('Motivo del descarte:') || '';
+  cap.estado='descartada'; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre=motivo;
+  dbGuardar('captaciones', filaCaptacion(cap));
+  renderCaptaciones();
+}
+function cerrarCaptacion(capId, resultado){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  let motivo = resultado==='baja' ? (prompt('Motivo de la baja (opcional):')||'') : '';
+  cap.estado=resultado; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre=motivo;
+  dbGuardar('captaciones', filaCaptacion(cap));
+  renderCaptaciones();
+}
+
+function renderCaptaciones(){
+  const activas = captaciones.filter(c=>c.estado==='activa');
+  const cerradas = captaciones.filter(c=>c.estado!=='activa');
+  const activasHTML = activas.map(cap=>{
+    const completas = FC_ETAPAS.filter(([k])=>cap[k]).length;
+    const pct = Math.round(completas/FC_ETAPAS.length*100);
+    return `
+    <div class="capt-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:700;font-size:13px">${cap.direccion}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${(cap.precioUSD||0).toLocaleString('es-AR')}</div></div>
+        <div style="font-weight:800;color:var(--gold2)">${pct}%</div>
+      </div>
+      <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
+        ${FC_ETAPAS.map(([k,l])=>`<span class="chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
+      </div>
+      ${cap.publicacion ? `
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <span class="chip" style="color:var(--green)" onclick="cerrarCaptacion('${cap.id}','vendida_propia')">Vendido por mí</span>
+        <span class="chip" style="color:var(--blue)" onclick="cerrarCaptacion('${cap.id}','vendida_otro')">Vendido por otro</span>
+        <span class="chip" style="color:var(--amber)" onclick="cerrarCaptacion('${cap.id}','baja')">Baja</span>
+      </div>` : `
+      <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}
+    </div>`;
+  }).join('') || '<div style="color:var(--text3);font-size:12px">Sin captaciones activas todavía.</div>';
+
+  const cerradasHTML = cerradas.length ? `
+    <div style="font-size:11px;font-weight:700;color:var(--text3);margin:16px 0 8px;text-transform:uppercase">Historial</div>
+    ${cerradas.map(cap=>`<div class="capt-card" style="opacity:.7"><div style="display:flex;justify-content:space-between"><div>${cap.direccion}</div><div style="color:var(--text3)">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</div></div></div>`).join('')}` : '';
+
+  document.getElementById('capt-wrap').innerHTML = activasHTML + cerradasHTML;
+}
+
+// ── Búsquedas propias ──
+function crearBusquedaAsesor(){
+  const nombreCliente = (document.getElementById('nb-cliente').value||'').trim();
+  const detalle = (document.getElementById('nb-detalle').value||'').trim();
+  if(!nombreCliente){ showToast('Falta el nombre del cliente'); return; }
+  const tipoPunta = document.getElementById('nb-tipo').value;
+  const c = resolverClientePorNombre(nombreCliente);
+  const b = {id:'b'+Date.now(), clienteId:c.id, agente:sesionActiva, tipoPunta,
+    propiedadRelacionada: tipoPunta!=='Búsqueda' ? detalle : '', criterios: tipoPunta==='Búsqueda' ? detalle : '',
+    muestras:[], estado:'en_proceso', fechaReserva:'', fechaEscritura:'', fechaDescarte:'', motivoDescarte:''};
+  busquedas.push(b);
+  dbGuardar('busquedas', filaBusqueda(b));
+  document.getElementById('nb-cliente').value=''; document.getElementById('nb-detalle').value='';
+  renderBusquedas();
+  showToast('Búsqueda agregada');
+}
+function agregarMuestra(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const propiedad = prompt('Propiedad mostrada:') || '';
+  b.muestras = (b.muestras||[]).concat([{fecha:fechaHoyDDMM(), propiedad}]);
+  dbGuardar('busquedas', filaBusqueda(b));
+  renderBusquedas();
+}
+function marcarReserva(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  b.estado='reservada'; b.fechaReserva=fechaHoyDDMM();
+  dbGuardar('busquedas', filaBusqueda(b));
+  renderBusquedas();
+}
+function descartarBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const motivo = prompt('Motivo del descarte:') || '';
+  b.estado='descartada'; b.fechaDescarte=fechaHoyDDMM(); b.motivoDescarte=motivo;
+  dbGuardar('busquedas', filaBusqueda(b));
+  renderBusquedas();
+}
+
+function renderBusquedas(){
+  const tagClassFor = t => t==='Propiedad'?'prop':t==='Ambas'?'ambas':'busq';
+  const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'};
+  document.getElementById('busq-wrap').innerHTML = busquedas.map(b=>`
+    <div class="consulta-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:700;font-size:13px">${b.propiedadRelacionada||b.criterios||'Sin detalle'}</div></div>
+        <span class="tag ${tagClassFor(b.tipoPunta)}">${b.tipoPunta}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+        <span style="font-size:10px;color:var(--text3)">Muestras</span>
+        <span style="font-weight:800">${(b.muestras||[]).length}</span>
+        <span style="margin-left:auto;font-size:10px;color:var(--text3)">${estadoLbl[b.estado]||b.estado}</span>
+      </div>
+      ${b.estado==='en_proceso' ? `
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span class="chip" style="color:var(--green)" onclick="agregarMuestra('${b.id}')">+ Muestra</span>
+        <span class="chip" onclick="marcarReserva('${b.id}')">Reserva</span>
+        <span class="chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>
+      </div>` : ''}
+    </div>`).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>';
+}
+
+// Sesión persistida en esta pestaña (no entre dispositivos, por simplicidad)
+(function(){
+  const prev = sessionStorage.getItem('asesorSesion');
+  if(prev && ASESORES.includes(prev)){
+    sesionActiva = prev;
+    entrarApp();
+  }
+})();
+</script>
+</body>
+</html>
