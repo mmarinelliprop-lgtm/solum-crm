@@ -1209,6 +1209,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <option value="Luli">Luli</option>
         <option value="Joaquin">Joaquín</option>
       </select>
+      <select class="filter-select" id="seg-mes-sel" onchange="segMesActivo=parseInt(this.value);renderSeguimiento()"></select>
       <button class="btn btn-gold btn-sm" onclick="guardarSeguimiento()">💾 Guardar</button>
       <button id="btn-seg-guardar-pendientes" class="btn btn-sm" onclick="guardarCambiosPendientes()" style="display:none;background:var(--amber);color:var(--bg);animation:pulse 1s infinite">💾 Guardar cambios</button>
       <button class="btn btn-outline btn-sm no-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
@@ -1244,7 +1245,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
       </div>
       <div id="analisis-vendedor-content">
         <div style="background:var(--card2);border-radius:var(--radius2);padding:20px;border:1px solid rgba(var(--w),0.06);text-align:center;color:var(--text3);font-size:13px">
-          Hacé click en "Generar análisis" para responder 10 preguntas rápidas (5 sobre el vendedor, 5 tu visión) y recibir un diagnóstico profesional sobre su desempeño y qué hacer para mejorar.
+          Hacé click en "Generar análisis" para obtener un diagnóstico automático a partir de sus datos reales, comparado contra el resto del equipo — sin preguntas.
         </div>
       </div>
     </div>
@@ -1255,7 +1256,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     <div class="filters" style="margin-bottom:16px">
       <select class="filter-select" id="seg-cal-mes" onchange="renderCalendarioSemanal()">
         <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-        <option value="4">Abril</option><option value="5">Mayo</option><option value="6" selected>Junio</option>
+        <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
         <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
         <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
       </select>
@@ -1930,6 +1931,7 @@ let segObjetivos = {};
 VENDEDORES_SEG.forEach(v => { segObjetivos[v] = {...(OBJ_BASE[v]||OBJ_BASE['Martina'])}; });
 
 let segVendedorActivo = "Martina"; // vendedor activo en seguimiento
+let segMesActivo = new Date().getMonth()+1; // mes "en curso" que se muestra en la ficha del vendedor (elegible)
 let _cambiosPendientes = {}; // {vendedor_mes_key: valor} cambios sin guardar
 let _hayPendientes = false; // flag de cambios sin guardar
 let _cambiosSemanalPendientes = {}; // {vendedor_mes_idx_key: valor} cambios del calendario semanal sin guardar
@@ -4162,7 +4164,11 @@ function switchSegVista(vista){
   document.getElementById('seg-vista-tabla').style.display = vista==='tabla'?'block':'none';
   document.getElementById('seg-vista-calendario').style.display = vista==='calendario'?'block':'none';
   if(vista==='tabla') renderSeguimiento();
-  if(vista==='calendario') renderCalendarioSemanal();
+  if(vista==='calendario'){
+    const calMesEl = document.getElementById('seg-cal-mes');
+    if(calMesEl) calMesEl.value = segMesActivo || (new Date().getMonth()+1);
+    renderCalendarioSemanal();
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -4334,13 +4340,22 @@ function renderSeguimientoEquipo(){
     const pcts = metricas.filter(x=>x.obj>0).map(x=>Math.min(150,x.real/x.obj*100));
     const pctTotal = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0;
     const accPct = accionesSemanaPct(ag, mes, anio);
-    return {ag, metricas, pctTotal, enRitmo: pctTotal >= Math.round(fraccionMes*100), accPct};
+    const factMesAg = d.f || 0;
+    const objMesAg = Math.round((obj.f||30000) * pesoMensual(mes));
+    const pctFactAg = objMesAg>0 ? Math.round(factMesAg/objMesAg*100) : 0;
+    return {ag, metricas, pctTotal, enRitmo: pctTotal >= Math.round(fraccionMes*100), accPct, factMesAg, objMesAg, pctFactAg};
   }).sort((a,b)=>b.pctTotal-a.pctTotal);
 
   document.getElementById('seg-eq-ranking').innerHTML = rankData.map(r=>`
     <div class="seg-vcard" style="--vc-color:${AV_COLORS[r.ag]||'#E3C98A'}" onclick="irSeguimientoVendedor('${r.ag}')">
       <div class="seg-vring" style="background:conic-gradient(${AV_COLORS[r.ag]||'#E3C98A'} 0 ${Math.min(100,r.pctTotal)}%, rgba(var(--w),.12) ${Math.min(100,r.pctTotal)}% 100%)"><div class="seg-vinit">${r.ag[0]}</div></div>
-      <div style="width:80px"><div style="font-weight:700;font-size:12.5px">${r.ag}</div><div style="font-size:9px;color:var(--text3)">${r.pctTotal}% cumplido</div></div>
+      <div style="width:94px">
+        <div style="font-weight:700;font-size:12.5px">${r.ag}</div>
+        <div style="font-size:9px;color:var(--text3)">${r.pctTotal}% cumplido</div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--gold2);margin-top:3px">${fmtUSD(r.factMesAg)}</div>
+        <div class="ritmo-bar-wrap" style="height:5px;margin-top:3px"><div class="ritmo-bar" style="width:${Math.min(100,r.pctFactAg)}%;background:linear-gradient(90deg,var(--gold3),var(--gold))"></div></div>
+        <div style="font-size:8px;color:var(--text3);margin-top:2px">${r.pctFactAg}% de ${fmtUSD(r.objMesAg)}</div>
+      </div>
       <div class="seg-vstats">
         ${r.metricas.map(x=>`<div class="seg-vmetric"><span class="vm-lbl">${x.label}</span><div class="vm-bar-wrap"><div class="vm-bar" style="width:${x.obj>0?Math.min(100,Math.round(x.real/x.obj*100)):0}%;background:${x.color}"></div></div><span class="vm-val">${x.real}/${x.obj}</span></div>`).join('')}
       </div>
@@ -4382,6 +4397,11 @@ function renderSeguimiento(){
   const vendedor = segVendedorActivo || 'Martina';
   // Sincronizar select
   const selEl2 = document.getElementById('seg-vendedor-sel'); if(selEl2) selEl2.value = vendedor;
+  const selMesEl = document.getElementById('seg-mes-sel');
+  if(selMesEl){
+    if(!selMesEl.options.length) selMesEl.innerHTML = MESES_NOMBRES.slice(1).map((m,i)=>`<option value="${i+1}">${m}</option>`).join('');
+    selMesEl.value = segMesActivo;
+  }
   // Objetivo por mes específico
   const getObj = (m, key) => {
     return segObjetivos?.[vendedor]?.[m]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
@@ -4396,7 +4416,7 @@ function renderSeguimiento(){
   const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
   const objetivoBase = objetivoBaseVendedor(vendedor);
   const premioViaje = viajeUmbralVendedor(vendedor);
-  const mesHoy = new Date().getMonth()+1;
+  const mesHoy = segMesActivo || (new Date().getMonth()+1);
   const dMes = getSegMes(vendedor, mesHoy, anioSeg);
 
   // Merge datos reales + manuales + de operaciones cargadas
@@ -4588,67 +4608,21 @@ function renderSeguimiento(){
 }
 
 let fodaData = {}; // legacy, ya no se usa para generar pero se mantiene por compatibilidad de lectura
-let analisisVendedorData = {}; // {vendedor: {respuestas, analisis}}
-
-const PREGUNTAS_VENDEDOR = [
-  '¿Qué actividades sentís que te están dando mejores resultados este mes?',
-  '¿Dónde sentís que estás perdiendo más tiempo o energía?',
-  '¿Qué obstáculo concreto te está frenando para cerrar más operaciones?',
-  '¿Cómo te sentís con la carga de trabajo actual (sobrepasado, cómodo, con capacidad de más)?',
-  '¿Qué te gustaría aprender o mejorar para vender más?'
-];
-const PREGUNTAS_MARTINA_VENDEDOR = [
-  '¿Cómo ves la actitud y compromiso de este vendedor últimamente?',
-  '¿Cumple los acuerdos y plazos que se compromete a cumplir?',
-  '¿Notás mejora, estancamiento o retroceso comparado con meses anteriores?',
-  '¿Hay algo personal o externo que esté afectando su desempeño?',
-  '¿Qué tan alineado está con la cultura y objetivos de SOLUM?'
-];
-
+let analisisVendedorData = {}; // {vendedor: {analisis, fecha}}
+// Análisis automático: toma todos los datos reales del vendedor y los compara contra el resto
+// del equipo — sin cuestionario, un solo click.
 function iniciarAnalisisVendedor(){
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
-  let idx = 0;
-  const respuestas = { vendedor: [], martina: [] };
-
-  const container = document.getElementById('analisis-vendedor-content');
-  const totalPreguntas = PREGUNTAS_VENDEDOR.length + PREGUNTAS_MARTINA_VENDEDOR.length;
-
-  function renderPregunta(){
-    const esVendedor = idx < PREGUNTAS_VENDEDOR.length;
-    const pregunta = esVendedor ? PREGUNTAS_VENDEDOR[idx] : PREGUNTAS_MARTINA_VENDEDOR[idx-PREGUNTAS_VENDEDOR.length];
-    const quien = esVendedor ? `Pregunta para ${vendedor}` : 'Pregunta para vos (Martina)';
-    container.innerHTML = `
-      <div style="background:var(--card2);border-radius:var(--radius2);padding:20px;border:1px solid rgba(var(--w),0.06)">
-        <div style="font-size:11px;color:var(--gold2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${quien} · ${idx+1}/${totalPreguntas}</div>
-        <div style="font-size:14px;color:var(--text);margin-bottom:14px;font-weight:600">${pregunta}</div>
-        <textarea id="analisis-resp-input" rows="3" placeholder="Escribí tu respuesta..."
-          style="width:100%;background:var(--bg2);border:1px solid rgba(var(--w),0.1);border-radius:8px;padding:10px;color:var(--text);font-size:13px;outline:none;resize:vertical"></textarea>
-        <div style="display:flex;gap:8px;margin-top:12px">
-          <button class="btn btn-gold btn-sm" onclick="siguientePreguntaVendedor()">Siguiente</button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('analisis-vendedor-content').innerHTML=''">Cancelar</button>
-        </div>
-      </div>`;
-    document.getElementById('analisis-resp-input').focus();
-  }
-
-  window.siguientePreguntaVendedor = function(){
-    const val = document.getElementById('analisis-resp-input').value.trim();
-    if(idx < PREGUNTAS_VENDEDOR.length) respuestas.vendedor.push(val);
-    else respuestas.martina.push(val);
-    idx++;
-    if(idx < totalPreguntas) renderPregunta();
-    else generarAnalisisVendedorFinal(vendedor, respuestas);
-  };
-
-  renderPregunta();
+  generarAnalisisVendedorFinal(vendedor);
 }
 
-async function generarAnalisisVendedorFinal(vendedor, respuestas){
+async function generarAnalisisVendedorFinal(vendedor){
   const container = document.getElementById('analisis-vendedor-content');
-  container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3)">⏳ Generando análisis...</div>`;
+  container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3)">⏳ Analizando datos y comparando contra el equipo...</div>`;
 
+  const anio = new Date().getFullYear();
   const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
-  const getMd = m2 => getSegMes(vendedor, m2, new Date().getFullYear());
+  const getMd = m2 => getSegMes(vendedor, m2, anio);
   const mesActual = new Date().getMonth()+1;
   const allM = Array.from({length:mesActual},(_,i)=>i+1);
 
@@ -4660,13 +4634,20 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
     return `${met}: real=${real} obj=${objV*mesActual} cumpl=${pct}%`;
   }).join('\n');
 
-  const est = estadoNivelVendedor(vendedor, new Date().getFullYear());
+  const est = estadoNivelVendedor(vendedor, anio);
   const mesesRestantes = 12 - mesActual;
   const infoFacturacion = `Facturación bruta acumulada: ${est.facturacion} · Próximo hito de nivel: ${est.objetivoActual ?? 'nivel máximo alcanzado'} · % comisión vigente: ${Math.round(est.pctActual*100)}% · Meses restantes en el año: ${mesesRestantes}`;
 
-  const qa = PREGUNTAS_VENDEDOR.map((q,i)=>`P: ${q}\nR: ${respuestas.vendedor[i]||'(sin responder)'}`).join('\n\n')
-    + '\n\n--- Visión de Martina ---\n\n'
-    + PREGUNTAS_MARTINA_VENDEDOR.map((q,i)=>`P: ${q}\nR: ${respuestas.martina[i]||'(sin responder)'}`).join('\n\n');
+  // Comparación contra el resto del equipo (mismas 4 métricas clave del mes + facturación acumulada)
+  const comparacionEquipo = SEG_EQUIPO_AGENTES.map(ag=>{
+    const d = getSegMes(ag, mesActual, anio);
+    const o = segObjetivos?.[ag]?.[mesActual] || OBJ_BASE[ag] || OBJ_BASE['Martina'];
+    const metricas = ['cp','m','r','v'].map(k=>({k, real:d[k]||0, obj:o[k]||0}));
+    const pcts = metricas.filter(x=>x.obj>0).map(x=>Math.min(150,x.real/x.obj*100));
+    const pctTotal = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0;
+    const estAg = estadoNivelVendedor(ag, anio);
+    return `${ag}${ag===vendedor?' (este vendedor)':''}: cumplimiento del mes ${pctTotal}% · facturación acumulada $${Math.round(estAg.facturacion)}`;
+  }).join('\n');
 
   try {
     const resp = await fetch('/.netlify/functions/claude', {
@@ -4675,24 +4656,24 @@ async function generarAnalisisVendedorFinal(vendedor, respuestas){
       body: JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:1200,
-        system:`Sos un consultor experto en inteligencia comercial y generación de cartera para inmobiliarias del mercado argentino (Rosario/Cañada de Gómez). Analizás el desempeño de un asesor inmobiliario combinando datos duros (métricas de actividad) con las respuestas cualitativas del propio vendedor y de su jefa.
+        system:`Sos un consultor experto en inteligencia comercial y generación de cartera para inmobiliarias del mercado argentino (Rosario/Cañada de Gómez). Analizás el desempeño de un asesor inmobiliario combinando sus métricas de actividad y facturación con una comparación directa contra el resto del equipo — sin cuestionarios, solo datos duros.
 Criterio importante: la prospección no siempre tiene una relación directa con la captación. Parte de la prospección es indirecta — busca instalar al vendedor en el "top of mind" de la gente (redes, contacto recurrente, presencia) — y no necesariamente se traduce en una captación o venta inmediata. No trates una prospección alta con captación baja como automáticamente "ineficaz"; consideralo un resultado esperable de la prospección indirecta, salvo que el patrón se sostenga muchos meses sin ningún resultado.
-Generá un diagnóstico profesional, directo y accionable. Estructura en 5 bloques cortos (2-4 líneas cada uno), sin markdown ni bullets, texto plano con saltos de línea:
-1. DIAGNÓSTICO: cómo viene realmente el vendedor combinando números + percepción
+Generá un diagnóstico profesional, directo y accionable, apoyado explícitamente en cómo se ubica este vendedor respecto del resto del equipo (quién lo supera, en qué, y por cuánto). Estructura en 5 bloques cortos (2-4 líneas cada uno), sin markdown ni bullets, texto plano con saltos de línea:
+1. DIAGNÓSTICO: cómo viene realmente el vendedor, en números, y dónde se ubica frente al equipo
 2. CAUSA RAÍZ: por qué está pasando esto (no solo qué)
 3. ACCIÓN INMEDIATA: 2-3 acciones concretas para las próximas 2 semanas
-4. SEÑAL DE ALERTA: si hay algo preocupante en la actitud o consistencia que Martina debería vigilar (si no hay, decir que no hay señales de alerta)
+4. SEÑAL DE ALERTA: si hay algo preocupante en la consistencia o el ritmo que Martina debería vigilar (si no hay, decir que no hay señales de alerta)
 5. PLAN AL OBJETIVO: qué tiene que hacer concretamente el vendedor para llegar a su objetivo de facturación de acá a fin de año (actividades a sostener/aumentar, no solo el número), y cómo recomendás repartir el objetivo restante mes a mes considerando la estacionalidad del rubro inmobiliario (los últimos meses del año concentran más cierre de operaciones que el arranque)
 Respondé en JSON: {"diagnostico":"...","causa":"...","accion":"...","alerta":"...","planObjetivo":"..."}`,
-        messages:[{role:'user',content:`Vendedor: ${vendedor}\n\nMétricas del año (hasta mes ${mesActual}):\n${resumen}\n\n${infoFacturacion}\n\nRespuestas:\n${qa}`}]
+        messages:[{role:'user',content:`Vendedor: ${vendedor}\n\nMétricas del año (hasta mes ${mesActual}):\n${resumen}\n\n${infoFacturacion}\n\nComparación contra el resto del equipo (mes actual):\n${comparacionEquipo}`}]
       })
     });
     const data = await resp.json();
     const text = data.content?.[0]?.text||'{}';
     const analisis = JSON.parse(text.replace(/```json|```/g,'').trim());
 
-    analisisVendedorData[vendedor] = { respuestas, analisis, fecha: new Date().toISOString() };
-    dbGuardar('analisis_vendedor', [Date.now(), vendedor, JSON.stringify(respuestas), JSON.stringify(analisis)]);
+    analisisVendedorData[vendedor] = { analisis, fecha: new Date().toISOString() };
+    dbGuardar('analisis_vendedor', [Date.now(), vendedor, '', JSON.stringify(analisis)]);
 
     renderAnalisisVendedor(vendedor, analisis);
   } catch(e) {
@@ -4736,7 +4717,7 @@ function loadFoda(vendedor){
     const container = document.getElementById('analisis-vendedor-content');
     if(container) container.innerHTML = `
       <div style="background:var(--card2);border-radius:var(--radius2);padding:20px;border:1px solid rgba(var(--w),0.06);text-align:center;color:var(--text3);font-size:13px">
-        Hacé click en "Generar análisis" para responder 10 preguntas rápidas y recibir un diagnóstico profesional.
+        Hacé click en "Generar análisis" para obtener un diagnóstico automático a partir de sus datos reales, comparado contra el resto del equipo.
       </div>`;
   }
 }
