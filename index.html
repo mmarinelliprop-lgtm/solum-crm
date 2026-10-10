@@ -710,10 +710,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 <div class="tab-content" id="tab-operaciones-content">
   <div class="section-header">
     <div><div class="section-title">Operaciones</div><div class="section-sub">Listado completo con estado de cobro</div></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-outline" onclick="openBuscarCliente()">👤 Ficha de cliente</button>
-      <button class="btn btn-gold" onclick="openNuevaOp()">+ Nueva operación</button>
-    </div>
+    <button class="btn btn-gold" onclick="openNuevaOp()">+ Nueva operación</button>
   </div>
 
   <div class="filters" id="ops-filters">
@@ -1757,14 +1754,14 @@ async function cargarDatosDB() {
       const porId = {};
       captRows.slice(1).forEach(r=>{
         const [id,clienteId,agente,direccion,tipo,zona,precioUSD,dormitorios,fechaInicio,fechaPublicacion,
-               prelisting,acm,documentacion,fotos,publicacion,descartada,fechaDescarte,motivoDescarte] = r;
+               prelisting,acm,documentacion,fotos,publicacion,estado,fechaCierre,motivoCierre] = r;
         if(!id) return;
         porId[id] = {id,clienteId,agente,direccion,tipo,zona,precioUSD:parseFloat(precioUSD)||0,dormitorios:parseInt(dormitorios)||0,
           fechaInicio,fechaPublicacion,
           prelisting:prelisting===true||prelisting==='true', acm:acm===true||acm==='true',
           documentacion:documentacion===true||documentacion==='true', fotos:fotos===true||fotos==='true',
           publicacion:publicacion===true||publicacion==='true',
-          descartada:descartada===true||descartada==='true', fechaDescarte, motivoDescarte};
+          estado: estado||'activa', fechaCierre, motivoCierre};
       });
       captaciones = Object.values(porId);
     }
@@ -5051,7 +5048,7 @@ function filaCliente(c){ return [c.id, c.nombre||'', c.cuit||'', c.mail||'', c.t
 function filaCaptacion(c){
   return [c.id, c.clienteId, c.agente||'', c.direccion||'', c.tipo||'', c.zona||'', c.precioUSD||0, c.dormitorios||0,
     c.fechaInicio||'', c.fechaPublicacion||'', !!c.prelisting, !!c.acm, !!c.documentacion, !!c.fotos, !!c.publicacion,
-    !!c.descartada, c.fechaDescarte||'', c.motivoDescarte||''];
+    c.estado||'activa', c.fechaCierre||'', c.motivoCierre||''];
 }
 function filaBusqueda(b){
   return [b.id, b.clienteId, b.agente||'', b.tipoPunta||'Búsqueda', b.propiedadRelacionada||'', b.criterios||'',
@@ -5087,37 +5084,90 @@ function crearClienteDesdeBusqueda(){
   abrirFichaCliente(c.id);
 }
 
+let fichaClienteActivaId = null;
 function abrirFichaCliente(clienteId){
+  fichaClienteActivaId = clienteId;
   renderFichaCliente(clienteId);
   openModal('modalFichaCliente');
+}
+// Refresca cualquier vista de captaciones/búsquedas que esté visible en este momento:
+// el modal de ficha de cliente (si está abierto) y/o la sección dentro de la ficha del vendedor.
+function refrescarCaptBusq(clienteId){
+  if(fichaClienteActivaId && !document.getElementById('modalFichaCliente').classList.contains('hidden')){
+    renderFichaCliente(fichaClienteActivaId);
+  }
+  const captVEl = document.getElementById('seg-v-captaciones');
+  const busqVEl = document.getElementById('seg-v-busquedas');
+  if(captVEl || busqVEl){
+    const vendedor = segVendedorActivo || 'Martina';
+    if(captVEl) captVEl.innerHTML = captCardsHTML(captaciones.filter(x=>normAgente(x.agente)===normAgente(vendedor)));
+    if(busqVEl) busqVEl.innerHTML = busqCardsHTML(busquedas.filter(x=>normAgente(x.agente)===normAgente(vendedor)));
+  }
 }
 
 const FC_ETAPAS = [['prelisting','Prelisting'],['acm','ACM'],['documentacion','Documentación'],['fotos','Fotos'],['publicacion','Publicación']];
 
+// Estados posibles de una captación:
+//  'activa'         → en el pipeline, se ve como tarjeta con las 5 etapas
+//  'descartada'      → nunca llegó a publicarse, se descartó antes (reactivable)
+//  'vendida_propia'  → se publicó y el agente que la captó cerró la venta
+//  'vendida_otro'    → se publicó y se vendió por fuera de SOLUM (dueño/otra inmobiliaria)
+//  'baja'            → se publicó pero el dueño se arrepintió de vender y la bajó
+const CAPT_RESULTADO_LABEL = {vendida_propia:'Vendido por mí', vendida_otro:'Vendido por otro', baja:'Baja', descartada:'Descartada'};
+const CAPT_RESULTADO_COLOR = {vendida_propia:'var(--green)', vendida_otro:'var(--blue)', baja:'var(--amber)', descartada:'var(--red)'};
+
 function captCardsHTML(capts){
   const etapas = FC_ETAPAS;
-  return capts.map(cap=>{
+  const activas = capts.filter(c=>c.estado==='activa');
+  const cerradas = capts.filter(c=>c.estado!=='activa');
+
+  const tarjetas = activas.map(cap=>{
     const completas = etapas.filter(([k])=>cap[k]).length;
     const pct = Math.round(completas/etapas.length*100);
     const desvio = cap.publicacion && completas < etapas.length;
     return `
-    <div class="capt-card ${desvio?'desvio':''} ${cap.descartada?'descartada':''}">
+    <div class="capt-card ${desvio?'desvio':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div><div style="font-weight:700;font-size:13px">${cap.direccion}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${fmtN2(cap.precioUSD)}</div></div>
-        ${cap.descartada ? `<span class="fc-status" style="background:var(--redbg);color:var(--red)">Descartada</span>` : desvio ? `<span class="fc-status" style="background:var(--amberbg);color:var(--amber)">⚠ desvío</span>` : `<div style="font-weight:800;color:var(--gold2)">${pct}%</div>`}
+        ${desvio ? `<span class="fc-status" style="background:var(--amberbg);color:var(--amber)">⚠ desvío</span>` : `<div style="font-weight:800;color:var(--gold2)">${pct}%</div>`}
       </div>
-      ${!cap.descartada ? `
       <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
         ${etapas.map(([k,l])=>`<span class="fc-chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
       </div>
       <div style="height:5px;background:rgba(var(--w),.1);border-radius:3px;margin-top:9px;overflow:hidden"><div style="height:5px;width:${pct}%;background:var(--green)"></div></div>
+      ${cap.publicacion ? `
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <span class="fc-chip" style="color:var(--green)" onclick="cerrarCaptacion('${cap.id}','vendida_propia')">Vendido por mí</span>
+        <span class="fc-chip" style="color:var(--blue)" onclick="cerrarCaptacion('${cap.id}','vendida_otro')">Vendido por otro</span>
+        <span class="fc-chip" style="color:var(--amber)" onclick="cerrarCaptacion('${cap.id}','baja')">Baja</span>
+      </div>` : `
       <div style="display:flex;gap:8px;margin-top:10px">
         <span class="fc-chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span>
-      </div>` : `
-      <div style="font-size:10px;color:var(--text3);margin-top:8px">${cap.motivoDescarte||'Sin motivo'} · ${cap.fechaDescarte||''}</div>
-      <div style="display:flex;gap:8px;margin-top:10px"><span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span></div>`}
+      </div>`}
     </div>`;
-  }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin captaciones cargadas</div>';
+  }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin captaciones activas</div>';
+
+  const planillaHTML = cerradas.length ? `
+    <div class="table-wrap" style="margin-top:4px">
+      <table>
+        <thead><tr><th style="text-align:left">Dirección</th><th>Precio</th><th>Agente</th><th>Publicación</th><th>Cierre</th><th>Resultado</th><th>Motivo</th><th></th></tr></thead>
+        <tbody>
+          ${cerradas.map(cap=>`
+          <tr>
+            <td class="metric">${cap.direccion}</td>
+            <td>USD ${fmtN2(cap.precioUSD)}</td>
+            <td>${cap.agente||''}</td>
+            <td>${cap.fechaPublicacion||'—'}</td>
+            <td>${cap.fechaCierre||'—'}</td>
+            <td style="color:${CAPT_RESULTADO_COLOR[cap.estado]||'var(--text)'};font-weight:700">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</td>
+            <td style="font-size:10px;color:var(--text3)">${cap.motivoCierre||'—'}</td>
+            <td>${cap.estado==='descartada' ? `<span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span>` : ''}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>` : '';
+
+  return `<div class="capt-grid">${tarjetas}</div>${planillaHTML ? `<div style="font-size:11px;font-weight:700;color:var(--text3);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em">Historial (publicadas/descartadas)</div>${planillaHTML}` : ''}`;
 }
 
 function busqCardsHTML(busqs){
@@ -5159,7 +5209,7 @@ function renderFichaCliente(clienteId){
       <div style="font-size:13px;font-weight:700">Captaciones</div>
       <span class="fc-chip" onclick="nuevaCaptacion('${c.id}')">+ Nueva captación</span>
     </div>
-    <div class="capt-grid">${captCardsHTML(capts)}</div>
+    ${captCardsHTML(capts)}
     <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px">
       <div style="font-size:13px;font-weight:700">Búsquedas y consultas</div>
       <span class="fc-chip" onclick="nuevaBusqueda('${c.id}')">+ Nueva consulta</span>
@@ -5174,7 +5224,8 @@ function nuevaCaptacion(clienteId){
   const zona = prompt('Zona/barrio:') || '';
   const precioUSD = parseFloat(prompt('Precio USD:', '0')) || 0;
   const cap = {id:'cap'+Date.now(), clienteId, agente:segVendedorActivo||'Martina', direccion, tipo, zona, precioUSD,
-    dormitorios:0, fechaInicio:fechaHoyDDMM(), fechaPublicacion:'', prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:false, descartada:false};
+    dormitorios:0, fechaInicio:fechaHoyDDMM(), fechaPublicacion:'', prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:false,
+    estado:'activa', fechaCierre:'', motivoCierre:''};
   captaciones.push(cap);
   guardarCaptacion(cap);
   renderFichaCliente(clienteId);
@@ -5184,20 +5235,29 @@ function toggleEtapaCaptacion(capId, etapa){
   cap[etapa] = !cap[etapa];
   if(etapa==='publicacion') cap.fechaPublicacion = cap.publicacion ? fechaHoyDDMM() : '';
   guardarCaptacion(cap);
-  renderFichaCliente(cap.clienteId);
+  refrescarCaptBusq(cap.clienteId);
 }
 function descartarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
   const motivo = prompt('Motivo del descarte:') || '';
-  cap.descartada = true; cap.fechaDescarte = fechaHoyDDMM(); cap.motivoDescarte = motivo;
+  cap.estado = 'descartada'; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = motivo;
   guardarCaptacion(cap);
-  renderFichaCliente(cap.clienteId);
+  refrescarCaptBusq(cap.clienteId);
 }
 function reactivarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  cap.descartada = false; cap.fechaDescarte = ''; cap.motivoDescarte = '';
+  cap.estado = 'activa'; cap.fechaCierre = ''; cap.motivoCierre = '';
   guardarCaptacion(cap);
-  renderFichaCliente(cap.clienteId);
+  refrescarCaptBusq(cap.clienteId);
+}
+// Cierra una captación ya publicada: vendida_propia / vendida_otro / baja
+function cerrarCaptacion(capId, resultado){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  let motivo = '';
+  if(resultado==='baja') motivo = prompt('Motivo de la baja (opcional):') || '';
+  cap.estado = resultado; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = motivo;
+  guardarCaptacion(cap);
+  refrescarCaptBusq(cap.clienteId);
 }
 
 function nuevaBusqueda(clienteId){
@@ -5215,26 +5275,26 @@ function agregarMuestraBusqueda(busId){
   const propiedad = prompt('Propiedad mostrada:') || '';
   b.muestras = (b.muestras||[]).concat([{fecha:fechaHoyDDMM(), propiedad}]);
   guardarBusqueda(b);
-  renderFichaCliente(b.clienteId);
+  refrescarCaptBusq(b.clienteId);
 }
 function marcarReservaBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
   b.estado = 'reservada'; b.fechaReserva = fechaHoyDDMM();
   guardarBusqueda(b);
-  renderFichaCliente(b.clienteId);
+  refrescarCaptBusq(b.clienteId);
 }
 function marcarEscrituraBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
   b.estado = 'escriturada'; b.fechaEscritura = fechaHoyDDMM();
   guardarBusqueda(b);
-  renderFichaCliente(b.clienteId);
+  refrescarCaptBusq(b.clienteId);
 }
 function descartarBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
   const motivo = prompt('Motivo del descarte:') || '';
   b.estado = 'descartada'; b.fechaDescarte = fechaHoyDDMM(); b.motivoDescarte = motivo;
   guardarBusqueda(b);
-  renderFichaCliente(b.clienteId);
+  refrescarCaptBusq(b.clienteId);
 }
 
 function diasHabilesEnMes(lunes, viernes, mes, anio) {
