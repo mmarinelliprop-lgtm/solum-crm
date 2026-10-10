@@ -35,6 +35,7 @@ Igual que la búsqueda, pero priorizá similitud con la propiedad a tasar (misma
 ## Cómo acceder a los portales
 
 - Probá primero WebFetch: es rápido. Si devuelve bloqueo, captcha, 403 o contenido vacío (Zonaprop y MercadoLibre suelen hacerlo), pasá al navegador integrado (navigate + get_page_text). Los datos suelen estar también en el JSON embebido de la página (`javascript_tool` leyendo `window.__PRELOADED_STATE__` o los `<script type="application/ld+json">`), que es más confiable que parsear el texto.
+- Si corrés en la nube (sin navegador integrado, solo WebFetch/WebSearch): intentá cada portal una sola vez; si devuelve bloqueo o contenido vacío, no reintentes. Anotalo en las notas ("Zonaprop: bloqueado sin navegador") y seguí con los portales que sí se pueden leer. Probá también una variante del link (versión móvil, o buscar la publicación por ID/dirección con WebSearch) antes de rendirte.
 - Trabajá solo con texto: no tenés capturas de pantalla y no las uses. Leé con `get_page_text` (o `javascript_tool` devolviendo solo los campos que necesitás, en vez de volcar la página entera) y `read_page` si necesitás estructura. Es más rápido y gasta muchos menos tokens. Para paginar o filtrar, navegá directo a la URL con los parámetros en lugar de hacer clic.
 - Si un portal pide captcha o login, no lo resuelvas ni intentes saltearlo: avisá al usuario y seguí con los otros portales.
 - Sé amable con los sitios: no dispares decenas de requests seguidos; limitá a lo necesario.
