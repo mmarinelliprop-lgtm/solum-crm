@@ -1076,31 +1076,60 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 ══════════════════════════════════════════════ -->
 <div class="tab-content" id="tab-seguimiento-content">
 
-  <!-- ══ PANTALLA: RESUMEN MENSUAL DEL EQUIPO (landing de Seguimiento) ══ -->
+  <!-- ══ PANTALLA: RESUMEN MENSUAL DEL EQUIPO (landing de Seguimiento) — mismo grid/estilo que el Dashboard ══ -->
   <div id="seg-vista-equipo">
     <div class="section-header">
       <div><div class="section-title">RESUMEN MENSUAL SOLUMITOS</div></div>
       <div class="filters"><select class="filter-select" id="seg-eq-mes" onchange="renderSeguimientoEquipo()"></select></div>
     </div>
 
-    <!-- Tarjeta grande: facturación del MES (no acumulado anual) + ritmo de captaciones + acciones semanales -->
-    <div class="seg-eq-hero" id="seg-eq-hero" style="align-items:center"></div>
-
-    <!-- Embudos del mes (captación y venta, agregados del equipo) -->
-    <div class="seg-eq-hero">
-      <div class="seg-eq-col">
-        <div class="funnel-title">EMBUDO DE<br>CAPTACIÓN</div>
-        <div class="funnel-wrap" id="seg-eq-funnel-capt"></div>
+    <div class="dg">
+      <!-- COBRADO del mes -->
+      <div class="glass hero">
+        <svg class="mesh" viewBox="0 0 600 260" preserveAspectRatio="none" fill="none" stroke-width="1"><g id="seg-eq-meshg"></g></svg>
+        <div class="hero-l">
+          <div class="hero-head">
+            <h2>Cobrado</h2>
+            <svg viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+            <span class="caidas-mini" id="seg-eq-caidas"></span>
+          </div>
+          <div class="big" id="seg-eq-big"></div>
+          <div class="bar-wrap">
+            <div class="bar">
+              <div class="s-cobr" id="seg-eq-b1"></div>
+              <div class="s-porc" id="seg-eq-b2"></div>
+              <div class="s-pend" id="seg-eq-b3"></div>
+            </div>
+            <div class="scale"><span>0</span><span id="seg-eq-scale"></span></div>
+            <div class="legend" id="seg-eq-legend"></div>
+          </div>
+        </div>
+        <div class="hero-r">
+          <div class="date-row"><span id="seg-eq-periodo"></span><div class="ring" id="seg-eq-ring"></div></div>
+          <div class="hud" id="seg-eq-hud"></div>
+        </div>
       </div>
-      <div class="seg-eq-divider"></div>
-      <div class="seg-eq-col">
-        <div class="funnel-title">EMBUDO DE<br>VENTA</div>
-        <div class="funnel-wrap" id="seg-eq-funnel-venta"></div>
+
+      <!-- RITMO DE CAPTACIONES + RANKING DEL EQUIPO -->
+      <div class="glass rank">
+        <div class="eyebrow">Ritmo de captaciones</div>
+        <div id="seg-eq-ritmo"></div>
+        <div class="eyebrow" style="margin-top:18px">Ranking del equipo</div>
+        <div id="seg-eq-ranking" style="display:flex;flex-direction:column;gap:6px;max-height:520px;overflow-y:auto"></div>
+      </div>
+
+      <!-- EMBUDOS del mes -->
+      <div class="bottom">
+        <div class="chart-card">
+          <div class="eyebrow">Embudo de captación</div>
+          <div class="funnel-wrap" id="seg-eq-funnel-capt" style="margin-top:10px"></div>
+        </div>
+        <div class="chart-card">
+          <div class="eyebrow">Embudo de venta</div>
+          <div class="funnel-wrap" id="seg-eq-funnel-venta" style="margin-top:10px"></div>
+        </div>
       </div>
     </div>
-
-    <div class="section-header"><div class="section-title" style="font-size:14px">Ranking de cumplimiento del mes</div></div>
-    <div id="seg-eq-ranking" style="display:flex;flex-direction:column;gap:6px;margin-bottom:24px"></div>
   </div>
 
   <!-- ══ PANTALLA: FICHA INDIVIDUAL DEL VENDEDOR (ya existente, sin cambios de lógica) ══ -->
@@ -1353,11 +1382,15 @@ syncThemeIcon();
     d.style.cssText = `width:${s}px;height:${s}px;left:${r()*100}%;top:${r()*100}%;background:${cols[Math.floor(r()*cols.length)]};`;
     b.appendChild(d);
   }
-  const g = document.getElementById('meshg'); if(!g) return;
-  let s2 = 3; const r2 = () => { s2 = (s2*9301+49297)%233280; return s2/233280; };
-  const pts = Array.from({length:16},()=>[r2()*600,r2()*260]); let h = '';
-  pts.forEach((p,i)=>{ pts.slice(i+1).forEach(q=>{ if(Math.hypot(p[0]-q[0],p[1]-q[1])<150) h+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}"/>`; }); h+=`<circle cx="${p[0]}" cy="${p[1]}" r="2.5"/>`; });
-  g.innerHTML = h;
+  const drawMesh = (id, seed0) => {
+    const g = document.getElementById(id); if(!g) return;
+    let s2 = seed0; const r2 = () => { s2 = (s2*9301+49297)%233280; return s2/233280; };
+    const pts = Array.from({length:16},()=>[r2()*600,r2()*260]); let h = '';
+    pts.forEach((p,i)=>{ pts.slice(i+1).forEach(q=>{ if(Math.hypot(p[0]-q[0],p[1]-q[1])<150) h+=`<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}"/>`; }); h+=`<circle cx="${p[0]}" cy="${p[1]}" r="2.5"/>`; });
+    g.innerHTML = h;
+  };
+  drawMesh('meshg', 3);
+  drawMesh('seg-eq-meshg', 11);
 })();
 
 // ═══════════════════════════════════════════════
@@ -4055,12 +4088,40 @@ function renderSeguimientoEquipo(){
   const diaHoy = esMesActual ? hoy.getDate() : diasDelMes;
   const fraccionMes = diaHoy/diasDelMes;
 
-  // ── Facturación del mes (equipo, sin Martina) ──
-  const factMes = operaciones.filter(o=>SEG_EQUIPO_AGENTES.includes(normAgente(o.agente)) && o.anio===anio && o.mes===mes && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
+  // ── Cobrado del mes (equipo, sin Martina) — mismo desglose que el Dashboard pero mensual ──
+  const opsMes = operaciones.filter(o=>SEG_EQUIPO_AGENTES.includes(normAgente(o.agente)) && o.anio===anio && o.mes===mes);
+  const factMes = opsMes.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
+  const porCobrarMes = opsMes.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  const pendienteMes = opsMes.filter(o=>o.estado==='Pendiente').reduce((s,o)=>s+(o.comision||0),0);
+  const caidasMes = opsMes.filter(o=>o.estado==='Caída');
+  const montoCaidasMes = caidasMes.reduce((s,o)=>s+(o.comision||0),0);
   const objMes = Math.round(OBJETIVO_EQUIPO_ANUAL * pesoMensual(mes));
   const objMesAHoy = Math.round(objMes * fraccionMes);
-  const pctFactMes = objMes>0 ? Math.min(999, Math.round(factMes/objMes*100)) : 0;
-  const pctObjHoy = objMes>0 ? Math.round(objMesAHoy/objMes*100) : 0;
+  const pc = v => objMes>0 ? Math.min(100, v/objMes*100) : 0;
+  const pctCobrado = objMes>0 ? Math.round(factMes/objMes*100) : 0;
+  const b1 = pc(factMes), b2 = Math.min(100-b1, pc(porCobrarMes)), b3 = Math.min(100-b1-b2, pc(pendienteMes));
+  const proyectadoMes = factMes + porCobrarMes; // dentro del mes, lo cobrado + lo ya reservado y por cobrar
+  const pctProy = objMes ? Math.round((proyectadoMes/objMes-1)*1000)/10 : 0;
+
+  document.getElementById('seg-eq-big').innerHTML = `${fmtUSD(factMes)}<small>USD</small>`;
+  document.getElementById('seg-eq-b1').style.width = b1+'%';
+  document.getElementById('seg-eq-b2').style.width = b2+'%';
+  document.getElementById('seg-eq-b3').style.width = b3+'%';
+  document.getElementById('seg-eq-scale').textContent = `Objetivo: ${fmtUSD(objMes)} · ${pctCobrado}% cobrado`;
+  document.getElementById('seg-eq-caidas').textContent = `Caídas: ${caidasMes.length} · ${fmtUSD(montoCaidasMes)}`;
+  document.getElementById('seg-eq-legend').innerHTML = `
+    <div class="lg"><i class="s-cobr"></i>Cobrado: <b>${fmtUSD(factMes)}</b></div>
+    <div class="lg"><i class="s-porc"></i>Por cobrar: <b>${fmtUSD(porCobrarMes)}</b></div>
+    <div class="lg" title="Reservas hechas pero todavía no aceptadas por ambas partes"><i class="s-pend"></i>Pendiente: <b>${fmtUSD(pendienteMes)}</b></div>`;
+  document.getElementById('seg-eq-periodo').textContent = MESES_NOMBRES[mes] + ' ' + anio;
+  document.getElementById('seg-eq-ring').style.background = `conic-gradient(var(--green) 0 ${Math.min(100,pctCobrado)}%,rgba(var(--w),.12) ${Math.min(100,pctCobrado)}% 100%)`;
+  document.getElementById('seg-eq-hud').innerHTML = `
+    <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--green)"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></div>
+      <div><div class="m-l">Objetivo mensual</div><div class="m-v">${fmtUSD(objMes)}</div></div></div>
+    <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--green)"><path d="M6 18L18 6"/><path d="M9 6h9v9"/></svg></div>
+      <div><div class="m-l">Proyectado de cierre</div><div class="m-v">${fmtUSD(proyectadoMes)}<span class="pill" style="${pctProy<0?'background:var(--amberbg);color:var(--amber)':''}">${pctProy>=0?'+':''}${pctProy}%</span></div></div></div>
+    <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--amber)"><path d="M5 4h14M5 20h14M7 4v3l5 5-5 5v3M17 4v3l-5 5 5 5v3"/></svg></div>
+      <div><div class="m-l">Falta para el objetivo</div><div class="m-v">${fmtUSD(Math.max(0,objMes-factMes))}</div></div></div>`;
 
   // ── Ritmo de captaciones del equipo (cp real vs. objetivo del mes, prorrateado a hoy) ──
   let cpReal=0, cpObj=0;
@@ -4071,40 +4132,15 @@ function renderSeguimientoEquipo(){
   const cpObjHoy = Math.round(cpObj * fraccionMes);
   const enRitmoCaptaciones = cpReal >= cpObjHoy;
 
-  // ── Acciones semanales del equipo (semana que contiene hoy) ──
-  const accPcts = SEG_EQUIPO_AGENTES.map(v=>accionesSemanaPct(v, mes, anio)).filter(p=>p!==null);
-  const accPromedio = accPcts.length ? Math.round(accPcts.reduce((a,b)=>a+b,0)/accPcts.length) : null;
-
-  const eqHero = document.getElementById('seg-eq-hero');
-  eqHero.innerHTML = `
-    <div class="seg-eq-col" style="flex:1.3">
-      <div class="m-l" style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);font-weight:700">FACTURACIÓN DEL MES — ${MESES_NOMBRES[mes]}</div>
-      <div style="font-size:30px;font-weight:800;margin-top:4px">${fmtUSD(factMes)}<small style="font-size:12px;color:var(--text3);font-weight:600"> / ${fmtUSD(objMes)} · ${pctFactMes}%</small></div>
-      <div class="fact-bar-wrap" style="margin-top:12px">
-        <div class="fact-bar-fill" style="width:${Math.min(100,pctFactMes)}%"></div>
-        ${esMesActual?`<div class="fact-marker" style="left:${Math.min(100,pctObjHoy)}%"></div><div class="fact-marker-lbl" style="left:${Math.min(100,pctObjHoy)}%">Hoy ${pctObjHoy}%</div>`:''}
-        <div class="fact-marker" style="left:100%"></div><div class="fact-marker-lbl" style="left:100%;transform:translateX(-100%)">100%</div>
-      </div>
+  document.getElementById('seg-eq-ritmo').innerHTML = `
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:6px">
+      <div style="font-size:26px;font-weight:800">${cpReal} <span style="font-size:13px;color:var(--text3);font-weight:600">de ${cpObj}</span></div>
+      <div class="seg-ritmo-tag ${enRitmoCaptaciones?'ok':'late'}" style="font-size:10px;padding:4px 11px">${enRitmoCaptaciones?'● En ritmo':'● Atrasado'}</div>
     </div>
-    <div class="seg-eq-divider"></div>
-    <div class="seg-eq-col">
-      <div class="hero-head" style="font-size:11px;margin-bottom:6px">Ritmo de captaciones</div>
-      <div style="display:flex;align-items:baseline;justify-content:space-between">
-        <div style="font-size:19px;font-weight:800">${cpReal} <span style="font-size:11px;color:var(--text3);font-weight:600">de ${cpObj}</span></div>
-        <div class="seg-ritmo-tag ${enRitmoCaptaciones?'ok':'late'}">${enRitmoCaptaciones?'● En ritmo':'● Atrasado'}</div>
-      </div>
-      <div class="ritmo-bar-wrap" style="margin-top:6px">
-        <div class="ritmo-bar" style="width:${cpObj?Math.min(100,Math.round(cpReal/cpObj*100)):0}%;background:linear-gradient(90deg,var(--gold3),var(--gold))"></div>
-      </div>
-      <div style="font-size:9px;color:var(--text3);margin-top:4px">Objetivo a hoy: ${cpObjHoy} · día ${diaHoy} de ${diasDelMes}</div>
+    <div class="ritmo-bar-wrap" style="margin-top:8px;height:16px">
+      <div class="ritmo-bar" style="width:${cpObj?Math.min(100,Math.round(cpReal/cpObj*100)):0}%;background:linear-gradient(90deg,var(--gold3),var(--gold))"></div>
     </div>
-    <div class="seg-eq-divider"></div>
-    <div class="seg-eq-col" style="align-items:center">
-      <div class="hero-head" style="font-size:11px;margin-bottom:6px">Acciones semanales</div>
-      <div class="seg-pie" style="background:${accPromedio===null?'rgba(var(--w),.1)':`conic-gradient(var(--green) 0 ${accPromedio}%, rgba(var(--w),.15) ${accPromedio}% 100%)`}"></div>
-      <div style="font-size:11px;font-weight:800;margin-top:6px">${accPromedio===null?'Sin semana vigente':accPromedio+'% cumplidas'}</div>
-      <div style="font-size:9px;color:var(--text3)">Semana actual del equipo</div>
-    </div>`;
+    <div style="font-size:10px;color:var(--text3);margin-top:5px">Objetivo a hoy: ${cpObjHoy} · día ${diaHoy} de ${diasDelMes}</div>`;
 
   // ── Embudos del mes (agregado del equipo): p→ec→acm→cp y m→r→v ──
   let p=0,ec=0,acm=0,cp=0,m=0,r=0,v=0;
