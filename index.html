@@ -1215,6 +1215,14 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     <!-- Resumen mensual y anual del vendedor -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" id="seg-resumenes"></div>
 
+    <!-- Captaciones y búsquedas/consultas del vendedor seleccionado -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:700;color:var(--text)">📋 Captaciones en curso</div>
+    </div>
+    <div class="capt-grid" id="seg-v-captaciones" style="margin-bottom:20px"></div>
+    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px">🔎 Búsquedas y consultas</div>
+    <div class="capt-grid" id="seg-v-busquedas" style="margin-bottom:20px"></div>
+
     <!-- Análisis de Inteligencia Empresarial -->
     <div style="margin-bottom:24px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -4585,6 +4593,12 @@ function renderSeguimiento(){
       </div>`;
   }
 
+  // Captaciones y búsquedas/consultas del vendedor seleccionado (reutiliza las tarjetas de la ficha de cliente)
+  const captVEl = document.getElementById('seg-v-captaciones');
+  if(captVEl) captVEl.innerHTML = captCardsHTML(captaciones.filter(x=>normAgente(x.agente)===normAgente(vendedor)));
+  const busqVEl = document.getElementById('seg-v-busquedas');
+  if(busqVEl) busqVEl.innerHTML = busqCardsHTML(busquedas.filter(x=>normAgente(x.agente)===normAgente(vendedor)));
+
   // ── Análisis IA ──
   loadFoda(vendedor);
 
@@ -5078,14 +5092,11 @@ function abrirFichaCliente(clienteId){
   openModal('modalFichaCliente');
 }
 
-function renderFichaCliente(clienteId){
-  const c = clientes.find(x=>x.id===clienteId);
-  if(!c) return;
-  const capts = captaciones.filter(x=>x.clienteId===clienteId);
-  const busqs = busquedas.filter(x=>x.clienteId===clienteId);
-  const etapas = [['prelisting','Prelisting'],['acm','ACM'],['documentacion','Documentación'],['fotos','Fotos'],['publicacion','Publicación']];
+const FC_ETAPAS = [['prelisting','Prelisting'],['acm','ACM'],['documentacion','Documentación'],['fotos','Fotos'],['publicacion','Publicación']];
 
-  const captHTML = capts.map(cap=>{
+function captCardsHTML(capts){
+  const etapas = FC_ETAPAS;
+  return capts.map(cap=>{
     const completas = etapas.filter(([k])=>cap[k]).length;
     const pct = Math.round(completas/etapas.length*100);
     const desvio = cap.publicacion && completas < etapas.length;
@@ -5107,8 +5118,10 @@ function renderFichaCliente(clienteId){
       <div style="display:flex;gap:8px;margin-top:10px"><span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span></div>`}
     </div>`;
   }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin captaciones cargadas</div>';
+}
 
-  const busqHTML = busqs.map(b=>{
+function busqCardsHTML(busqs){
+  return busqs.map(b=>{
     const tagClass = b.tipoPunta==='Propiedad'?'prop':b.tipoPunta==='Ambas'?'ambas':'busq';
     const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'}[b.estado]||b.estado;
     const estadoColor = b.estado==='escriturada'?'var(--green)':b.estado==='reservada'?'var(--amber)':b.estado==='descartada'?'var(--red)':'var(--blue)';
@@ -5132,7 +5145,13 @@ function renderFichaCliente(clienteId){
       <div style="display:flex;gap:8px;margin-top:10px"><span class="fc-chip" style="color:var(--green)" onclick="marcarEscrituraBusqueda('${b.id}')">Marcar escritura</span></div>` : ''}
     </div>`;
   }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin búsquedas/consultas cargadas</div>';
+}
 
+function renderFichaCliente(clienteId){
+  const c = clientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  const capts = captaciones.filter(x=>x.clienteId===clienteId);
+  const busqs = busquedas.filter(x=>x.clienteId===clienteId);
   document.getElementById('fc-contenido').innerHTML = `
     <div class="modal-title">${c.nombre}</div>
     <div style="font-size:11px;color:var(--text3);margin-bottom:16px">${c.cuit||'sin CUIT'} · ${c.telefono||'sin teléfono'} · ${c.mail||'sin mail'} · alta ${c.fechaAlta||''}</div>
@@ -5140,12 +5159,12 @@ function renderFichaCliente(clienteId){
       <div style="font-size:13px;font-weight:700">Captaciones</div>
       <span class="fc-chip" onclick="nuevaCaptacion('${c.id}')">+ Nueva captación</span>
     </div>
-    <div class="capt-grid">${captHTML}</div>
+    <div class="capt-grid">${captCardsHTML(capts)}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px">
       <div style="font-size:13px;font-weight:700">Búsquedas y consultas</div>
       <span class="fc-chip" onclick="nuevaBusqueda('${c.id}')">+ Nueva consulta</span>
     </div>
-    <div class="capt-grid">${busqHTML}</div>`;
+    <div class="capt-grid">${busqCardsHTML(busqs)}</div>`;
 }
 function fmtN2(n){ return Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0}); }
 
