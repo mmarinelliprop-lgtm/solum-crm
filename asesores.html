@@ -6,71 +6,89 @@
 <title>SOLUMITOS — Mi Seguimiento</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2317355B%22/><text x=%2250%22 y=%2268%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22%23B6A284%22 font-family=%22Georgia,serif%22>S</text></svg>">
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
 :root{
-  --navy:#17355B;--navy2:#1e3f6e;--navy3:#0f2240;
-  --gold:#B6A284;--gold2:#d4bfa0;--gold3:#8a7562;
-  --bg:#0a1628;--bg2:#0f1e38;--bg3:#142444;
-  --card:#152238;--card2:#1a2d4a;--card3:#1f3455;
-  --text:#f0ece4;--text2:#b8b0a4;--text3:#7a7468;
-  --green:#2ee6b8;--greenbg:rgba(46,230,184,0.14);
-  --amber:#ffd36e;--amberbg:rgba(255,211,110,0.15);
-  --red:#ff4d97;--redbg:rgba(255,77,151,0.14);
-  --blue:#4a9eff;--bluebg:rgba(74,158,255,0.12);
-  --radius:10px;--radius2:14px;
+  color-scheme:dark;
+  --w:255,255,255;
+  --navy:#1b3a52;--navy2:rgba(95,127,166,.32);--navy3:#14293a;
+  --gold:#E3C98A;--gold2:#E3C98A;--gold3:rgba(227,201,138,.55);
+  --on-gold:#0b1a26;
+  --bg:#0b1a26;--bg2:#10222f;--bg3:#16303f;
+  --card:rgba(18,32,48,.58);--card2:rgba(255,255,255,.06);--card3:rgba(255,255,255,.10);
+  --pop:#13273a;
+  --border:rgba(255,255,255,.14);--edge:rgba(255,255,255,.14);
+  --text:#ffffff;--text2:#cbd5e1;--text3:#94A3B8;
+  --green:#2DD4C4;--greenbg:rgba(45,212,196,.15);
+  --amber:#D9B25C;--amberbg:rgba(217,178,92,.16);
+  --red:#FF4FA0;--redbg:rgba(255,79,160,.16);
+  --blue:#7FA6D6;--bluebg:rgba(95,127,166,.22);
+  --lila:#A596C4;--bronce:#B9794A;
+  --radius:12px;--radius2:20px;
+  --glass-blur:blur(18px) saturate(140%);
+  --glass-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 30px rgba(0,0,0,.35);
+  --bokeh-a:linear-gradient(135deg,#0a1b27 0%,#12303c 45%,#0c1822 100%);
+  --bokeh-op:.55;
 }
 *{scrollbar-width:thin;scrollbar-color:var(--gold3) var(--bg2);}
 *::-webkit-scrollbar{height:9px;width:9px;}
 *::-webkit-scrollbar-track{background:var(--bg2);border-radius:6px;}
 *::-webkit-scrollbar-thumb{background:var(--gold3);border-radius:6px;}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-.header{background:var(--bg2);border-bottom:1px solid rgba(255,255,255,0.06);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;}
-.header-name{font-size:18px;font-weight:800;color:var(--gold2);}
+body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;position:relative;}
+.bokeh{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bokeh-a);pointer-events:none;}
+.bokeh i{position:absolute;border-radius:50%;filter:blur(22px);opacity:var(--bokeh-op);}
+.header{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--edge);box-shadow:var(--glass-shadow);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.header-brand{display:flex;align-items:center;gap:12px;}
+.header-logo{width:38px;height:38px;color:var(--gold);padding:3px;flex:none;}
+.header-logo svg{width:100%;height:100%;display:block;}
+.header-name{font-size:18px;font-weight:800;color:var(--text);letter-spacing:.03em;}
 .header-sub{font-size:11px;color:var(--text3);margin-top:2px;}
-.btn{padding:7px 14px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;}
-.btn-gold{background:var(--gold);color:var(--navy3);}
-.btn-outline{background:transparent;border:1px solid rgba(255,255,255,0.12);color:var(--text2);}
-.tabs{display:flex;gap:0;background:var(--bg2);border-bottom:1px solid rgba(255,255,255,0.06);}
-.tab-btn{padding:12px 20px;background:none;border:none;color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;}
-.tab-btn.active{color:var(--gold2);border-bottom-color:var(--gold);}
-.content{padding:20px;max-width:900px;margin:0 auto;}
+.btn{padding:8px 16px;border-radius:9px;border:none;font-size:12px;font-weight:700;cursor:pointer;}
+.btn-gold{background:linear-gradient(180deg,var(--gold),var(--bronce));color:var(--on-gold);}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2);}
+.tabs{display:flex;gap:0;background:var(--card);backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--edge);overflow-x:auto;}
+.tab-btn{padding:13px 20px;background:none;border:none;color:var(--text3);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
+.tab-btn.active{color:var(--gold2);border-bottom-color:var(--gold);background:rgba(var(--w),.05);}
+.content{padding:22px;max-width:900px;margin:0 auto;}
 .hidden{display:none!important;}
-.card{background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.06);padding:18px;margin-bottom:16px;}
+.card{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:var(--radius2);padding:20px;margin-bottom:16px;}
 .card-title{font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:12px;}
-.filter-select,.inp{background:var(--card2);border:1px solid rgba(255,255,255,0.1);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;width:100%;}
+.filter-select,.inp{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;width:100%;}
 .filter-select:focus,.inp:focus{border-color:var(--gold3);}
-.login-box{max-width:360px;margin:80px auto;background:var(--card);border-radius:var(--radius2);border:1px solid rgba(255,255,255,0.08);padding:28px;text-align:center;}
-.login-box .logo{font-size:30px;margin-bottom:10px;}
+.login-box{max-width:380px;margin:70px auto;background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:var(--radius2);padding:30px;text-align:center;position:relative;z-index:1;}
+.login-box .logo{width:52px;height:52px;margin:0 auto 10px;color:var(--gold);}
+.login-box .logo svg{width:100%;height:100%;display:block;}
 .login-box label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px;text-align:left;}
-.week-card{background:var(--card2);border-radius:12px;padding:14px 16px;margin-bottom:10px;}
+.week-card{background:rgba(var(--w),.05);border:1px solid var(--edge);border-radius:14px;padding:14px 16px;margin-bottom:10px;}
 .week-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
 .week-range{font-size:11px;color:var(--text3);}
 .metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
 .metric-tile label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;}
-.metric-tile input{width:100%;background:var(--card3);border:1px solid rgba(255,255,255,0.08);color:var(--text);padding:7px 9px;border-radius:6px;font-size:14px;font-weight:700;text-align:center;}
+.metric-tile input{width:100%;background:rgba(var(--w),.06);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:7px;font-size:14px;font-weight:700;text-align:center;}
 .accion-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;}
-.accion-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;}
+.accion-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
 .accion-item.done span{color:var(--text3);text-decoration:line-through;}
 .accion-add{display:flex;gap:6px;margin-top:8px;}
 .accion-add input{flex:1;}
-.chip{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;border-radius:14px;font-size:10.5px;font-weight:700;border:1px solid rgba(255,255,255,0.12);color:var(--text3);background:var(--card3);cursor:pointer;}
+.chip{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;border-radius:14px;font-size:10.5px;font-weight:700;border:1px solid var(--border);color:var(--text3);background:var(--card2);cursor:pointer;}
 .chip.on{background:var(--green);color:#06241f;border-color:var(--green);}
-.capt-card,.consulta-card{background:var(--card2);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;margin-bottom:10px;}
+.capt-card,.consulta-card{background:rgba(var(--w),.05);border:1px solid var(--edge);border-radius:14px;padding:14px;margin-bottom:10px;}
 .tag{font-size:9px;font-weight:700;padding:3px 9px;border-radius:10px;}
 .tag.prop{background:var(--bluebg);color:var(--blue);}
 .tag.busq{background:var(--amberbg);color:var(--amber);}
-.tag.ambas{background:rgba(165,150,196,.2);color:#a596c4;}
-.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card2);color:var(--text);padding:10px 18px;border-radius:10px;font-size:12px;border:1px solid rgba(255,255,255,0.1);z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
+.tag.ambas{background:rgba(165,150,196,.2);color:var(--lila);}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--card);backdrop-filter:var(--glass-blur);color:var(--text);padding:10px 18px;border-radius:10px;font-size:12px;border:1px solid var(--edge);z-index:100;opacity:0;transition:opacity .3s;pointer-events:none;}
 .toast.show{opacity:1;}
 .err{color:var(--red);font-size:12px;margin-top:10px;min-height:16px;}
 </style>
 </head>
 <body>
+<div class="bokeh" id="bokeh"></div>
 
 <div id="screen-login">
   <div class="login-box">
-    <div class="logo">🏠</div>
-    <div style="font-size:17px;font-weight:800;color:var(--gold2)">SOLUMITOS</div>
+    <div class="logo"><svg viewBox="0 0 720 600" fill="none" stroke="currentColor" stroke-width="34" stroke-linejoin="miter"><path d="M50 566V432L302 52L452 202L215 555"/><path d="M122 555V440L302 178L682 555"/><path d="M39 555H692"/></svg></div>
+    <div style="font-size:19px;font-weight:800;color:var(--text);letter-spacing:.03em">SOLUMITOS</div>
     <div style="font-size:11px;color:var(--text3);margin-top:2px">Mi seguimiento semanal</div>
     <label>Tu nombre</label>
     <select class="filter-select" id="login-nombre"></select>
@@ -83,7 +101,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <div id="screen-app" class="hidden">
   <div class="header">
-    <div><div class="header-name" id="header-greeting"></div><div class="header-sub">Cargá tu semana, tus captaciones y tus búsquedas — solo vos ves esto</div></div>
+    <div class="header-brand">
+      <div class="header-logo"><svg viewBox="0 0 720 600" fill="none" stroke="currentColor" stroke-width="34" stroke-linejoin="miter"><path d="M50 566V432L302 52L452 202L215 555"/><path d="M122 555V440L302 178L682 555"/><path d="M39 555H692"/></svg></div>
+      <div><div class="header-name" id="header-greeting"></div><div class="header-sub">Cargá tu semana, tus captaciones y tus búsquedas — solo vos ves esto</div></div>
+    </div>
     <button class="btn btn-outline" onclick="salir()">Salir</button>
   </div>
   <div class="tabs">
@@ -526,6 +547,18 @@ function renderBusquedas(){
       </div>` : ''}
     </div>`).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>';
 }
+
+// Decoración bokeh (mismas burbujas difuminadas que el fondo de SOLUMITOS)
+(function(){
+  const b = document.getElementById('bokeh');
+  const cols = ['rgba(227,201,138,.55)','rgba(45,212,196,.30)','rgba(95,127,166,.40)','rgba(227,160,100,.40)','rgba(120,150,170,.30)'];
+  let seed = 7; const r = () => { seed = (seed*9301+49297)%233280; return seed/233280; };
+  for(let i=0;i<26;i++){
+    const s = 40+r()*140, d = document.createElement('i');
+    d.style.cssText = `width:${s}px;height:${s}px;left:${r()*100}%;top:${r()*100}%;background:${cols[Math.floor(r()*cols.length)]};`;
+    b.appendChild(d);
+  }
+})();
 
 // Sesión persistida en esta pestaña (no entre dispositivos, por simplicidad)
 (function(){
