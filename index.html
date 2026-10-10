@@ -337,6 +337,25 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 .fc-tag.ambas{background:rgba(165,150,196,.2);color:var(--lila);}
 .consulta-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
 .fc-status{font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;}
+
+/* Tablero KPI unificado de la ficha del vendedor */
+.kpi-board{background:var(--card);backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:22px;padding:22px 26px;}
+.kpi-tier{padding:18px 0;border-top:1px solid rgba(var(--w),0.07);}
+.kpi-tier:first-child{padding-top:0;border-top:none;}
+.kpi-tier-label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
+.kpi-tier-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+.kpi-mini-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px;}
+.kpi-mini-tile{background:rgba(var(--w),.04);border:1px solid var(--border);border-radius:12px;padding:9px 10px;}
+.kpi-mini-tile .mt-l{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);font-weight:700;}
+.kpi-mini-tile .mt-v{font-size:17px;font-weight:800;margin-top:3px;}
+@media print{
+  .no-print, .header, .tabs-bar, .back-link, .filters, .fc-chip, #seg-vista-equipo, #btn-analisis-vendedor,
+  .btn, select.filter-select { display:none !important; }
+  .tab-content{display:none !important;}
+  .tab-content.active{display:block !important;}
+  body{background:#fff;color:#000;}
+  .kpi-board, .kpi, .table-wrap, .capt-card, .consulta-card, .chart-card{box-shadow:none !important;border-color:#ccc !important;}
+}
 .text-green{color:var(--green);}
 .text-red{color:var(--red);}
 .text-amber{color:var(--amber);}
@@ -1188,29 +1207,18 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
       </select>
       <button class="btn btn-gold btn-sm" onclick="guardarSeguimiento()">💾 Guardar</button>
       <button id="btn-seg-guardar-pendientes" class="btn btn-sm" onclick="guardarCambiosPendientes()" style="display:none;background:var(--amber);color:var(--bg);animation:pulse 1s infinite">💾 Guardar cambios</button>
+      <button class="btn btn-outline btn-sm no-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
     </div>
   </div>
 
-  <!-- Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) -->
-  <div id="seg-hitos" style="margin-bottom:20px;"></div>
+  <!-- Tablero KPI unificado: financiero global + mes en curso + acumulado anual + embudos -->
+  <div id="seg-kpi-unificado" style="margin-bottom:24px;"></div>
 
   <!-- Vista: Tabla anual -->
   <div id="seg-vista-tabla">
     <div class="table-wrap" style="overflow-x:auto;margin-bottom:24px">
       <table id="seg-tabla-anual" style="white-space:nowrap" style="min-width:1100px"></table>
     </div>
-
-    <!-- Tarjeta de facturación con próximas metas -->
-    <div id="seg-nivel-vendedor" style="margin-bottom:20px;"></div>
-
-    <!-- Totales anuales -->
-    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap" id="seg-totales"></div>
-
-    <!-- Gráfico embudo -->
-    <div id="embudo-funnel" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px"></div>
-
-    <!-- Resumen mensual y anual del vendedor -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" id="seg-resumenes"></div>
 
     <!-- Captaciones y búsquedas/consultas del vendedor seleccionado -->
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -2984,7 +2992,7 @@ function renderDashboard(){
   document.getElementById('dg-proy').innerHTML = `$ ${fmtN(Math.round(proyEquipoAnual))}<span class="pill" title="Cobrado + por cobrar + estacional, según ritmo actual" style="${pctProy<0?'background:var(--amberbg);color:var(--amber)':''}">${pctProy>=0?'+':''}${pctProy}%</span>`;
 
   document.getElementById('rankingList').innerHTML = rankData.map((r,i)=>`
-    <div class="ranking-item" onclick="abrirFichaAsesor('${r.nombre}')" title="Ver ficha / exportar PDF">
+    <div class="ranking-item" onclick="irAFichaVendedor('${r.nombre}')" title="Ver ficha / imprimir PDF">
       <div class="rn ${i===0?'r1':''}">${i+1}</div>
       <div class="av" style="background:${AV_COLORS[r.nombre]||'#94A3B8'}">${r.nombre[0]}</div>
       <div class="rname">${r.nombre}<div>${r.ops} ops · <span class="rank-pdf-hint">ver ficha →</span></div></div>
@@ -4186,6 +4194,12 @@ function irSeguimientoVendedor(nombre){
   document.getElementById('seg-vista-vendedor-wrap').style.display = 'block';
   switchSegVista('tabla');
 }
+// Punto único de entrada a la ficha del vendedor, usado tanto desde el ranking del Dashboard
+// como desde el ranking de Seguimiento — siempre la misma ficha.
+function irAFichaVendedor(nombre){
+  switchTab('seguimiento');
+  irSeguimientoVendedor(nombre);
+}
 
 // Semana (lun-vie) que contiene la fecha de hoy, dentro del mes dado; null si hoy cae fuera de ese mes
 function semanaDeHoy(mes, anio){
@@ -4361,83 +4375,13 @@ function renderSeguimiento(){
   const anioSeg = new Date().getFullYear();
 
   // ── Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) — solo los logrados ──
-  const hitosCont = document.getElementById('seg-hitos');
-  const nivelCont = document.getElementById('seg-nivel-vendedor');
-  if(hitosCont && nivelCont){
-    const est = estadoNivelVendedor(vendedor, anioSeg);
-    const pctFact = est.objetivoActual ? Math.min(100, Math.round(est.facturacion/est.objetivoActual*100)) : 100;
-    const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
-
-    // Hitos del año: primer objetivo de nivel, cambio de nivel de comisión, viaje — en base a estadoNivelVendedor
-    const tieneNiveles = est.siguienteNivel !== null || est.objetivoActual === null; // false para Martina/Kito (% fijo)
-    const hito1Done = tieneNiveles ? (est.objetivoActual !== 40000) : (est.objetivoActual === null);
-    const hito2Done = tieneNiveles ? (est.objetivoActual === null) : false; // false = no aplica (comisión fija), igual que "no cumplido" a efectos de ocultarlo
-
-    const hitosLogrados = [];
-    if(hito1Done) hitosLogrados.push({ico:'🥇', v:'Primer objetivo de facturación alcanzado'});
-    if(hito2Done) hitosLogrados.push({ico:'⚡', v:`Cambió de nivel de comisión — este año: ${Math.round((est.siguienteNivel||0.7)*100)}%`});
-    if(est.viajeGanado) hitosLogrados.push({ico:'✈️', v:'¡Viaje ganado! 🎉'});
-
-    hitosCont.innerHTML = hitosLogrados.length ? `
-      <div class="hito-row" style="grid-template-columns:repeat(${hitosLogrados.length},1fr)">
-        ${hitosLogrados.map(h=>`
-        <div class="hito-card done">
-          <div class="hito-ico">${h.ico}</div>
-          <div><div class="hito-l">Hito cumplido</div><div class="hito-v">${h.v}</div></div>
-        </div>`).join('')}
-      </div>` : '';
-
-    // Próximas metas: los objetivos que todavía NO se cumplieron, dentro de la tarjeta de facturación
-    const proximasMetas = [];
-    if(!hito1Done && tieneNiveles) proximasMetas.push(`Primer objetivo ($40.000) — faltan ${fmtUSD(Math.max(0,40000-est.facturacion))}`);
-    if(!hito2Done && tieneNiveles) proximasMetas.push(`Cambio de nivel (${Math.round((est.siguienteNivel||0.7)*100)}%) — faltan ${fmtUSD(Math.max(0,(est.objetivoActual===40000?50000:est.objetivoActual)-est.facturacion))}`);
-    if(!est.viajeGanado) proximasMetas.push(`Viaje — faltan ${fmtUSD(Math.max(0,est.umbralViaje-est.facturacion))}`);
-    if(est.objetivoActual) proximasMetas.push(`Próximo objetivo ${fmtUSD(est.objetivoActual)} — faltan ${fmtUSD(Math.max(0,est.objetivoActual-est.facturacion))}`);
-
-    // Línea de tiempo de hitos sobre la misma barra: cada umbral (alcanzado o no) marcado a su posición real
-    const hitosTimeline = [];
-    if(tieneNiveles){
-      hitosTimeline.push({v:40000, label:'1er objetivo', done:est.facturacion>=40000});
-      hitosTimeline.push({v:50000, label:'Cambio de nivel', done:est.facturacion>=50000});
-    } else if(est.objetivoActual){
-      hitosTimeline.push({v:est.objetivoActual, label:'Objetivo', done:false});
-    }
-    hitosTimeline.push({v:est.umbralViaje, label:'Viaje', done:est.viajeGanado});
-    const scaleMax = Math.max(est.facturacion, ...hitosTimeline.map(h=>h.v)) || 1;
-    const pctFactScale = Math.min(100, Math.round(est.facturacion/scaleMax*100));
-
-    // Resumen del mes en curso (datos reales de getSegMes) — Captaciones/Muestras/Reservas/Ventas
-    const mesHoy = new Date().getMonth()+1;
-    const dMes = getSegMes(vendedor, mesHoy, anioSeg);
-    const resumenMes = [
-      {l:'Captaciones', v:dMes.cp||0, color:'var(--blue)'},
-      {l:'Muestras', v:dMes.m||0, color:'var(--amber)'},
-      {l:'Reservas', v:dMes.r||0, color:'var(--lila)'},
-      {l:'Ventas', v:dMes.v||0, color:'var(--green)'}
-    ];
-
-    nivelCont.innerHTML = `
-      <div class="kpi" style="min-width:260px">
-        <div class="kpi-label">Facturación bruta ${anioSeg}</div>
-        <div class="kpi-value" style="color:var(--text);font-size:30px">${fmtUSD(est.facturacion)}</div>
-        <div class="fact-bar-wrap" style="margin-top:20px">
-          <div class="fact-bar-fill" style="width:${pctFactScale}%"></div>
-          ${hitosTimeline.map(h=>{
-            const left = Math.min(100, Math.round(h.v/scaleMax*100));
-            return `<div class="fact-marker${h.done?' done':''}" style="left:${left}%"></div><div class="fact-marker-lbl${h.done?' done':''}" style="left:${left}%;${left>90?'transform:translateX(-100%)':''}">${h.label} ${fmtUSD(h.v)}</div>`;
-          }).join('')}
-        </div>
-        <div class="kpi-sub" style="margin-top:14px">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;border-top:1px solid rgba(var(--w),0.08);padding-top:10px">
-          ${resumenMes.map(r=>`<div><div class="kpi-label" style="margin-bottom:2px">${r.l} · ${MESES_NOMBRES[mesHoy]}</div><div style="font-size:16px;font-weight:800;color:${r.color}">${r.v}</div></div>`).join('')}
-        </div>
-        ${proximasMetas.length ? `
-        <div style="margin-top:14px;border-top:1px solid rgba(var(--w),0.08);padding-top:10px">
-          <div class="kpi-label" style="margin-bottom:6px">Próximas metas</div>
-          ${proximasMetas.map(m=>`<div style="font-size:11px;color:var(--text2);padding:3px 0">🎯 ${m}</div>`).join('')}
-        </div>` : `<div class="kpi-sub" style="margin-top:14px;color:var(--green)">🏁 Todos los objetivos del año cumplidos</div>`}
-      </div>`;
-  }
+  // Datos financieros globales del vendedor, usados más abajo para armar el tablero KPI unificado
+  const est = estadoNivelVendedor(vendedor, anioSeg);
+  const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  const objetivoBase = objetivoBaseVendedor(vendedor);
+  const premioViaje = viajeUmbralVendedor(vendedor);
+  const mesHoy = new Date().getMonth()+1;
+  const dMes = getSegMes(vendedor, mesHoy, anioSeg);
 
   // Merge datos reales + manuales + de operaciones cargadas
   const getMd = m2 => getSegMes(vendedor, m2, anioSeg);
@@ -4516,20 +4460,7 @@ function renderSeguimiento(){
   for(let mm=mesActual+1; mm<=12; mm++) proyFuturaFact += estimadoAnualFact*pesoMensual(mm);
   const proyAnual = totFac + facPorCobrarSeg + proyFuturaFact;
 
-  const totalesEl = document.getElementById('seg-totales');
-  if(totalesEl) totalesEl.innerHTML = `
-    <div class="kpi" style="flex:1"><div class="kpi-label">Captaciones año</div><div class="kpi-value gold">${totCap}</div></div>
-    <div class="kpi" style="flex:1"><div class="kpi-label">Ventas año</div><div class="kpi-value green">${totVen}</div></div>
-    <div class="kpi" style="flex:1"><div class="kpi-label">Ganancia del vendedor</div><div class="kpi-value amber">${fmtUSD(totGananciaVendedor)}</div></div>
-    <div class="kpi" style="flex:1"><div class="kpi-label">Comisión bruta promedio</div><div class="kpi-value" style="color:var(--text)">${fmtUSD(Math.round(comisionPromedio))}</div><div class="kpi-sub">Por operación cobrada</div></div>
-    <div class="kpi" style="flex:1;border:1px solid rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
-      <div class="kpi-label">Proyección anual</div>
-      <div class="kpi-value" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
-      <div class="kpi-sub">Cobrado + por cobrar + estacional (20/22,5/25,5/32%)</div>
-    </div>`;
-
-  // ── Gráficos de embudo (misma estética futurista que el resumen del equipo) ──
-  // Embudos con la misma estética futurista (.fseg) que el resumen mensual del equipo
+  // Embudos del año (misma estética que el resumen del equipo)
   const fp = allM.reduce((s,m)=>s+(getMd(m).p||0),0);
   const fec = allM.reduce((s,m)=>s+(getMd(m).ec||0),0);
   const facm = allM.reduce((s,m)=>s+(getMd(m).acm||0),0);
@@ -4548,50 +4479,76 @@ function renderSeguimiento(){
     {label:`RESERVAS: ${fr}`, pct: fm>0?Math.round(fr/fm*100):0, w:76, color:'#64FFDA'},
     {label:`VENTAS: ${fv}`, pct: fr>0?Math.round(fv/fr*100):0, w:52, color:'#D9A8F5'}
   ];
-  const funnelEl = document.getElementById('embudo-funnel');
-  if(funnelEl){
-    funnelEl.innerHTML = `
-      <div class="chart-card" style="flex:1;min-width:280px">
-        <div class="funnel-title">EMBUDO DE<br>CAPTACIÓN</div>
-        <div class="funnel-wrap" id="seg-v-funnel-capt" style="margin-top:10px"></div>
-      </div>
-      <div class="chart-card" style="flex:1;min-width:280px">
-        <div class="funnel-title">EMBUDO DE<br>VENTA</div>
-        <div class="funnel-wrap" id="seg-v-funnel-venta" style="margin-top:10px"></div>
+
+  // ── Tablero KPI unificado: financiero global · mes en curso / acumulado anual · embudos ──
+  const kpiEl = document.getElementById('seg-kpi-unificado');
+  if(kpiEl){
+    const scaleMax = Math.max(est.facturacion, objetivoBase, premioViaje) || 1;
+    const pctFactScale = Math.min(100, Math.round(est.facturacion/scaleMax*100));
+    const leftObj = Math.min(100, Math.round(objetivoBase/scaleMax*100));
+    const leftViaje = Math.min(100, Math.round(premioViaje/scaleMax*100));
+    const objMesVendedor = Math.round((obj.f||30000) * pesoMensual(mesActual));
+    const pctMesVendedor = objMesVendedor>0 ? Math.round(dMes.f/objMesVendedor*100) : 0;
+
+    kpiEl.innerHTML = `
+      <div class="kpi-board">
+        <div class="kpi-tier">
+          <div class="kpi-tier-label">Seguimiento financiero global</div>
+          <div style="font-size:30px;font-weight:800">${fmtUSD(est.facturacion)}<small style="font-size:12px;color:var(--text3);font-weight:600"> acumulado ${anioSeg}</small></div>
+          <div class="fact-bar-wrap" style="margin-top:22px;position:relative">
+            <div class="fact-bar-fill" style="width:${pctFactScale}%"></div>
+            <div class="fact-marker${est.facturacion>=objetivoBase?' done':''}" style="left:${leftObj}%"></div>
+            <div class="fact-marker-lbl${est.facturacion>=objetivoBase?' done':''}" style="left:${leftObj}%">🎯 ${fmtUSD(objetivoBase)}</div>
+            <div class="fact-marker${est.viajeGanado?' done':''}" style="left:${leftViaje}%"></div>
+            <div class="fact-marker-lbl${est.viajeGanado?' done':''}" style="left:${leftViaje}%;${leftViaje>85?'transform:translateX(-100%)':''}">✈️ ${fmtUSD(premioViaje)}</div>
+          </div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:11px;color:var(--text2)">
+            <span>Por cobrar: <b>${fmtUSD(facPorCobrar)}</b></span>
+            <span>Faltan para objetivo: <b>${fmtUSD(Math.max(0,objetivoBase-est.facturacion))}</b></span>
+            <span>Faltan para premio: <b>${fmtUSD(Math.max(0,premioViaje-est.facturacion))}</b></span>
+          </div>
+        </div>
+        <div class="kpi-tier kpi-tier-cols">
+          <div>
+            <div class="kpi-tier-label">Mes en curso — ${MESES_NOMBRES[mesHoy]}</div>
+            <div style="font-size:22px;font-weight:800">${fmtUSD(dMes.f||0)}<small style="font-size:11px;color:var(--text3);font-weight:600"> / ${fmtUSD(objMesVendedor)} · ${Math.min(999,pctMesVendedor)}%</small></div>
+            <div class="kpi-mini-grid">
+              <div class="kpi-mini-tile"><div class="mt-l">Captac. nuevas</div><div class="mt-v" style="color:var(--blue)">${dMes.cp||0}</div></div>
+              <div class="kpi-mini-tile"><div class="mt-l">Muestras</div><div class="mt-v" style="color:var(--amber)">${dMes.m||0}</div></div>
+              <div class="kpi-mini-tile"><div class="mt-l">Reservas</div><div class="mt-v" style="color:var(--lila)">${dMes.r||0}</div></div>
+              <div class="kpi-mini-tile"><div class="mt-v" style="color:var(--green)">${dMes.v||0}</div><div class="mt-l" style="margin-top:2px">Ventas</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="kpi-tier-label">Acumulado anual · ${anioSeg}</div>
+            <div class="kpi-mini-grid" style="grid-template-columns:repeat(2,1fr);margin-top:0">
+              <div class="kpi-mini-tile"><div class="mt-l">Captaciones año</div><div class="mt-v">${totCap}</div></div>
+              <div class="kpi-mini-tile"><div class="mt-l">Ventas año</div><div class="mt-v" style="color:var(--green)">${totVen}</div></div>
+              <div class="kpi-mini-tile"><div class="mt-l">Ganancia del vendedor</div><div class="mt-v" style="color:var(--gold2)">${fmtUSD(totGananciaVendedor)}</div></div>
+              <div class="kpi-mini-tile"><div class="mt-l">Ticket prom. comisión</div><div class="mt-v">${fmtUSD(Math.round(comisionPromedio))}</div></div>
+            </div>
+            <div class="kpi-mini-tile" style="margin-top:10px;border-color:rgba(74,158,255,0.3);background:rgba(74,158,255,0.07)">
+              <div class="mt-l">Proyección anual (estacionalidad trimestral)</div>
+              <div class="mt-v" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div>
+            </div>
+          </div>
+        </div>
+        <div class="kpi-tier">
+          <div class="kpi-tier-label">Trazabilidad de conversión</div>
+          <div class="kpi-tier-cols">
+            <div>
+              <div class="funnel-title" style="text-align:left">EMBUDO DE CAPTACIÓN</div>
+              <div class="funnel-wrap" id="seg-v-funnel-capt" style="margin-top:10px"></div>
+            </div>
+            <div>
+              <div class="funnel-title" style="text-align:left">EMBUDO DE VENTA</div>
+              <div class="funnel-wrap" id="seg-v-funnel-venta" style="margin-top:10px"></div>
+            </div>
+          </div>
+        </div>
       </div>`;
     renderSegFunnel('seg-v-funnel-capt', funnelCaptVendedor);
     renderSegFunnel('seg-v-funnel-venta', funnelVentaVendedor);
-  }
-
-  // ── Resumen mensual y anual del vendedor — la facturación (monto) manda, el % es secundario ──
-  const resEl = document.getElementById('seg-resumenes');
-  if(resEl){
-    const estNiv = estadoNivelVendedor(vendedor, anioSeg);
-    const dMesRes = getSegMes(vendedor, mesActual, anioSeg);
-    const objMesVendedor = Math.round((obj.f||30000) * pesoMensual(mesActual));
-    const pctMesVendedor = objMesVendedor>0 ? Math.round(dMesRes.f/objMesVendedor*100) : 0;
-    const pctAnualVendedor = estNiv.objetivoActual ? Math.round(estNiv.facturacion/estNiv.objetivoActual*100) : 100;
-    resEl.innerHTML = `
-      <div class="sum-card">
-        <div class="sum-head">Resumen mensual · ${MESES_NOMBRES[mesActual]} ${anioSeg}</div>
-        <div style="font-size:26px;font-weight:800">${fmtUSD(dMesRes.f||0)}<small style="font-size:11px;color:var(--text3);font-weight:600"> / ${fmtUSD(objMesVendedor)} · ${Math.min(999,pctMesVendedor)}%</small></div>
-        <div class="sum-grid">
-          <div class="sum-tile"><div class="st-l">Captaciones</div><div class="st-v" style="color:var(--blue)">${dMesRes.cp||0}</div></div>
-          <div class="sum-tile"><div class="st-l">Muestras</div><div class="st-v" style="color:var(--amber)">${dMesRes.m||0}</div></div>
-          <div class="sum-tile"><div class="st-l">Reservas</div><div class="st-v" style="color:var(--lila)">${dMesRes.r||0}</div></div>
-          <div class="sum-tile"><div class="st-l">Ventas</div><div class="st-v" style="color:var(--green)">${dMesRes.v||0}</div></div>
-        </div>
-      </div>
-      <div class="sum-card">
-        <div class="sum-head">Resumen anual · ${anioSeg}</div>
-        <div style="font-size:26px;font-weight:800">${fmtUSD(estNiv.facturacion)}<small style="font-size:11px;color:var(--text3);font-weight:600"> acumulado · ${Math.min(999,pctAnualVendedor)}%</small></div>
-        <div class="sum-grid">
-          <div class="sum-tile"><div class="st-l">Captaciones año</div><div class="st-v">${totCap}</div></div>
-          <div class="sum-tile"><div class="st-l">Ventas año</div><div class="st-v" style="color:var(--green)">${totVen}</div></div>
-          <div class="sum-tile"><div class="st-l">Ganancia del vendedor</div><div class="st-v" style="color:var(--gold2)">${fmtUSD(totGananciaVendedor)}</div></div>
-          <div class="sum-tile"><div class="st-l">Proyección anual</div><div class="st-v" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div></div>
-        </div>
-      </div>`;
   }
 
   // Captaciones y búsquedas/consultas del vendedor seleccionado (reutiliza las tarjetas de la ficha de cliente)
