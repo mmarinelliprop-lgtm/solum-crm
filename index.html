@@ -455,21 +455,29 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 .hito-v{font-size:12px;font-weight:700;margin-top:2px;line-height:1.3;}
 .hito-card.done .hito-v{color:var(--gold2);}
 
+/* Dos tarjetas de resumen del vendedor (mensual/anual) — la facturación es lo dominante, no el % */
+.sum-card{background:var(--card);backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:16px;padding:16px 20px;}
+.sum-head{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gold2);margin-bottom:10px;}
+.sum-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:14px;}
+.sum-tile{background:rgba(var(--w),.045);border:1px solid var(--border);border-radius:10px;padding:8px 10px;}
+.sum-tile .st-l{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);font-weight:700;}
+.sum-tile .st-v{font-size:15px;font-weight:800;margin-top:2px;}
+
 /* Seguimiento — resumen mensual del equipo (embudos, ranking, ritmo, acciones) */
 .seg-eq-hero{display:flex;gap:16px;background:var(--card);border-radius:20px;padding:18px 22px;margin-bottom:16px;flex-wrap:wrap;}
 .seg-eq-col{flex:1;min-width:220px;display:flex;flex-direction:column;}
 .seg-eq-divider{width:1px;background:rgba(var(--w),.14);}
-.funnel-title{text-align:center;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#fff;margin-bottom:7px;}
+.funnel-title{text-align:center;font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--text);margin-bottom:7px;}
 .funnel-wrap{display:flex;flex-direction:column;align-items:center;gap:0;margin-top:2px;position:relative;}
-.funnel-track{position:absolute;top:4px;bottom:4px;width:2px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,.04));z-index:0;}
-.fseg{position:relative;z-index:1;margin:0 auto;background:rgba(18,32,48,.72);border-radius:8px;padding:5px 14px;text-align:center;}
-.fseg-node{position:absolute;left:50%;top:-4px;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:var(--seg-color,#fff);box-shadow:0 0 7px var(--seg-color,#fff);z-index:2;}
+.funnel-track{position:absolute;top:4px;bottom:4px;width:2px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg, rgba(var(--w),.35), rgba(var(--w),.04));z-index:0;}
+.fseg{position:relative;z-index:1;margin:0 auto;background:var(--pop);border:1px solid var(--border);border-radius:8px;padding:5px 14px;text-align:center;}
+.fseg-node{position:absolute;left:50%;top:-4px;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:var(--seg-color,var(--text));box-shadow:0 0 7px var(--seg-color,var(--text));z-index:2;}
 .fseg + .fseg{margin-top:6px;}
-.fs-label{font-size:10px;font-weight:700;color:#fff;white-space:nowrap;}
+.fs-label{font-size:10px;font-weight:700;color:var(--text);white-space:nowrap;}
 .fs-bar-row{display:flex;align-items:center;gap:6px;width:100%;margin-top:4px;}
-.fs-bar-wrap{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;}
+.fs-bar-wrap{flex:1;height:4px;background:rgba(var(--w),.08);border-radius:3px;overflow:hidden;}
 .fs-bar{height:4px;border-radius:3px;}
-.fs-pct{font-size:9px;font-weight:700;color:var(--seg-color,#fff);white-space:nowrap;min-width:28px;text-align:right;}
+.fs-pct{font-size:9px;font-weight:700;color:var(--seg-color,var(--text));white-space:nowrap;min-width:28px;text-align:right;}
 .ritmo-bar-wrap{height:13px;border-radius:9px;background:rgba(var(--w),.08);overflow:hidden;border:1px solid rgba(var(--w),.14);}
 .ritmo-bar{height:100%;border-radius:9px;}
 .seg-pie{width:58px;height:58px;border-radius:50%;flex:none;position:relative;}
@@ -1173,6 +1181,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 
     <!-- Gráfico embudo -->
     <div id="embudo-funnel" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px"></div>
+
+    <!-- Resumen mensual y anual del vendedor -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" id="seg-resumenes"></div>
 
     <!-- Análisis de Inteligencia Empresarial -->
     <div style="margin-bottom:24px">
@@ -4387,67 +4398,70 @@ function renderSeguimiento(){
       <div class="kpi-sub">Cobrado + por cobrar + estacional (20/22,5/25,5/32%)</div>
     </div>`;
 
-  // ── Gráficos de embudo (forma real, dos embudos lado a lado) ──
-  function renderFunnelSVG(labels, values, colors, width, segH){
-    const maxVal = Math.max(values[0]||1, 1);
-    const n = values.length;
-    const height = n*segH;
-    const widthFor = v => Math.max(width*0.22, width * Math.min(1, v/maxVal));
-    let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}" style="display:block;margin:0 auto">`;
-    for(let i=0;i<n;i++){
-      const topW = widthFor(values[i]);
-      const botW = i<n-1 ? widthFor(values[i+1]) : widthFor(values[i])*0.82;
-      const y0 = i*segH, y1 = y0+segH-5;
-      const xTop0 = (width-topW)/2, xTop1 = xTop0+topW;
-      const xBot0 = (width-botW)/2, xBot1 = xBot0+botW;
-      svg += `<polygon points="${xTop0},${y0} ${xTop1},${y0} ${xBot1},${y1} ${xBot0},${y1}" fill="${colors[i]}" opacity="0.93"/>`;
-      svg += `<text x="${width/2}" y="${(y0+y1)/2-3}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#1a1a1a">${labels[i]}</text>`;
-      svg += `<text x="${width/2}" y="${(y0+y1)/2+11}" text-anchor="middle" font-size="12" font-weight="800" fill="#1a1a1a">${values[i]}</text>`;
-    }
-    svg += `</svg>`;
-    return svg;
-  }
-  function renderConversiones(labels, values){
-    let html = '';
-    for(let i=1;i<values.length;i++){
-      const conv = values[i-1]>0 ? Math.round(values[i]/values[i-1]*100) : null;
-      html += `<div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);padding:2px 6px">
-        <span>${labels[i-1]} → ${labels[i]}</span>
-        <span style="color:${conv===null?'var(--text3)':conv>=50?'var(--green)':conv>=25?'var(--amber)':'var(--red)'};font-weight:700">${conv===null?'—':conv+'%'}</span>
-      </div>`;
-    }
-    return html;
-  }
-
-  const funnel1Keys = ['p','ec','acm','cp'];
-  const funnel1Labels = ['Prospección','Entrevista','ACM','Captación'];
-  const funnel1Colors = ['#f9e04b','#f9b8a0','#f0a0c0','#c9a8d8'];
-  const funnel1Vals = funnel1Keys.map(k=>allM.reduce((s,m)=>s+(getMd(m)[k]||0),0));
-
-  const funnel2Keys = ['m','r','v'];
-  const funnel2Labels = ['Muestras','Reservas','Ventas'];
-  const funnel2Colors = ['#a0c4e8','#80d4e0','#4cc9b0'];
-  const funnel2Vals = funnel2Keys.map(k=>allM.reduce((s,m)=>s+(getMd(m)[k]||0),0));
-
+  // ── Gráficos de embudo (misma estética futurista que el resumen del equipo) ──
+  // Embudos con la misma estética futurista (.fseg) que el resumen mensual del equipo
+  const fp = allM.reduce((s,m)=>s+(getMd(m).p||0),0);
+  const fec = allM.reduce((s,m)=>s+(getMd(m).ec||0),0);
+  const facm = allM.reduce((s,m)=>s+(getMd(m).acm||0),0);
+  const fcp = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
+  const fm = allM.reduce((s,m)=>s+(getMd(m).m||0),0);
+  const fr = allM.reduce((s,m)=>s+(getMd(m).r||0),0);
+  const fv = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
+  const funnelCaptVendedor = [
+    {label:`PROSPECCIÓN: ${fp}`, pct: fp>0?100:0, w:100, color:'#FFE57F'},
+    {label:`ENTREVISTAS: ${fec}`, pct: fp>0?Math.round(fec/fp*100):0, w:82, color:'#FFC08A'},
+    {label:`ACM: ${facm}`, pct: fec>0?Math.round(facm/fec*100):0, w:64, color:'#FF9EC4'},
+    {label:`CAPTACIÓN: ${fcp}`, pct: facm>0?Math.round(fcp/facm*100):0, w:46, color:'#E8D08A'}
+  ];
+  const funnelVentaVendedor = [
+    {label:`MUESTRAS: ${fm}`, pct: fm>0?100:0, w:100, color:'#8FD6FF'},
+    {label:`RESERVAS: ${fr}`, pct: fm>0?Math.round(fr/fm*100):0, w:76, color:'#64FFDA'},
+    {label:`VENTAS: ${fv}`, pct: fr>0?Math.round(fv/fr*100):0, w:52, color:'#D9A8F5'}
+  ];
   const funnelEl = document.getElementById('embudo-funnel');
   if(funnelEl){
-    const card1 = `
-      <div class="chart-card" style="flex:1;min-width:340px">
-        <div class="chart-title">Prospección → Captación</div>
-        <div style="display:flex;align-items:center">
-          <div style="flex:1;text-align:center">${renderFunnelSVG(funnel1Labels, funnel1Vals, funnel1Colors, 210, 58)}</div>
-          <div style="width:150px;flex-shrink:0">${renderConversiones(funnel1Labels, funnel1Vals)}</div>
+    funnelEl.innerHTML = `
+      <div class="chart-card" style="flex:1;min-width:280px">
+        <div class="funnel-title">EMBUDO DE<br>CAPTACIÓN</div>
+        <div class="funnel-wrap" id="seg-v-funnel-capt" style="margin-top:10px"></div>
+      </div>
+      <div class="chart-card" style="flex:1;min-width:280px">
+        <div class="funnel-title">EMBUDO DE<br>VENTA</div>
+        <div class="funnel-wrap" id="seg-v-funnel-venta" style="margin-top:10px"></div>
+      </div>`;
+    renderSegFunnel('seg-v-funnel-capt', funnelCaptVendedor);
+    renderSegFunnel('seg-v-funnel-venta', funnelVentaVendedor);
+  }
+
+  // ── Resumen mensual y anual del vendedor — la facturación (monto) manda, el % es secundario ──
+  const resEl = document.getElementById('seg-resumenes');
+  if(resEl){
+    const estNiv = estadoNivelVendedor(vendedor, anioSeg);
+    const dMesRes = getSegMes(vendedor, mesActual, anioSeg);
+    const objMesVendedor = Math.round((obj.f||30000) * pesoMensual(mesActual));
+    const pctMesVendedor = objMesVendedor>0 ? Math.round(dMesRes.f/objMesVendedor*100) : 0;
+    const pctAnualVendedor = estNiv.objetivoActual ? Math.round(estNiv.facturacion/estNiv.objetivoActual*100) : 100;
+    resEl.innerHTML = `
+      <div class="sum-card">
+        <div class="sum-head">Resumen mensual · ${MESES_NOMBRES[mesActual]} ${anioSeg}</div>
+        <div style="font-size:26px;font-weight:800">${fmtUSD(dMesRes.f||0)}<small style="font-size:11px;color:var(--text3);font-weight:600"> / ${fmtUSD(objMesVendedor)} · ${Math.min(999,pctMesVendedor)}%</small></div>
+        <div class="sum-grid">
+          <div class="sum-tile"><div class="st-l">Captaciones</div><div class="st-v" style="color:var(--blue)">${dMesRes.cp||0}</div></div>
+          <div class="sum-tile"><div class="st-l">Muestras</div><div class="st-v" style="color:var(--amber)">${dMesRes.m||0}</div></div>
+          <div class="sum-tile"><div class="st-l">Reservas</div><div class="st-v" style="color:var(--lila)">${dMesRes.r||0}</div></div>
+          <div class="sum-tile"><div class="st-l">Ventas</div><div class="st-v" style="color:var(--green)">${dMesRes.v||0}</div></div>
+        </div>
+      </div>
+      <div class="sum-card">
+        <div class="sum-head">Resumen anual · ${anioSeg}</div>
+        <div style="font-size:26px;font-weight:800">${fmtUSD(estNiv.facturacion)}<small style="font-size:11px;color:var(--text3);font-weight:600"> acumulado · ${Math.min(999,pctAnualVendedor)}%</small></div>
+        <div class="sum-grid">
+          <div class="sum-tile"><div class="st-l">Captaciones año</div><div class="st-v">${totCap}</div></div>
+          <div class="sum-tile"><div class="st-l">Ventas año</div><div class="st-v" style="color:var(--green)">${totVen}</div></div>
+          <div class="sum-tile"><div class="st-l">Ganancia del vendedor</div><div class="st-v" style="color:var(--gold2)">${fmtUSD(totGananciaVendedor)}</div></div>
+          <div class="sum-tile"><div class="st-l">Proyección anual</div><div class="st-v" style="color:var(--blue)">${fmtUSD(Math.round(proyAnual))}</div></div>
         </div>
       </div>`;
-    const card2 = `
-      <div class="chart-card" style="flex:1;min-width:340px">
-        <div class="chart-title">Muestras → Ventas</div>
-        <div style="display:flex;align-items:center">
-          <div style="flex:1;text-align:center">${renderFunnelSVG(funnel2Labels, funnel2Vals, funnel2Colors, 210, 58)}</div>
-          <div style="width:150px;flex-shrink:0">${renderConversiones(funnel2Labels, funnel2Vals)}</div>
-        </div>
-      </div>`;
-    funnelEl.innerHTML = card1 + card2;
   }
 
   // ── Análisis IA ──
