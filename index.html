@@ -4229,6 +4229,16 @@ function renderSeguimiento(){
     const scaleMax = Math.max(est.facturacion, ...hitosTimeline.map(h=>h.v)) || 1;
     const pctFactScale = Math.min(100, Math.round(est.facturacion/scaleMax*100));
 
+    // Resumen del mes en curso (datos reales de getSegMes) — Captaciones/Muestras/Reservas/Ventas
+    const mesHoy = new Date().getMonth()+1;
+    const dMes = getSegMes(vendedor, mesHoy, anioSeg);
+    const resumenMes = [
+      {l:'Captaciones', v:dMes.cp||0, color:'var(--blue)'},
+      {l:'Muestras', v:dMes.m||0, color:'var(--amber)'},
+      {l:'Reservas', v:dMes.r||0, color:'var(--lila)'},
+      {l:'Ventas', v:dMes.v||0, color:'var(--green)'}
+    ];
+
     nivelCont.innerHTML = `
       <div class="kpi" style="min-width:260px">
         <div class="kpi-label">Facturación bruta ${anioSeg}</div>
@@ -4241,6 +4251,9 @@ function renderSeguimiento(){
           }).join('')}
         </div>
         <div class="kpi-sub" style="margin-top:14px">Por cobrar: ${fmtUSD(facPorCobrar)}</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px;border-top:1px solid rgba(var(--w),0.08);padding-top:10px">
+          ${resumenMes.map(r=>`<div><div class="kpi-label" style="margin-bottom:2px">${r.l} · ${MESES_NOMBRES[mesHoy]}</div><div style="font-size:16px;font-weight:800;color:${r.color}">${r.v}</div></div>`).join('')}
+        </div>
         ${proximasMetas.length ? `
         <div style="margin-top:14px;border-top:1px solid rgba(var(--w),0.08);padding-top:10px">
           <div class="kpi-label" style="margin-bottom:6px">Próximas metas</div>
@@ -5135,7 +5148,10 @@ CUANDO TE MANDAN UNA FOTO DE RESERVA/BOLETO
 Extraé TODOS estos campos:
 
 OPERACIÓN:
-1. Dirección/propiedad → "propiedad"
+1. Dirección/propiedad → "propiedad". SIEMPRE la dirección TEXTUAL EXACTA tal como figura en el documento
+   (calle + altura, y barrio/piso/depto si están). NUNCA reemplaces la dirección por una descripción
+   genérica del tipo "departamento de 2 dormitorios" — ese dato va en las notas si hace falta, no en
+   "propiedad". Si el documento no trae una dirección legible, NO inventes ni generalices: preguntá.
 2. Precio de venta → "precio" (en USD)
 3. Agente → quién firma o está asignado. Si no figura → preguntá con lista
 4. Punta → Vendedor o Comprador. Si no está claro → preguntá
