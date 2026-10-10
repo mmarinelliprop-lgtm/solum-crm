@@ -340,7 +340,7 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 
 /* Tablero KPI unificado de la ficha del vendedor */
 .kpi-board{background:var(--card);backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:22px;padding:22px 26px;}
-.kpi-tier{padding:18px 0;border-top:1px solid rgba(var(--w),0.07);}
+.kpi-tier{padding:14px 0;border-top:1px solid rgba(var(--w),0.07);}
 .kpi-tier:first-child{padding-top:0;border-top:none;}
 .kpi-tier-label{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px;}
 .kpi-tier-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
@@ -348,6 +348,10 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 .kpi-mini-tile{background:rgba(var(--w),.04);border:1px solid var(--border);border-radius:12px;padding:9px 10px;}
 .kpi-mini-tile .mt-l{font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);font-weight:700;}
 .kpi-mini-tile .mt-v{font-size:17px;font-weight:800;margin-top:3px;}
+.mt-bar-wrap{height:5px;border-radius:4px;background:rgba(var(--w),.1);overflow:hidden;margin-top:7px;}
+.mt-bar{height:100%;border-radius:4px;}
+.mt-obj{font-size:8px;color:var(--text3);margin-top:3px;}
+.funnel-col-box{border-radius:16px;padding:14px 14px 6px;}
 @media print{
   .no-print, .header, .tabs-bar, .back-link, .filters, .fc-chip, #seg-vista-equipo, #btn-analisis-vendedor,
   .btn, select.filter-select { display:none !important; }
@@ -4347,15 +4351,27 @@ function renderSeguimientoEquipo(){
     </div>`).join('');
 }
 
+// Tile de KPI con mini barra de progreso contra su objetivo (todas las métricas tienen objetivo real en OBJ_BASE/segObjetivos)
+function miniTileHTML(label, val, objetivo, color, labelBelow){
+  const pct = objetivo>0 ? Math.min(100, Math.round(val/objetivo*100)) : 0;
+  const top = labelBelow
+    ? `<div class="mt-v" style="color:${color}">${val}</div><div class="mt-l" style="margin-top:2px">${label}</div>`
+    : `<div class="mt-l">${label}</div><div class="mt-v" style="color:${color}">${val}</div>`;
+  return `<div class="kpi-mini-tile">${top}
+    <div class="mt-bar-wrap"><div class="mt-bar" style="width:${pct}%;background:${color}"></div></div>
+    <div class="mt-obj">${val}/${objetivo} · ${pct}%</div>
+  </div>`;
+}
+
 function renderSegFunnel(wrapId, data){
   const wrap = document.getElementById(wrapId);
   if(!wrap) return;
   wrap.innerHTML = '<div class="funnel-track"></div>' + data.map(seg => `
-    <div class="fseg" style="--seg-color:${seg.color};width:${seg.w}%;border:1px solid ${seg.color}66;">
+    <div class="fseg" style="--seg-color:${seg.color};width:${seg.w}%;border:1px solid ${seg.color}aa;background:linear-gradient(135deg,${seg.color}2e,var(--pop) 70%);box-shadow:0 0 12px ${seg.color}40;">
       <div class="fseg-node"></div>
       <div class="fs-label">${seg.label}</div>
       <div class="fs-bar-row">
-        <div class="fs-bar-wrap"><div class="fs-bar" style="width:${Math.min(100,seg.pct)}%;background:${seg.color}"></div></div>
+        <div class="fs-bar-wrap"><div class="fs-bar" style="width:${Math.min(100,seg.pct)}%;background:${seg.color};box-shadow:0 0 6px ${seg.color}"></div></div>
         <span class="fs-pct">${seg.pct}%</span>
       </div>
     </div>`).join('');
@@ -4495,7 +4511,7 @@ function renderSeguimiento(){
         <div class="kpi-tier">
           <div class="kpi-tier-label">Seguimiento financiero global</div>
           <div style="font-size:30px;font-weight:800">${fmtUSD(est.facturacion)}<small style="font-size:12px;color:var(--text3);font-weight:600"> acumulado ${anioSeg}</small></div>
-          <div class="fact-bar-wrap" style="margin-top:22px;position:relative">
+          <div class="fact-bar-wrap" style="margin-top:17px;position:relative">
             <div class="fact-bar-fill" style="width:${pctFactScale}%"></div>
             <div class="fact-marker${est.facturacion>=objetivoBase?' done':''}" style="left:${leftObj}%"></div>
             <div class="fact-marker-lbl${est.facturacion>=objetivoBase?' done':''}" style="left:${leftObj}%">🎯 ${fmtUSD(objetivoBase)}</div>
@@ -4513,17 +4529,17 @@ function renderSeguimiento(){
             <div class="kpi-tier-label">Mes en curso — ${MESES_NOMBRES[mesHoy]}</div>
             <div style="font-size:22px;font-weight:800">${fmtUSD(dMes.f||0)}<small style="font-size:11px;color:var(--text3);font-weight:600"> / ${fmtUSD(objMesVendedor)} · ${Math.min(999,pctMesVendedor)}%</small></div>
             <div class="kpi-mini-grid">
-              <div class="kpi-mini-tile"><div class="mt-l">Captac. nuevas</div><div class="mt-v" style="color:var(--blue)">${dMes.cp||0}</div></div>
-              <div class="kpi-mini-tile"><div class="mt-l">Muestras</div><div class="mt-v" style="color:var(--amber)">${dMes.m||0}</div></div>
-              <div class="kpi-mini-tile"><div class="mt-l">Reservas</div><div class="mt-v" style="color:var(--lila)">${dMes.r||0}</div></div>
-              <div class="kpi-mini-tile"><div class="mt-v" style="color:var(--green)">${dMes.v||0}</div><div class="mt-l" style="margin-top:2px">Ventas</div></div>
+              ${miniTileHTML('Captac. nuevas', dMes.cp||0, Math.round((obj.cp||0)*pesoMensual(mesHoy))||1, 'var(--blue)')}
+              ${miniTileHTML('Muestras', dMes.m||0, Math.round((obj.m||0)*pesoMensual(mesHoy))||1, 'var(--amber)')}
+              ${miniTileHTML('Reservas', dMes.r||0, Math.round((obj.r||0)*pesoMensual(mesHoy))||1, 'var(--lila)')}
+              ${miniTileHTML('Ventas', dMes.v||0, Math.round((obj.v||0)*pesoMensual(mesHoy))||1, 'var(--green)', true)}
             </div>
           </div>
           <div>
             <div class="kpi-tier-label">Acumulado anual · ${anioSeg}</div>
             <div class="kpi-mini-grid" style="grid-template-columns:repeat(2,1fr);margin-top:0">
-              <div class="kpi-mini-tile"><div class="mt-l">Captaciones año</div><div class="mt-v">${totCap}</div></div>
-              <div class="kpi-mini-tile"><div class="mt-l">Ventas año</div><div class="mt-v" style="color:var(--green)">${totVen}</div></div>
+              ${miniTileHTML('Captaciones año', totCap, obj.cp||1, 'var(--gold2)')}
+              ${miniTileHTML('Ventas año', totVen, obj.v||1, 'var(--green)')}
               <div class="kpi-mini-tile"><div class="mt-l">Ganancia del vendedor</div><div class="mt-v" style="color:var(--gold2)">${fmtUSD(totGananciaVendedor)}</div></div>
               <div class="kpi-mini-tile"><div class="mt-l">Ticket prom. comisión</div><div class="mt-v">${fmtUSD(Math.round(comisionPromedio))}</div></div>
             </div>
@@ -4536,12 +4552,12 @@ function renderSeguimiento(){
         <div class="kpi-tier">
           <div class="kpi-tier-label">Trazabilidad de conversión</div>
           <div class="kpi-tier-cols">
-            <div>
-              <div class="funnel-title" style="text-align:left">EMBUDO DE CAPTACIÓN</div>
+            <div class="funnel-col-box" style="background:radial-gradient(circle at 20% 0%, rgba(227,201,138,.12), transparent 65%);border:1px solid rgba(227,201,138,.18)">
+              <div class="funnel-title" style="text-align:left;color:var(--gold2)">EMBUDO DE CAPTACIÓN</div>
               <div class="funnel-wrap" id="seg-v-funnel-capt" style="margin-top:10px"></div>
             </div>
-            <div>
-              <div class="funnel-title" style="text-align:left">EMBUDO DE VENTA</div>
+            <div class="funnel-col-box" style="background:radial-gradient(circle at 20% 0%, rgba(45,212,196,.12), transparent 65%);border:1px solid rgba(45,212,196,.18)">
+              <div class="funnel-title" style="text-align:left;color:var(--green)">EMBUDO DE VENTA</div>
               <div class="funnel-wrap" id="seg-v-funnel-venta" style="margin-top:10px"></div>
             </div>
           </div>
