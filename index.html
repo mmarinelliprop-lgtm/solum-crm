@@ -321,6 +321,22 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 .cal-accion-add{display:flex;gap:6px;margin-top:6px;}
 .cal-accion-add input{flex:1;background:var(--card2);border:1px solid rgba(var(--w),0.08);color:var(--text);padding:5px 8px;border-radius:5px;font-size:12px;}
 .cal-accion-add button{background:var(--gold);color:var(--on-gold);border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+
+/* Ficha de cliente: captaciones (pipeline de 5 etapas) y búsquedas/consultas */
+.bc-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.bc-item:hover{background:var(--card3);border-color:var(--gold3);}
+.fc-chip{display:inline-flex;align-items:center;justify-content:center;padding:4px 9px;border-radius:14px;font-size:9.5px;font-weight:700;border:1px solid var(--border);color:var(--text3);background:var(--card2);cursor:pointer;}
+.fc-chip.on{background:var(--green);color:#06241f;border-color:var(--green);}
+.capt-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
+.capt-card.desvio{border-color:var(--amber);}
+.capt-card.descartada{opacity:.6;}
+.capt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;}
+.fc-tag{font-size:9px;font-weight:700;padding:3px 9px;border-radius:10px;}
+.fc-tag.prop{background:var(--bluebg);color:var(--blue);}
+.fc-tag.busq{background:var(--amberbg);color:var(--amber);}
+.fc-tag.ambas{background:rgba(165,150,196,.2);color:var(--lila);}
+.consulta-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:10px;}
+.fc-status{font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px;}
 .text-green{color:var(--green);}
 .text-red{color:var(--red);}
 .text-amber{color:var(--amber);}
@@ -694,7 +710,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 <div class="tab-content" id="tab-operaciones-content">
   <div class="section-header">
     <div><div class="section-title">Operaciones</div><div class="section-sub">Listado completo con estado de cobro</div></div>
-    <button class="btn btn-gold" onclick="openNuevaOp()">+ Nueva operación</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="openBuscarCliente()">👤 Ficha de cliente</button>
+      <button class="btn btn-gold" onclick="openNuevaOp()">+ Nueva operación</button>
+    </div>
   </div>
 
   <div class="filters" id="ops-filters">
@@ -1368,6 +1387,31 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
   </div>
 </div>
 
+<!-- Modal: Buscar / crear cliente -->
+<div class="modal-overlay hidden" id="modalBuscarCliente">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-title">Ficha de cliente</div>
+    <div class="modal-field"><label class="modal-label">Buscar por nombre, CUIT o teléfono</label>
+      <input class="modal-input" id="bc-buscar" placeholder="Escribí para buscar..." oninput="renderBuscarClienteResultados()">
+    </div>
+    <div id="bc-resultados" style="max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalBuscarCliente')">Cancelar</button>
+      <button class="btn btn-gold" onclick="crearClienteDesdeBusqueda()">+ Nuevo cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Ficha individual del cliente (captaciones + búsquedas) -->
+<div class="modal-overlay hidden" id="modalFichaCliente">
+  <div class="modal" style="max-width:760px;max-height:88vh;overflow-y:auto">
+    <div id="fc-contenido"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalFichaCliente')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════
 // TEMA CLARO / OSCURO + FONDO GLASS
@@ -1687,6 +1731,50 @@ async function cargarDatosDB() {
       if(!segData[agSeg][op.mes]) segData[agSeg][op.mes]={};
     });
 
+    // Clientes (ficha individual)
+    const clienteRows = await dbLeer('clientes');
+    if(clienteRows && clienteRows.length > 1){
+      const porId = {};
+      clienteRows.slice(1).forEach(r=>{
+        const [id,nombre,cuit,mail,telefono,agente,fechaAlta,notas] = r;
+        if(!id) return;
+        porId[id] = {id, nombre, cuit, mail, telefono, agente, fechaAlta, notas};
+      });
+      clientes = Object.values(porId);
+    }
+
+    // Captaciones en curso (pipeline de 5 etapas, por cliente)
+    const captRows = await dbLeer('captaciones');
+    if(captRows && captRows.length > 1){
+      const porId = {};
+      captRows.slice(1).forEach(r=>{
+        const [id,clienteId,agente,direccion,tipo,zona,precioUSD,dormitorios,fechaInicio,fechaPublicacion,
+               prelisting,acm,documentacion,fotos,publicacion,descartada,fechaDescarte,motivoDescarte] = r;
+        if(!id) return;
+        porId[id] = {id,clienteId,agente,direccion,tipo,zona,precioUSD:parseFloat(precioUSD)||0,dormitorios:parseInt(dormitorios)||0,
+          fechaInicio,fechaPublicacion,
+          prelisting:prelisting===true||prelisting==='true', acm:acm===true||acm==='true',
+          documentacion:documentacion===true||documentacion==='true', fotos:fotos===true||fotos==='true',
+          publicacion:publicacion===true||publicacion==='true',
+          descartada:descartada===true||descartada==='true', fechaDescarte, motivoDescarte};
+      });
+      captaciones = Object.values(porId);
+    }
+
+    // Búsquedas / consultas (de Propiedad, de Búsqueda o Ambas) y sus muestras, por cliente
+    const busqRows = await dbLeer('busquedas');
+    if(busqRows && busqRows.length > 1){
+      const porId = {};
+      busqRows.slice(1).forEach(r=>{
+        const [id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestrasJSON,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte] = r;
+        if(!id) return;
+        let muestras = [];
+        try{ muestras = JSON.parse(muestrasJSON||'[]'); }catch(e){ muestras = []; }
+        porId[id] = {id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestras,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte};
+      });
+      busquedas = Object.values(porId);
+    }
+
   } catch(e) {
     console.error('Error cargando DB:', e);
   }
@@ -1810,6 +1898,11 @@ const SEG_DATA_REAL = {
 let segData = {};
 // Acciones a cumplir por semana: {vendedor: {mes: {semIdx: {accionId: {texto, cumplida}}}}}
 let segAcciones = {};
+
+// Ficha de cliente: clientes[], y sus captaciones/búsquedas en curso (ver sección FICHA DE CLIENTE)
+let clientes = [];
+let captaciones = [];
+let busquedas = [];
 
 // Objetivos editables por vendedor (arrancan con los base)
 let segObjetivos = {};
@@ -4935,6 +5028,194 @@ function eliminarAccionSemana(vendedor, mes, semIdx, accionId){
   delete segAcciones[vendedor][mes][semIdx][accionId];
   guardarAccionSemana(vendedor, mes, semIdx, accionId, '', false); // texto vacío = borrada, para que al recargar no vuelva
   renderCalendarioSemanal();
+}
+
+// ═══════════════════════════════════════════════
+// FICHA DE CLIENTE — captaciones (pipeline 5 etapas) y búsquedas/consultas
+// ═══════════════════════════════════════════════
+function filaCliente(c){ return [c.id, c.nombre||'', c.cuit||'', c.mail||'', c.telefono||'', c.agente||'', c.fechaAlta||'', c.notas||'']; }
+function filaCaptacion(c){
+  return [c.id, c.clienteId, c.agente||'', c.direccion||'', c.tipo||'', c.zona||'', c.precioUSD||0, c.dormitorios||0,
+    c.fechaInicio||'', c.fechaPublicacion||'', !!c.prelisting, !!c.acm, !!c.documentacion, !!c.fotos, !!c.publicacion,
+    !!c.descartada, c.fechaDescarte||'', c.motivoDescarte||''];
+}
+function filaBusqueda(b){
+  return [b.id, b.clienteId, b.agente||'', b.tipoPunta||'Búsqueda', b.propiedadRelacionada||'', b.criterios||'',
+    JSON.stringify(b.muestras||[]), b.estado||'en_proceso', b.fechaReserva||'', b.fechaEscritura||'', b.fechaDescarte||'', b.motivoDescarte||''];
+}
+function guardarCliente(c){ dbGuardar('clientes', filaCliente(c)); }
+function guardarCaptacion(c){ dbGuardar('captaciones', filaCaptacion(c)); }
+function guardarBusqueda(b){ dbGuardar('busquedas', filaBusqueda(b)); }
+
+function openBuscarCliente(){
+  document.getElementById('bc-buscar').value = '';
+  renderBuscarClienteResultados();
+  openModal('modalBuscarCliente');
+}
+function renderBuscarClienteResultados(){
+  const q = (document.getElementById('bc-buscar').value||'').trim().toLowerCase();
+  const el = document.getElementById('bc-resultados');
+  const matches = !q ? clientes.slice(0,20) : clientes.filter(c =>
+    (c.nombre||'').toLowerCase().includes(q) || (c.cuit||'').toLowerCase().includes(q) || (c.telefono||'').includes(q));
+  el.innerHTML = matches.length ? matches.map(c=>`
+    <div class="bc-item" onclick="closeModal('modalBuscarCliente');abrirFichaCliente('${c.id}')">
+      <div><div style="font-weight:700;font-size:13px">${c.nombre}</div><div style="font-size:10.5px;color:var(--text3)">${c.cuit||'sin CUIT'} · ${c.telefono||'sin teléfono'}</div></div>
+      <span style="font-size:11px;color:var(--gold2)">Ver ficha →</span>
+    </div>`).join('') : '<div style="font-size:12px;color:var(--text3);text-align:center;padding:12px">Sin resultados. Podés crear un cliente nuevo.</div>';
+}
+function crearClienteDesdeBusqueda(){
+  const nombre = (document.getElementById('bc-buscar').value||'').trim();
+  if(!nombre){ showToast('Escribí el nombre del cliente primero', 'amber'); return; }
+  const c = {id:'c'+Date.now(), nombre, cuit:'', mail:'', telefono:'', agente:segVendedorActivo||'Martina', fechaAlta:fechaHoyDDMM(), notas:''};
+  clientes.push(c);
+  guardarCliente(c);
+  closeModal('modalBuscarCliente');
+  abrirFichaCliente(c.id);
+}
+
+function abrirFichaCliente(clienteId){
+  renderFichaCliente(clienteId);
+  openModal('modalFichaCliente');
+}
+
+function renderFichaCliente(clienteId){
+  const c = clientes.find(x=>x.id===clienteId);
+  if(!c) return;
+  const capts = captaciones.filter(x=>x.clienteId===clienteId);
+  const busqs = busquedas.filter(x=>x.clienteId===clienteId);
+  const etapas = [['prelisting','Prelisting'],['acm','ACM'],['documentacion','Documentación'],['fotos','Fotos'],['publicacion','Publicación']];
+
+  const captHTML = capts.map(cap=>{
+    const completas = etapas.filter(([k])=>cap[k]).length;
+    const pct = Math.round(completas/etapas.length*100);
+    const desvio = cap.publicacion && completas < etapas.length;
+    return `
+    <div class="capt-card ${desvio?'desvio':''} ${cap.descartada?'descartada':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:700;font-size:13px">${cap.direccion}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${fmtN2(cap.precioUSD)}</div></div>
+        ${cap.descartada ? `<span class="fc-status" style="background:var(--redbg);color:var(--red)">Descartada</span>` : desvio ? `<span class="fc-status" style="background:var(--amberbg);color:var(--amber)">⚠ desvío</span>` : `<div style="font-weight:800;color:var(--gold2)">${pct}%</div>`}
+      </div>
+      ${!cap.descartada ? `
+      <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
+        ${etapas.map(([k,l])=>`<span class="fc-chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
+      </div>
+      <div style="height:5px;background:rgba(var(--w),.1);border-radius:3px;margin-top:9px;overflow:hidden"><div style="height:5px;width:${pct}%;background:var(--green)"></div></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span class="fc-chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span>
+      </div>` : `
+      <div style="font-size:10px;color:var(--text3);margin-top:8px">${cap.motivoDescarte||'Sin motivo'} · ${cap.fechaDescarte||''}</div>
+      <div style="display:flex;gap:8px;margin-top:10px"><span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span></div>`}
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin captaciones cargadas</div>';
+
+  const busqHTML = busqs.map(b=>{
+    const tagClass = b.tipoPunta==='Propiedad'?'prop':b.tipoPunta==='Ambas'?'ambas':'busq';
+    const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'}[b.estado]||b.estado;
+    const estadoColor = b.estado==='escriturada'?'var(--green)':b.estado==='reservada'?'var(--amber)':b.estado==='descartada'?'var(--red)':'var(--blue)';
+    return `
+    <div class="consulta-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div><div style="font-weight:700;font-size:13px">${b.propiedadRelacionada||b.criterios||'Sin detalle'}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${b.agente||''}</div></div>
+        <span class="fc-tag ${tagClass}">${b.tipoPunta}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
+        <span style="font-size:10px;color:var(--text3)">Muestras</span>
+        <span style="font-weight:800">${(b.muestras||[]).length}</span>
+        <span class="fc-status" style="margin-left:auto;background:rgba(var(--w),.08);color:${estadoColor}">${estadoLbl}</span>
+      </div>
+      ${b.estado==='en_proceso' ? `
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span class="fc-chip" style="color:var(--green)" onclick="agregarMuestraBusqueda('${b.id}')">+ Muestra</span>
+        <span class="fc-chip" onclick="marcarReservaBusqueda('${b.id}')">Reserva</span>
+        <span class="fc-chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>
+      </div>` : b.estado==='reservada' ? `
+      <div style="display:flex;gap:8px;margin-top:10px"><span class="fc-chip" style="color:var(--green)" onclick="marcarEscrituraBusqueda('${b.id}')">Marcar escritura</span></div>` : ''}
+    </div>`;
+  }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin búsquedas/consultas cargadas</div>';
+
+  document.getElementById('fc-contenido').innerHTML = `
+    <div class="modal-title">${c.nombre}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:16px">${c.cuit||'sin CUIT'} · ${c.telefono||'sin teléfono'} · ${c.mail||'sin mail'} · alta ${c.fechaAlta||''}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700">Captaciones</div>
+      <span class="fc-chip" onclick="nuevaCaptacion('${c.id}')">+ Nueva captación</span>
+    </div>
+    <div class="capt-grid">${captHTML}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px">
+      <div style="font-size:13px;font-weight:700">Búsquedas y consultas</div>
+      <span class="fc-chip" onclick="nuevaBusqueda('${c.id}')">+ Nueva consulta</span>
+    </div>
+    <div class="capt-grid">${busqHTML}</div>`;
+}
+function fmtN2(n){ return Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0}); }
+
+function nuevaCaptacion(clienteId){
+  const direccion = prompt('Dirección de la propiedad:'); if(!direccion) return;
+  const tipo = prompt('Tipo (Casa/Depto/Local/Terreno):', 'Depto') || '';
+  const zona = prompt('Zona/barrio:') || '';
+  const precioUSD = parseFloat(prompt('Precio USD:', '0')) || 0;
+  const cap = {id:'cap'+Date.now(), clienteId, agente:segVendedorActivo||'Martina', direccion, tipo, zona, precioUSD,
+    dormitorios:0, fechaInicio:fechaHoyDDMM(), fechaPublicacion:'', prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:false, descartada:false};
+  captaciones.push(cap);
+  guardarCaptacion(cap);
+  renderFichaCliente(clienteId);
+}
+function toggleEtapaCaptacion(capId, etapa){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  cap[etapa] = !cap[etapa];
+  if(etapa==='publicacion') cap.fechaPublicacion = cap.publicacion ? fechaHoyDDMM() : '';
+  guardarCaptacion(cap);
+  renderFichaCliente(cap.clienteId);
+}
+function descartarCaptacion(capId){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  const motivo = prompt('Motivo del descarte:') || '';
+  cap.descartada = true; cap.fechaDescarte = fechaHoyDDMM(); cap.motivoDescarte = motivo;
+  guardarCaptacion(cap);
+  renderFichaCliente(cap.clienteId);
+}
+function reactivarCaptacion(capId){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  cap.descartada = false; cap.fechaDescarte = ''; cap.motivoDescarte = '';
+  guardarCaptacion(cap);
+  renderFichaCliente(cap.clienteId);
+}
+
+function nuevaBusqueda(clienteId){
+  const tipoPunta = prompt('Tipo: Propiedad, Búsqueda o Ambas', 'Búsqueda') || 'Búsqueda';
+  const detalle = prompt(tipoPunta==='Propiedad' ? 'Propiedad por la que consulta:' : 'Qué busca (criterios):') || '';
+  const b = {id:'b'+Date.now(), clienteId, agente:segVendedorActivo||'Martina', tipoPunta,
+    propiedadRelacionada: tipoPunta!=='Búsqueda' ? detalle : '', criterios: tipoPunta==='Búsqueda' ? detalle : '',
+    muestras:[], estado:'en_proceso', fechaReserva:'', fechaEscritura:'', fechaDescarte:'', motivoDescarte:''};
+  busquedas.push(b);
+  guardarBusqueda(b);
+  renderFichaCliente(clienteId);
+}
+function agregarMuestraBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const propiedad = prompt('Propiedad mostrada:') || '';
+  b.muestras = (b.muestras||[]).concat([{fecha:fechaHoyDDMM(), propiedad}]);
+  guardarBusqueda(b);
+  renderFichaCliente(b.clienteId);
+}
+function marcarReservaBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  b.estado = 'reservada'; b.fechaReserva = fechaHoyDDMM();
+  guardarBusqueda(b);
+  renderFichaCliente(b.clienteId);
+}
+function marcarEscrituraBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  b.estado = 'escriturada'; b.fechaEscritura = fechaHoyDDMM();
+  guardarBusqueda(b);
+  renderFichaCliente(b.clienteId);
+}
+function descartarBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const motivo = prompt('Motivo del descarte:') || '';
+  b.estado = 'descartada'; b.fechaDescarte = fechaHoyDDMM(); b.motivoDescarte = motivo;
+  guardarBusqueda(b);
+  renderFichaCliente(b.clienteId);
 }
 
 function diasHabilesEnMes(lunes, viernes, mes, anio) {
