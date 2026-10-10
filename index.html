@@ -310,6 +310,17 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 .cal-metric-obj{font-size:10px;color:var(--text3);}
 .cal-met{border-color:rgba(46,230,184,0.4)!important;color:var(--green)!important;}
 .cal-unmet{border-color:rgba(255,77,151,0.3)!important;color:var(--red)!important;}
+.cal-acciones{padding:10px 14px;border-top:1px solid rgba(var(--w),0.06);background:var(--card2);}
+.cal-acciones-head{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.cal-accion-item{display:flex;align-items:center;gap:8px;padding:4px 0;}
+.cal-accion-item input[type=checkbox]{width:15px;height:15px;flex:none;cursor:pointer;}
+.cal-accion-item .ca-texto{flex:1;font-size:12px;}
+.cal-accion-item.done .ca-texto{color:var(--text3);text-decoration:line-through;}
+.cal-accion-item .ca-del{cursor:pointer;color:var(--text3);font-size:13px;flex:none;}
+.cal-accion-item .ca-del:hover{color:var(--red);}
+.cal-accion-add{display:flex;gap:6px;margin-top:6px;}
+.cal-accion-add input{flex:1;background:var(--card2);border:1px solid rgba(var(--w),0.08);color:var(--text);padding:5px 8px;border-radius:5px;font-size:12px;}
+.cal-accion-add button{background:var(--gold);color:var(--on-gold);border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;}
 .text-green{color:var(--green);}
 .text-red{color:var(--red);}
 .text-amber{color:var(--amber);}
@@ -1651,6 +1662,21 @@ async function cargarDatosDB() {
       });
     }
 
+    // Cargar acciones semanales a cumplir (checklist por semana)
+    const accRows = await dbLeer('seguimiento_acciones');
+    if(accRows && accRows.length > 1) {
+      accRows.slice(1).forEach(r => {
+        const [ts, vendedor, mes, semIdx, accionId, texto, cumplida] = r;
+        if(!vendedor || !accionId) return;
+        if(!segAcciones[vendedor]) segAcciones[vendedor]={};
+        if(!segAcciones[vendedor][mes]) segAcciones[vendedor][mes]={};
+        if(!segAcciones[vendedor][mes][semIdx]) segAcciones[vendedor][mes][semIdx]={};
+        // último valor guardado para ese accionId gana (texto vacío = fue borrada)
+        if(texto===''||texto===undefined) delete segAcciones[vendedor][mes][semIdx][accionId];
+        else segAcciones[vendedor][mes][semIdx][accionId] = {texto, cumplida: cumplida===true||cumplida==='true'};
+      });
+    }
+
     // Reconstruir seguimiento desde operaciones cargadas
     // NOTA: v y f se calculan siempre en getSegMes, no se guardan en segData
     // NOTA: r viene del Sheet (histórico) — no se reconstruye desde operaciones
@@ -1782,6 +1808,8 @@ const SEG_DATA_REAL = {
 
 // Store de seguimiento: {vendedor: {mes: {metrica: valor, semanas:[{fecha,vals}]}}}
 let segData = {};
+// Acciones a cumplir por semana: {vendedor: {mes: {semIdx: {accionId: {texto, cumplida}}}}}
+let segAcciones = {};
 
 // Objetivos editables por vendedor (arrancan con los base)
 let segObjetivos = {};
@@ -4842,8 +4870,10 @@ function renderCalendarioSemanal(){
         </div>
       </div>`;
     });
-    html += '</div></div>';
-    
+    html += '</div>';
+    html += renderAccionesSemanaHTML(vendedor, mes, i);
+    html += '</div>';
+
     // Si partida, también impactar en el mes siguiente
     if(esPartida) {
       const mesSig = viernesDate.getMonth()+1;
@@ -4853,6 +4883,58 @@ function renderCalendarioSemanal(){
   });
 
   document.getElementById('seg-calendario-wrap').innerHTML = html || '<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sin semanas calculadas</div></div>';
+}
+
+// ── Acciones a cumplir de la semana (checklist libre, independiente de las métricas numéricas) ──
+function renderAccionesSemanaHTML(vendedor, mes, semIdx){
+  const acciones = segAcciones?.[vendedor]?.[mes]?.[semIdx] || {};
+  const items = Object.entries(acciones).sort((a,b)=>a[0]-b[0]);
+  return `
+    <div class="cal-acciones">
+      <div class="cal-acciones-head">Acciones a cumplir esta semana</div>
+      ${items.map(([id,a])=>`
+        <div class="cal-accion-item ${a.cumplida?'done':''}">
+          <input type="checkbox" ${a.cumplida?'checked':''} onchange="toggleAccionSemana('${vendedor}',${mes},${semIdx},'${id}',this.checked)">
+          <span class="ca-texto">${a.texto}</span>
+          <span class="ca-del" onclick="eliminarAccionSemana('${vendedor}',${mes},${semIdx},'${id}')" title="Eliminar">✕</span>
+        </div>`).join('') || '<div style="font-size:11px;color:var(--text3)">Sin acciones cargadas todavía</div>'}
+      <div class="cal-accion-add">
+        <input type="text" placeholder="Nueva acción..." id="nueva-accion-${vendedor}-${mes}-${semIdx}"
+          onkeydown="if(event.key==='Enter') agregarAccionSemana('${vendedor}',${mes},${semIdx})">
+        <button onclick="agregarAccionSemana('${vendedor}',${mes},${semIdx})">+ Agregar</button>
+      </div>
+    </div>`;
+}
+
+function guardarAccionSemana(vendedor, mes, semIdx, accionId, texto, cumplida){
+  dbGuardar('seguimiento_acciones', [Date.now(), vendedor, mes, semIdx, accionId, texto, cumplida]);
+}
+
+function agregarAccionSemana(vendedor, mes, semIdx){
+  const input = document.getElementById(`nueva-accion-${vendedor}-${mes}-${semIdx}`);
+  const texto = (input?.value||'').trim();
+  if(!texto) return;
+  const accionId = 'a'+Date.now();
+  if(!segAcciones[vendedor]) segAcciones[vendedor]={};
+  if(!segAcciones[vendedor][mes]) segAcciones[vendedor][mes]={};
+  if(!segAcciones[vendedor][mes][semIdx]) segAcciones[vendedor][mes][semIdx]={};
+  segAcciones[vendedor][mes][semIdx][accionId] = {texto, cumplida:false};
+  guardarAccionSemana(vendedor, mes, semIdx, accionId, texto, false);
+  renderCalendarioSemanal();
+}
+
+function toggleAccionSemana(vendedor, mes, semIdx, accionId, cumplida){
+  const a = segAcciones?.[vendedor]?.[mes]?.[semIdx]?.[accionId];
+  if(!a) return;
+  a.cumplida = cumplida;
+  guardarAccionSemana(vendedor, mes, semIdx, accionId, a.texto, cumplida);
+}
+
+function eliminarAccionSemana(vendedor, mes, semIdx, accionId){
+  if(!segAcciones?.[vendedor]?.[mes]?.[semIdx]?.[accionId]) return;
+  delete segAcciones[vendedor][mes][semIdx][accionId];
+  guardarAccionSemana(vendedor, mes, semIdx, accionId, '', false); // texto vacío = borrada, para que al recargar no vuelva
+  renderCalendarioSemanal();
 }
 
 function diasHabilesEnMes(lunes, viernes, mes, anio) {
