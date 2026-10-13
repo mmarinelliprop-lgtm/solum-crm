@@ -413,6 +413,12 @@ function renderSemana(){
   const anio = new Date().getFullYear();
   const semanas = getSemanasMes(anio, mes);
   const semData = segData[mes]?.semanas || [];
+  const obj = OBJ_BASE[sesionActiva] || OBJ_BASE['Kito'];
+  // Objetivo semanal: mismo criterio que la tabla de Martina (mensual/4, con ACM y Promo fijos en 2 por semana)
+  const objSemana = {
+    p: Math.ceil((obj.p||0)/4), ec: Math.ceil((obj.ec||2)/4)||2, acm: 2, pr: 2,
+    cg: Math.ceil((obj.cg||0)/4), m: Math.ceil((obj.m||0)/4)
+  };
 
   document.getElementById('semanas-wrap').innerHTML = semanas.map((sem,i)=>{
     const vals = semData[i]?.vals || {};
@@ -425,12 +431,17 @@ function renderSemana(){
         <div class="week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
       </div>
       <div class="metric-grid">
-        ${SEM_METRICAS.map(({label,key})=>`
+        ${SEM_METRICAS.map(({label,key})=>{
+          const o = objSemana[key]||0;
+          const v = vals[key];
+          const cumple = v!==undefined && v!==null && v!=='' && parseFloat(v)>=o;
+          return `
           <div class="metric-tile">
-            <label>${label}</label>
-            <input type="number" value="${vals[key]??''}" placeholder="0"
+            <label>${label} <span style="color:var(--text3)">(obj ${o})</span></label>
+            <input type="number" value="${v??''}" placeholder="0" style="${v!==undefined&&v!==null&&v!==''?('color:'+(cumple?'var(--green)':'var(--red)')):''}"
               onchange="guardarMetricaSemana(${mes},${i},'${key}',this.value)">
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
       <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.06);padding-top:10px">
         <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Acciones a cumplir esta semana</div>
