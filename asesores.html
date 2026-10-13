@@ -49,7 +49,7 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 .tabs{display:flex;gap:0;background:var(--card);backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--edge);overflow-x:auto;}
 .tab-btn{padding:13px 20px;background:none;border:none;color:var(--text3);font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
 .tab-btn.active{color:var(--gold2);border-bottom-color:var(--gold);background:rgba(var(--w),.05);}
-.content{padding:22px;max-width:900px;margin:0 auto;}
+.content{padding:18px 26px;max-width:1360px;margin:0 auto;width:100%;}
 .hidden{display:none!important;}
 .card{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:var(--radius2);padding:20px;margin-bottom:16px;}
 .card-title{font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:12px;}
@@ -68,6 +68,7 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 .pep-mid{background:linear-gradient(135deg,rgba(227,201,138,.16),rgba(227,201,138,.04));border:1px solid rgba(227,201,138,.3);color:var(--gold2);}
 .pep-low{background:linear-gradient(135deg,rgba(255,79,160,.14),rgba(255,79,160,.04));border:1px solid rgba(255,79,160,.3);color:var(--red);}
 .semanas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:start;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start;}
 .login-box{max-width:380px;margin:70px auto;background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:var(--radius2);padding:30px;text-align:center;position:relative;z-index:1;}
 .login-box .logo{width:52px;height:52px;margin:0 auto 10px;color:var(--gold);}
 .login-box .logo svg{width:100%;height:100%;display:block;}
@@ -142,7 +143,7 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
   <div class="content hidden" id="content-capt">
     <div class="card">
       <div class="card-title">+ Nueva captación</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
         <input class="inp" id="nc-cliente" placeholder="Nombre del propietario">
         <input class="inp" id="nc-direccion" placeholder="Dirección">
         <input class="inp" id="nc-tipo" placeholder="Tipo (Casa/Depto/Local)">
@@ -158,7 +159,7 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
   <div class="content hidden" id="content-busq">
     <div class="card">
       <div class="card-title">+ Nueva búsqueda</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
         <input class="inp" id="nb-cliente" placeholder="Nombre del cliente">
         <input class="inp" id="nb-tipo" placeholder="Tipo (Casa/Depto/Local)">
         <input class="inp" id="nb-zona" placeholder="Zona/barrio que busca">
@@ -566,9 +567,9 @@ function renderCaptaciones(){
 
   const cerradasHTML = cerradas.length ? `
     <div style="font-size:11px;font-weight:700;color:var(--text3);margin:16px 0 8px;text-transform:uppercase">Historial</div>
-    ${cerradas.map(cap=>`<div class="capt-card" style="opacity:.7"><div style="display:flex;justify-content:space-between"><div>${cap.direccion}</div><div style="color:var(--text3)">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</div></div></div>`).join('')}` : '';
+    <div class="cards-grid">${cerradas.map(cap=>`<div class="capt-card" style="opacity:.7"><div style="display:flex;justify-content:space-between"><div>${cap.direccion}</div><div style="color:var(--text3)">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</div></div></div>`).join('')}</div>` : '';
 
-  document.getElementById('capt-wrap').innerHTML = activasHTML + cerradasHTML;
+  document.getElementById('capt-wrap').innerHTML = `<div class="cards-grid">${activasHTML}</div>${cerradasHTML}`;
 }
 
 // ── Búsquedas propias ──
@@ -611,7 +612,7 @@ function descartarBusqueda(busId){
 
 function renderBusquedas(){
   const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'};
-  document.getElementById('busq-wrap').innerHTML = busquedas.map(b=>`
+  document.getElementById('busq-wrap').innerHTML = '<div class="cards-grid">' + (busquedas.map(b=>`
     <div class="consulta-card">
       <div style="font-weight:700;font-size:13px">${b.criterios || 'Sin detalle'}</div>
       <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${b.tipo||'tipo s/d'} · ${b.zona||'zona s/d'} · ${b.precioUSD?'hasta USD '+b.precioUSD.toLocaleString('es-AR'):'presupuesto s/d'}${b.dormitorios?' · '+b.dormitorios+' dorm.':''}</div>
@@ -626,7 +627,7 @@ function renderBusquedas(){
         <span class="chip" onclick="marcarReserva('${b.id}')">Reserva</span>
         <span class="chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>
       </div>` : ''}
-    </div>`).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>';
+    </div>`).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
 }
 
 // Decoración bokeh (mismas burbujas difuminadas que el fondo de SOLUMITOS)
