@@ -827,7 +827,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     <div>
       <span class="filter-label">Año</span>
       <select class="filter-select" id="op-anio" onchange="renderOperaciones()">
-        <option value="2026">2026</option><option value="2025">2025</option>
+        <option value="all">Todos</option>
+        <option value="2028">2028</option><option value="2027">2027</option>
+        <option value="2026" selected>2026</option><option value="2025">2025</option>
         <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
     </div>
@@ -3409,9 +3411,10 @@ function renderOperaciones(){
   const estadosChecks = Array.from(estadoCheckboxes).filter(c=>c.checked).map(c=>c.value);
   actualizarLabelEstados(estadosChecks, estadoCheckboxes.length);
   const punta = document.getElementById('op-punta').value;
-  const anio = parseInt(document.getElementById('op-anio').value);
+  const anioVal = document.getElementById('op-anio').value;
+  const anio = anioVal==='all' ? null : parseInt(anioVal);
 
-  let ops = operaciones.filter(o=>o.anio===anio);
+  let ops = anio===null ? operaciones.slice() : operaciones.filter(o=>o.anio===anio);
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
   if(agentesChecks.length>0 && agentesChecks.length<agenteCheckboxes.length) ops = ops.filter(o=>agentesChecks.includes(normAgente(o.agente)));
   else if(agentesChecks.length===0) ops = [];
@@ -3522,7 +3525,7 @@ function renderOperaciones(){
     </tr>` : '';
 
   // ── Gráficos de ganancia mensual ──
-  const anioFiltro = parseInt(document.getElementById('op-anio').value)||2026;
+  const anioFiltro = anio===null ? new Date().getFullYear() : anio;
   const mesesLabels = MESES_NOMBRES.slice(1);
 
   // Mi ganancia cobrada y pendiente por mes (sobre todas las ops del año que matchean el/los vendedor/es filtrado/s)
