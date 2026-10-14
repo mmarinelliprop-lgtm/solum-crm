@@ -2980,7 +2980,9 @@ function renderDashboard(){
   const opsCobradas = ops.filter(o=>o.estado==='Cobrada');
   const rankData = AGENTES_EQUIPO_VISIBLE.concat(dashInclMartina?['Martina']:[]).map(a=>{
     const aops = opsCobradas.filter(o=>normAgente(o.agente)===a);
-    return {nombre:a, fact:aops.reduce((s,o)=>s+o.comision,0), ops:aops.length};
+    const aopsTodas = ops.filter(o=>normAgente(o.agente)===a);
+    return {nombre:a, fact:aops.reduce((s,o)=>s+o.comision,0), ops:aops.length,
+      reservas: aopsTodas.length, ventas: aops.length};
   }).sort((a,b)=>b.fact-a.fact);
 
   // Proyectado del equipo (sin Martina, sin Jose/Cris) — misma estacionalidad trimestral que Operaciones
@@ -3004,7 +3006,7 @@ function renderDashboard(){
     <div class="ranking-item" onclick="irAFichaVendedor('${r.nombre}')" title="Ver ficha / imprimir PDF">
       <div class="rn ${i===0?'r1':''}">${i+1}</div>
       <div class="av" style="background:${AV_COLORS[r.nombre]||'#94A3B8'}">${r.nombre[0]}</div>
-      <div class="rname">${r.nombre}<div>${r.ops} ops · <span class="rank-pdf-hint">ver ficha →</span></div></div>
+      <div class="rname">${r.nombre}<div>Reservas: ${r.reservas} · Ventas: ${r.ventas} · <span class="rank-pdf-hint">ver ficha →</span></div></div>
       <div class="ramt">${fmtUSD(r.fact)}</div>
     </div>`).join('');
 }
