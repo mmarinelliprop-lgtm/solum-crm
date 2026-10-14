@@ -1140,7 +1140,10 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
   <div id="seg-vista-equipo">
     <div class="section-header">
       <div><div class="section-title">RESUMEN MENSUAL SOLUMITOS</div></div>
-      <div class="filters"><select class="filter-select" id="seg-eq-mes" onchange="renderSeguimientoEquipo()"></select></div>
+      <div class="filters">
+        <select class="filter-select" id="seg-eq-mes" onchange="renderSeguimientoEquipo()"></select>
+        <button class="btn btn-outline btn-sm" onclick="irSeguimientoVendedor('Martina')">Ver mi seguimiento</button>
+      </div>
     </div>
 
     <div class="dg">

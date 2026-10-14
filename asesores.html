@@ -352,13 +352,17 @@ async function cargarTodo(){
       let agente = String(r[2]||'').trim();
       agente = MAP_AGENTE_OPS[agente] || agente;
       const fechaEsc = normFechaOp(r[9]);
+      const fechaReserva = normFechaOp(r[10]);
       const fParaMesAnio = parseFechaDDMM(fechaEsc);
       const mesGuardado = parseInt(r[12])||0, anioGuardado = parseInt(r[13])||0;
-      return {
-        agente, estado: r[11],
-        mes: fParaMesAnio ? fParaMesAnio.getMonth()+1 : mesGuardado,
-        anio: fParaMesAnio ? fParaMesAnio.getFullYear() : anioGuardado
-      };
+      const mes = fParaMesAnio ? fParaMesAnio.getMonth()+1 : mesGuardado;
+      const anio = fParaMesAnio ? fParaMesAnio.getFullYear() : anioGuardado;
+      // Reservas se cuentan por la fecha en que se tomó la reserva (fechaReserva), no por la
+      // fecha de cobro — mismo criterio que mesAnioReservaOp() en index.html.
+      const fReserva = parseFechaDDMM(fechaReserva);
+      const mesReserva = fReserva ? fReserva.getMonth()+1 : mes;
+      const anioReserva = fReserva ? fReserva.getFullYear() : anio;
+      return { agente, estado: r[11], mes, anio, mesReserva, anioReserva };
     }).filter(o=>o.agente===sesionActiva);
   }
 }
@@ -445,10 +449,10 @@ function renderKpisYMotivacion(){
   });
 
   // Reservas y ventas del mes, calculadas solo con la info de Operaciones (no con carga manual):
-  // reserva = cualquier operación propia del mes, venta = las que ya están en estado "Cobrada".
-  const opsMes = operacionesPropias.filter(o=>o.mes===mesActual && o.anio===anio);
-  const reservasMes = opsMes.length;
-  const ventasMes = opsMes.filter(o=>o.estado==='Cobrada').length;
+  // reserva = toda operación propia cuya fecha de reserva cae en el mes, venta = las que ya
+  // están en estado "Cobrada" (contadas por su fecha de cobro) — mismo criterio que index.html.
+  const reservasMes = operacionesPropias.filter(o=>o.mesReserva===mesActual && o.anioReserva===anio).length;
+  const ventasMes = operacionesPropias.filter(o=>o.mes===mesActual && o.anio===anio && o.estado==='Cobrada').length;
   const tilesOps = [
     {label:'Reservas (mes)', val: reservasMes, color:'var(--lila,#A596C4)'},
     {label:'Ventas (mes)', val: ventasMes, color:'var(--green)'}
