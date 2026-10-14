@@ -558,19 +558,67 @@ function cerrarCaptacion(capId, resultado){
   renderCaptaciones();
 }
 
+// Edición con borrador para captaciones — mismo patrón que búsquedas: los cambios quedan
+// en memoria hasta tocar "OK · Confirmar", así no se pierden ni se guardan solos al cambiar de pestaña.
+let captacionEditId = null;
+const captacionDrafts = {};
+
+function editarCaptacion(capId){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  captacionEditId = capId;
+  if(!captacionDrafts[capId]) captacionDrafts[capId] = {direccion:cap.direccion||'', tipo:cap.tipo||'', zona:cap.zona||'', precioUSD:cap.precioUSD||0, dormitorios:cap.dormitorios||0};
+  renderCaptaciones();
+}
+function draftCaptacion(capId, campo, val){
+  if(!captacionDrafts[capId]) captacionDrafts[capId] = {};
+  captacionDrafts[capId][campo] = val;
+}
+function confirmarEdicionCaptacion(capId){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  const d = captacionDrafts[capId] || {};
+  cap.direccion = d.direccion||''; cap.tipo = d.tipo||''; cap.zona = d.zona||''; cap.precioUSD = parseFloat(d.precioUSD)||0; cap.dormitorios = parseInt(d.dormitorios)||0;
+  dbGuardar('captaciones', filaCaptacion(cap));
+  delete captacionDrafts[capId];
+  captacionEditId = null;
+  renderCaptaciones();
+  showToast('Captación actualizada');
+}
+function cancelarEdicionCaptacion(capId){
+  delete captacionDrafts[capId];
+  captacionEditId = null;
+  renderCaptaciones();
+}
+
 function renderCaptaciones(){
   const activas = captaciones.filter(c=>c.estado==='activa');
   const cerradas = captaciones.filter(c=>c.estado!=='activa');
   const activasHTML = activas.map(cap=>{
     const completas = FC_ETAPAS.filter(([k])=>cap[k]).length;
     const pct = Math.round(completas/FC_ETAPAS.length*100);
+    const editando = captacionEditId === cap.id;
+    const d = captacionDrafts[cap.id] || {direccion:cap.direccion||'', tipo:cap.tipo||'', zona:cap.zona||'', precioUSD:cap.precioUSD||0, dormitorios:cap.dormitorios||0};
+    const datosHTML = editando ? `
+      <input class="inp" placeholder="Dirección" value="${d.direccion}" oninput="draftCaptacion('${cap.id}','direccion',this.value)" style="margin-top:6px;width:100%">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:6px">
+        <input class="inp" placeholder="Tipo" value="${d.tipo}" oninput="draftCaptacion('${cap.id}','tipo',this.value)">
+        <input class="inp" placeholder="Zona" value="${d.zona}" oninput="draftCaptacion('${cap.id}','zona',this.value)">
+        <input class="inp" type="number" placeholder="Precio USD" value="${d.precioUSD||''}" oninput="draftCaptacion('${cap.id}','precioUSD',this.value)">
+        <input class="inp" type="number" placeholder="Dormitorios" value="${d.dormitorios||''}" oninput="draftCaptacion('${cap.id}','dormitorios',this.value)">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <span class="chip" style="color:var(--green)" onclick="confirmarEdicionCaptacion('${cap.id}')">OK · Confirmar</span>
+        <span class="chip" onclick="cancelarEdicionCaptacion('${cap.id}')">Cancelar</span>
+      </div>` : `
+      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${(cap.precioUSD||0).toLocaleString('es-AR')}${cap.dormitorios?' · '+cap.dormitorios+' dorm.':''}</div>
+      <div style="margin-top:6px"><span class="chip" onclick="editarCaptacion('${cap.id}')">✏️ Editar</span></div>`;
     return `
     <div class="capt-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div style="font-weight:700;font-size:13px">${cap.direccion}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${(cap.precioUSD||0).toLocaleString('es-AR')}${cap.dormitorios?' · '+cap.dormitorios+' dorm.':''}</div></div>
+        <div style="font-weight:700;font-size:13px">${cap.direccion}</div>
         <div style="font-weight:800;color:var(--gold2)">${pct}%</div>
       </div>
-      <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
+      ${datosHTML}
+      ${!editando ? `<div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
         ${FC_ETAPAS.map(([k,l])=>`<span class="chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
       </div>
       ${cap.publicacion ? `
@@ -579,7 +627,7 @@ function renderCaptaciones(){
         <span class="chip" style="color:var(--blue)" onclick="cerrarCaptacion('${cap.id}','vendida_otro')">Vendido por otro</span>
         <span class="chip" style="color:var(--amber)" onclick="cerrarCaptacion('${cap.id}','baja')">Baja</span>
       </div>` : `
-      <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}
+      <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}` : ''}
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px">Sin captaciones activas todavía.</div>';
 
