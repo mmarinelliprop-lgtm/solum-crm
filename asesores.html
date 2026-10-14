@@ -264,10 +264,42 @@ let segAcciones = {}; // {mes: {semIdx: {accionId:{texto,cumplida}}}}
 let clientes = [];
 let captaciones = [];
 let busquedas = [];
+let operacionesPropias = []; // solo las del asesor logueado, leídas de la misma tabla "operaciones" que usa Martina
+
+// Mismo mapeo de nombres que usa index.html al leer la tabla "operaciones" de Sheets.
+const MAP_AGENTE_OPS = {
+  'Martina Marinelli':'Martina','Propia':'Martina','propia':'Martina','':'Martina',
+  'M. Victoria':'Vicky','Victoria':'Vicky','Maria Victoria':'Vicky','María Victoria':'Vicky',
+  'Maria Victoria Saire':'Vicky','María Victoria Saire':'Vicky',
+  'Manuela':'Manu','Manuela Pellegrini':'Manu',
+  'Marcela':'Marce','Marcela Corsalini':'Marce',
+  'Esteban':'Kito','Esteban Romero':'Kito',
+  'Cristian':'Cris','Cristian Ruiz Diaz':'Cris',
+  'Cecilia':'Ceci','Cecilia Bruno':'Ceci',
+};
+function parseFechaDDMM(f){
+  if(!f) return null;
+  const partes = String(f).trim().split('/');
+  if(partes.length!==3) return null;
+  const dia=parseInt(partes[0]), mes=parseInt(partes[1]), anio=parseInt(partes[2]);
+  if(!dia||!mes||!anio) return null;
+  return new Date(anio, mes-1, dia);
+}
+function normFechaOp(f){
+  if(!f) return '';
+  const s = String(f).trim();
+  if(!s) return '';
+  if(s.includes('T') || /^\d{4}-\d{2}-\d{2}/.test(s)){
+    const d = new Date(s);
+    if(!isNaN(d.getTime())) return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+    return '';
+  }
+  return s;
+}
 
 async function cargarTodo(){
-  const [semRows, accRows, clienteRows, captRows, busqRows] = await Promise.all([
-    dbLeer('seguimiento_semanal'), dbLeer('seguimiento_acciones'), dbLeer('clientes'), dbLeer('captaciones'), dbLeer('busquedas')
+  const [semRows, accRows, clienteRows, captRows, busqRows, opRows] = await Promise.all([
+    dbLeer('seguimiento_semanal'), dbLeer('seguimiento_acciones'), dbLeer('clientes'), dbLeer('captaciones'), dbLeer('busquedas'), dbLeer('operaciones')
   ]);
 
   if(semRows.length>1) semRows.slice(1).forEach(r=>{
@@ -314,6 +346,20 @@ async function cargarTodo(){
         tipo:tipo||'', zona:zona||'', precioUSD:parseFloat(precioUSD)||0, dormitorios:parseInt(dormitorios)||0};
     });
     busquedas = Object.values(porId);
+  }
+  if(opRows.length>1){
+    operacionesPropias = opRows.slice(1).map(r=>{
+      let agente = String(r[2]||'').trim();
+      agente = MAP_AGENTE_OPS[agente] || agente;
+      const fechaEsc = normFechaOp(r[9]);
+      const fParaMesAnio = parseFechaDDMM(fechaEsc);
+      const mesGuardado = parseInt(r[12])||0, anioGuardado = parseInt(r[13])||0;
+      return {
+        agente, estado: r[11],
+        mes: fParaMesAnio ? fParaMesAnio.getMonth()+1 : mesGuardado,
+        anio: fParaMesAnio ? fParaMesAnio.getFullYear() : anioGuardado
+      };
+    }).filter(o=>o.agente===sesionActiva);
   }
 }
 
@@ -397,7 +443,19 @@ function renderKpisYMotivacion(){
   const tiles = metricasKpi.map(({label,key,color})=>{
     return {label, key, color, val: totales[key]||0, objMensual: obj[key]||0};
   });
-  document.getElementById('kpi-wrap').innerHTML = tiles.map(t=>kpiTileHTML(t.label, t.val, t.objMensual||1, t.color)).join('');
+
+  // Reservas y ventas del mes, calculadas solo con la info de Operaciones (no con carga manual):
+  // reserva = cualquier operación propia del mes, venta = las que ya están en estado "Cobrada".
+  const opsMes = operacionesPropias.filter(o=>o.mes===mesActual && o.anio===anio);
+  const reservasMes = opsMes.length;
+  const ventasMes = opsMes.filter(o=>o.estado==='Cobrada').length;
+  const tilesOps = [
+    {label:'Reservas (mes)', val: reservasMes, color:'var(--lila,#A596C4)'},
+    {label:'Ventas (mes)', val: ventasMes, color:'var(--green)'}
+  ];
+
+  document.getElementById('kpi-wrap').innerHTML = tiles.map(t=>kpiTileHTML(t.label, t.val, t.objMensual||1, t.color)).join('')
+    + tilesOps.map(t=>`<div class="kpi-tile"><div class="kt-l">${t.label}</div><div class="kt-v" style="color:${t.color}">${t.val}</div><div class="kpi-obj" style="color:var(--text3)">Desde Operaciones</div></div>`).join('');
 
   // % de cumplimiento general del mes a esta altura, vs. lo esperable según el día del mes
   const pcts = tiles.filter(t=>t.objMensual>0).map(t=>Math.min(150, t.val/t.objMensual*100));
