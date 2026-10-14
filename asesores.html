@@ -732,6 +732,76 @@ function cancelarMuestra(){
   busquedaMuestraAbierta = null;
   renderBusquedas();
 }
+// Edición de una muestra ya cargada (fecha/propiedad) y de la fecha de reserva — mismo
+// patrón de borrador + OK que el resto de la tarjeta.
+let muestraEditKey = null; // `${busId}_${idx}`
+const muestraDrafts = {};
+let reservaEditId = null;
+const reservaDrafts = {};
+
+function fechaAFechaInput(ddmm){
+  if(!ddmm || !ddmm.includes('/')) return fechaInputHoy();
+  const [d,m] = ddmm.split('/');
+  return new Date().getFullYear()+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
+}
+function editarMuestra(busId, idx){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const m = (b.muestras||[])[idx]; if(!m) return;
+  muestraEditKey = busId+'_'+idx;
+  muestraDrafts[muestraEditKey] = {fecha: fechaAFechaInput(m.fecha), propiedad: m.propiedad||''};
+  renderBusquedas();
+}
+function draftMuestra(key, campo, val){
+  if(!muestraDrafts[key]) muestraDrafts[key] = {};
+  muestraDrafts[key][campo] = val;
+}
+function confirmarEdicionMuestra(busId, idx){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const key = busId+'_'+idx;
+  const d = muestraDrafts[key] || {};
+  b.muestras[idx] = {fecha: fechaInputAFecha(d.fecha), propiedad: d.propiedad||''};
+  dbGuardar('busquedas', filaBusqueda(b));
+  delete muestraDrafts[key];
+  muestraEditKey = null;
+  renderBusquedas();
+  showToast('Muestra actualizada');
+}
+function cancelarEdicionMuestra(){
+  muestraEditKey = null;
+  renderBusquedas();
+}
+function eliminarMuestra(busId, idx){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  b.muestras.splice(idx,1);
+  dbGuardar('busquedas', filaBusqueda(b));
+  renderBusquedas();
+}
+function editarReserva(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  reservaEditId = busId;
+  reservaDrafts[busId] = fechaAFechaInput(b.fechaReserva);
+  renderBusquedas();
+}
+function draftReserva(busId, val){ reservaDrafts[busId] = val; }
+function confirmarEdicionReserva(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  b.fechaReserva = fechaInputAFecha(reservaDrafts[busId]);
+  dbGuardar('busquedas', filaBusqueda(b));
+  reservaEditId = null;
+  renderBusquedas();
+  showToast('Reserva actualizada');
+}
+function cancelarEdicionReserva(){
+  reservaEditId = null;
+  renderBusquedas();
+}
+function revertirBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  b.estado = 'en_proceso'; b.fechaReserva=''; b.fechaDescarte=''; b.motivoDescarte='';
+  dbGuardar('busquedas', filaBusqueda(b));
+  renderBusquedas();
+  showToast('Vuelve a "en proceso"');
+}
 
 function renderBusquedas(){
   const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'};
@@ -771,13 +841,39 @@ function renderBusquedas(){
         <span style="font-weight:800">${(b.muestras||[]).length}</span>
         <span style="margin-left:auto;font-size:10px;color:var(--text3)">${estadoLbl[b.estado]||b.estado}</span>
       </div>
-      ${(b.muestras||[]).length ? `<div style="font-size:9.5px;color:var(--text3);margin-top:4px">${(b.muestras||[]).map(m=>`${m.fecha}${m.propiedad?' · '+m.propiedad:''}`).join(' · ')}</div>` : ''}
+      ${(b.muestras||[]).length ? `<div style="margin-top:4px">${(b.muestras||[]).map((m,idx)=>{
+        const key = b.id+'_'+idx;
+        if(muestraEditKey===key){
+          const dm = muestraDrafts[key] || {fecha:fechaAFechaInput(m.fecha), propiedad:m.propiedad||''};
+          return `<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center">
+            <input class="inp" type="date" value="${dm.fecha}" oninput="draftMuestra('${key}','fecha',this.value)" style="flex:0 0 140px">
+            <input class="inp" value="${dm.propiedad}" placeholder="Propiedad mostrada" oninput="draftMuestra('${key}','propiedad',this.value)" style="flex:1 1 140px">
+            <span class="chip" style="color:var(--green)" onclick="confirmarEdicionMuestra('${b.id}',${idx})">OK</span>
+            <span class="chip" onclick="cancelarEdicionMuestra()">Cancelar</span>
+          </div>`;
+        }
+        return `<div style="font-size:9.5px;color:var(--text3);display:flex;gap:6px;align-items:center;margin-top:2px">
+          <span>${m.fecha}${m.propiedad?' · '+m.propiedad:''}</span>
+          <span class="chip" style="padding:1px 6px;font-size:9px" onclick="editarMuestra('${b.id}',${idx})">✏️</span>
+          <span class="chip" style="padding:1px 6px;font-size:9px;color:var(--red)" onclick="eliminarMuestra('${b.id}',${idx})">✕</span>
+        </div>`;
+      }).join('')}</div>` : ''}
       ${muestraFormHTML}
-      ${b.estado==='en_proceso' && !editando ? `
+      ${b.estado==='reservada' ? (reservaEditId===b.id ? `
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <input class="inp" type="date" value="${reservaDrafts[b.id]||fechaAFechaInput(b.fechaReserva)}" oninput="draftReserva('${b.id}',this.value)" style="flex:0 0 140px">
+        <span class="chip" style="color:var(--green)" onclick="confirmarEdicionReserva('${b.id}')">OK</span>
+        <span class="chip" onclick="cancelarEdicionReserva()">Cancelar</span>
+      </div>` : `
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;display:flex;align-items:center;gap:6px">Fecha de reserva: ${b.fechaReserva||'s/d'} <span class="chip" style="padding:1px 6px;font-size:9px" onclick="editarReserva('${b.id}')">✏️</span></div>`) : ''}
+      ${!editando ? `
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        ${b.estado==='en_proceso' ? `
         <span class="chip" style="color:var(--green)" onclick="abrirMuestraForm('${b.id}')">+ Muestra</span>
         <span class="chip" onclick="marcarReserva('${b.id}')">Reserva</span>
-        <span class="chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>
+        <span class="chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>` : `
+        <span class="chip" style="color:var(--green)" onclick="abrirMuestraForm('${b.id}')">+ Muestra</span>
+        <span class="chip" onclick="revertirBusqueda('${b.id}')">Volver a "en proceso"</span>`}
       </div>` : ''}
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
