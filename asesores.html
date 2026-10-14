@@ -558,35 +558,75 @@ function cerrarCaptacion(capId, resultado){
   renderCaptaciones();
 }
 
-// Edición con borrador para captaciones — mismo patrón que búsquedas: los cambios quedan
-// en memoria hasta tocar "OK · Confirmar", así no se pierden ni se guardan solos al cambiar de pestaña.
-let captacionEditId = null;
-const captacionDrafts = {};
+// Edición "tocar el texto": cualquier dato de texto de una tarjeta (captación o búsqueda)
+// se puede tocar para convertirlo en un input editable (se puede modificar o borrar el
+// contenido); el cambio se guarda recién al tocar OK, nunca solo. Esto reemplaza al botón
+// único de "Editar" por campo: cada campo se edita por separado, tocándolo directamente.
+let campoEditKey = null; // `${entidad}:${id}:${campo}`
+let campoDraftVal = '';
 
-function editarCaptacion(capId){
-  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  captacionEditId = capId;
-  if(!captacionDrafts[capId]) captacionDrafts[capId] = {direccion:cap.direccion||'', tipo:cap.tipo||'', zona:cap.zona||'', precioUSD:cap.precioUSD||0, dormitorios:cap.dormitorios||0};
-  renderCaptaciones();
+function valorCampo(entidad, id, campo){
+  if(entidad==='muestra'){
+    const partes = id.split('_'); const idx = parseInt(partes.pop()); const busId = partes.join('_');
+    const b = busquedas.find(x=>x.id===busId); const m = b && (b.muestras||[])[idx];
+    return m && m[campo]!=null ? String(m[campo]) : '';
+  }
+  const obj = entidad==='busqueda' ? busquedas.find(x=>x.id===id) : captaciones.find(x=>x.id===id);
+  return obj && obj[campo]!=null ? String(obj[campo]) : '';
 }
-function draftCaptacion(capId, campo, val){
-  if(!captacionDrafts[capId]) captacionDrafts[capId] = {};
-  captacionDrafts[capId][campo] = val;
+function iniciarEdicionCampo(entidad, id, campo){
+  campoEditKey = entidad+':'+id+':'+campo;
+  campoDraftVal = valorCampo(entidad, id, campo);
+  if(campo==='fecha' || campo==='fechaReserva') campoDraftVal = fechaAFechaInput(campoDraftVal);
+  if(entidad==='busqueda' || entidad==='muestra') renderBusquedas(); else renderCaptaciones();
 }
-function confirmarEdicionCaptacion(capId){
-  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  const d = captacionDrafts[capId] || {};
-  cap.direccion = d.direccion||''; cap.tipo = d.tipo||''; cap.zona = d.zona||''; cap.precioUSD = parseFloat(d.precioUSD)||0; cap.dormitorios = parseInt(d.dormitorios)||0;
-  dbGuardar('captaciones', filaCaptacion(cap));
-  delete captacionDrafts[capId];
-  captacionEditId = null;
-  renderCaptaciones();
-  showToast('Captación actualizada');
+function draftCampo(val){ campoDraftVal = val; }
+function confirmarCampo(){
+  if(!campoEditKey) return;
+  const [entidad, id, campo] = campoEditKey.split(':');
+  let val = campoDraftVal;
+  if(campo==='fecha' || campo==='fechaReserva') val = fechaInputAFecha(val);
+  else if(campo==='precioUSD') val = parseFloat(val)||0;
+  else if(campo==='dormitorios') val = parseInt(val)||0;
+  if(entidad==='muestra'){
+    const partes = id.split('_'); const idx = parseInt(partes.pop()); const busId = partes.join('_');
+    const b = busquedas.find(x=>x.id===busId); if(!b || !b.muestras[idx]) return;
+    b.muestras[idx][campo] = val;
+    dbGuardar('busquedas', filaBusqueda(b));
+    campoEditKey = null;
+    renderBusquedas();
+  } else if(entidad==='busqueda'){
+    const b = busquedas.find(x=>x.id===id); if(!b) return;
+    b[campo] = val;
+    dbGuardar('busquedas', filaBusqueda(b));
+    campoEditKey = null;
+    renderBusquedas();
+  } else {
+    const cap = captaciones.find(x=>x.id===id); if(!cap) return;
+    cap[campo] = val;
+    dbGuardar('captaciones', filaCaptacion(cap));
+    campoEditKey = null;
+    renderCaptaciones();
+  }
+  showToast('Guardado');
 }
-function cancelarEdicionCaptacion(capId){
-  delete captacionDrafts[capId];
-  captacionEditId = null;
-  renderCaptaciones();
+function cancelarCampo(){
+  if(!campoEditKey) return;
+  const entidad = campoEditKey.split(':')[0];
+  campoEditKey = null;
+  if(entidad==='busqueda' || entidad==='muestra') renderBusquedas(); else renderCaptaciones();
+}
+function campoHTML(entidad, id, campo, opts){
+  opts = opts||{};
+  const key = entidad+':'+id+':'+campo;
+  if(campoEditKey===key){
+    const tag = opts.textarea
+      ? `<textarea class="inp" style="width:100%;min-height:50px" autofocus oninput="draftCampo(this.value)">${campoDraftVal}</textarea>`
+      : `<input class="inp" type="${opts.tipo||'text'}" value="${campoDraftVal}" autofocus oninput="draftCampo(this.value)" style="${opts.style||''}">`;
+    return `<div style="margin-top:4px">${tag}<div style="display:flex;gap:6px;margin-top:4px"><span class="chip" style="color:var(--green)" onclick="confirmarCampo()">OK</span><span class="chip" onclick="cancelarCampo()">Cancelar</span></div></div>`;
+  }
+  const texto = opts.formatear ? opts.formatear(valorCampo(entidad,id,campo)) : (valorCampo(entidad,id,campo) || opts.vacio || '—');
+  return `<span onclick="iniciarEdicionCampo('${entidad}','${id}','${campo}')" style="cursor:pointer;border-bottom:1px dashed var(--border);${opts.estilo||''}">${texto}</span>`;
 }
 function reactivarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
@@ -602,30 +642,16 @@ function renderCaptaciones(){
   const activasHTML = activas.map(cap=>{
     const completas = FC_ETAPAS.filter(([k])=>cap[k]).length;
     const pct = Math.round(completas/FC_ETAPAS.length*100);
-    const editando = captacionEditId === cap.id;
-    const d = captacionDrafts[cap.id] || {direccion:cap.direccion||'', tipo:cap.tipo||'', zona:cap.zona||'', precioUSD:cap.precioUSD||0, dormitorios:cap.dormitorios||0};
-    const datosHTML = editando ? `
-      <input class="inp" placeholder="Dirección" value="${d.direccion}" oninput="draftCaptacion('${cap.id}','direccion',this.value)" style="margin-top:6px;width:100%">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:6px">
-        <input class="inp" placeholder="Tipo" value="${d.tipo}" oninput="draftCaptacion('${cap.id}','tipo',this.value)">
-        <input class="inp" placeholder="Zona" value="${d.zona}" oninput="draftCaptacion('${cap.id}','zona',this.value)">
-        <input class="inp" type="number" placeholder="Precio USD" value="${d.precioUSD||''}" oninput="draftCaptacion('${cap.id}','precioUSD',this.value)">
-        <input class="inp" type="number" placeholder="Dormitorios" value="${d.dormitorios||''}" oninput="draftCaptacion('${cap.id}','dormitorios',this.value)">
-      </div>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <span class="chip" style="color:var(--green)" onclick="confirmarEdicionCaptacion('${cap.id}')">OK · Confirmar</span>
-        <span class="chip" onclick="cancelarEdicionCaptacion('${cap.id}')">Cancelar</span>
-      </div>` : `
-      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${(cap.precioUSD||0).toLocaleString('es-AR')}${cap.dormitorios?' · '+cap.dormitorios+' dorm.':''}</div>
-      <div style="margin-top:6px"><span class="chip" onclick="editarCaptacion('${cap.id}')">✏️ Editar</span></div>`;
     return `
     <div class="capt-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div style="font-weight:700;font-size:13px">${cap.direccion}</div>
+        <div style="font-weight:700;font-size:13px">${campoHTML('captacion',cap.id,'direccion',{vacio:'Sin dirección'})}</div>
         <div style="font-weight:800;color:var(--gold2)">${pct}%</div>
       </div>
-      ${datosHTML}
-      ${!editando ? `<div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
+      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">
+        ${campoHTML('captacion',cap.id,'tipo',{vacio:'tipo s/d'})} · ${campoHTML('captacion',cap.id,'zona',{vacio:'zona s/d'})} · USD ${campoHTML('captacion',cap.id,'precioUSD',{tipo:'number',formatear:v=>(parseFloat(v)||0).toLocaleString('es-AR')})}${campoHTML('captacion',cap.id,'dormitorios',{tipo:'number',formatear:v=>v?' · '+v+' dorm.':'',vacio:''})}
+      </div>
+      <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
         ${FC_ETAPAS.map(([k,l])=>`<span class="chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
       </div>
       ${cap.publicacion ? `
@@ -634,7 +660,7 @@ function renderCaptaciones(){
         <span class="chip" style="color:var(--blue)" onclick="cerrarCaptacion('${cap.id}','vendida_otro')">Vendido por otro</span>
         <span class="chip" style="color:var(--amber)" onclick="cerrarCaptacion('${cap.id}','baja')">Baja</span>
       </div>` : `
-      <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}` : ''}
+      <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px">Sin captaciones activas todavía.</div>';
 
@@ -697,38 +723,8 @@ function fechaInputAFecha(iso){
   return d+'/'+m;
 }
 
-// Edición con borrador: mientras una búsqueda está en edición, los cambios se guardan
-// en busquedaDrafts (memoria, no en el servidor) hasta tocar "OK". Así, si cambiás de
-// pestaña y volvés, no se pierde lo tipeado ni se marca nada como guardado sin confirmar.
-let busquedaEditId = null;
-const busquedaDrafts = {};
 let busquedaMuestraAbierta = null;
 
-function editarBusqueda(busId){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  busquedaEditId = busId;
-  if(!busquedaDrafts[busId]) busquedaDrafts[busId] = {tipo:b.tipo||'', zona:b.zona||'', precioUSD:b.precioUSD||0, dormitorios:b.dormitorios||0, criterios:b.criterios||''};
-  renderBusquedas();
-}
-function draftBusqueda(busId, campo, val){
-  if(!busquedaDrafts[busId]) busquedaDrafts[busId] = {};
-  busquedaDrafts[busId][campo] = val;
-}
-function confirmarEdicionBusqueda(busId){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const d = busquedaDrafts[busId] || {};
-  b.tipo = d.tipo||''; b.zona = d.zona||''; b.precioUSD = parseFloat(d.precioUSD)||0; b.dormitorios = parseInt(d.dormitorios)||0; b.criterios = d.criterios||'';
-  dbGuardar('busquedas', filaBusqueda(b));
-  delete busquedaDrafts[busId];
-  busquedaEditId = null;
-  renderBusquedas();
-  showToast('Búsqueda actualizada');
-}
-function cancelarEdicionBusqueda(busId){
-  delete busquedaDrafts[busId];
-  busquedaEditId = null;
-  renderBusquedas();
-}
 function abrirMuestraForm(busId){
   busquedaMuestraAbierta = busId;
   renderBusquedas();
@@ -747,67 +743,15 @@ function cancelarMuestra(){
   busquedaMuestraAbierta = null;
   renderBusquedas();
 }
-// Edición de una muestra ya cargada (fecha/propiedad) y de la fecha de reserva — mismo
-// patrón de borrador + OK que el resto de la tarjeta.
-let muestraEditKey = null; // `${busId}_${idx}`
-const muestraDrafts = {};
-let reservaEditId = null;
-const reservaDrafts = {};
-
 function fechaAFechaInput(ddmm){
   if(!ddmm || !ddmm.includes('/')) return fechaInputHoy();
   const [d,m] = ddmm.split('/');
   return new Date().getFullYear()+'-'+m.padStart(2,'0')+'-'+d.padStart(2,'0');
 }
-function editarMuestra(busId, idx){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const m = (b.muestras||[])[idx]; if(!m) return;
-  muestraEditKey = busId+'_'+idx;
-  muestraDrafts[muestraEditKey] = {fecha: fechaAFechaInput(m.fecha), propiedad: m.propiedad||''};
-  renderBusquedas();
-}
-function draftMuestra(key, campo, val){
-  if(!muestraDrafts[key]) muestraDrafts[key] = {};
-  muestraDrafts[key][campo] = val;
-}
-function confirmarEdicionMuestra(busId, idx){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const key = busId+'_'+idx;
-  const d = muestraDrafts[key] || {};
-  b.muestras[idx] = {fecha: fechaInputAFecha(d.fecha), propiedad: d.propiedad||''};
-  dbGuardar('busquedas', filaBusqueda(b));
-  delete muestraDrafts[key];
-  muestraEditKey = null;
-  renderBusquedas();
-  showToast('Muestra actualizada');
-}
-function cancelarEdicionMuestra(){
-  muestraEditKey = null;
-  renderBusquedas();
-}
 function eliminarMuestra(busId, idx){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
   b.muestras.splice(idx,1);
   dbGuardar('busquedas', filaBusqueda(b));
-  renderBusquedas();
-}
-function editarReserva(busId){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  reservaEditId = busId;
-  reservaDrafts[busId] = fechaAFechaInput(b.fechaReserva);
-  renderBusquedas();
-}
-function draftReserva(busId, val){ reservaDrafts[busId] = val; }
-function confirmarEdicionReserva(busId){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  b.fechaReserva = fechaInputAFecha(reservaDrafts[busId]);
-  dbGuardar('busquedas', filaBusqueda(b));
-  reservaEditId = null;
-  renderBusquedas();
-  showToast('Reserva actualizada');
-}
-function cancelarEdicionReserva(){
-  reservaEditId = null;
   renderBusquedas();
 }
 function revertirBusqueda(busId){
@@ -821,24 +765,6 @@ function revertirBusqueda(busId){
 function renderBusquedas(){
   const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'};
   document.getElementById('busq-wrap').innerHTML = '<div class="cards-grid">' + (busquedas.map(b=>{
-    const editando = busquedaEditId === b.id;
-    const d = busquedaDrafts[b.id] || {tipo:b.tipo||'', zona:b.zona||'', precioUSD:b.precioUSD||0, dormitorios:b.dormitorios||0, criterios:b.criterios||''};
-    const datosHTML = editando ? `
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:6px">
-        <input class="inp" placeholder="Tipo" value="${d.tipo}" oninput="draftBusqueda('${b.id}','tipo',this.value)">
-        <input class="inp" placeholder="Zona" value="${d.zona}" oninput="draftBusqueda('${b.id}','zona',this.value)">
-        <input class="inp" type="number" placeholder="Presupuesto USD" value="${d.precioUSD||''}" oninput="draftBusqueda('${b.id}','precioUSD',this.value)">
-        <input class="inp" type="number" placeholder="Dormitorios" value="${d.dormitorios||''}" oninput="draftBusqueda('${b.id}','dormitorios',this.value)">
-      </div>
-      <textarea class="inp" style="margin-top:6px;width:100%;min-height:50px" placeholder="Detalles / criterios" oninput="draftBusqueda('${b.id}','criterios',this.value)">${d.criterios}</textarea>
-      <div style="display:flex;gap:8px;margin-top:8px">
-        <span class="chip" style="color:var(--green)" onclick="confirmarEdicionBusqueda('${b.id}')">OK · Confirmar</span>
-        <span class="chip" onclick="cancelarEdicionBusqueda('${b.id}')">Cancelar</span>
-      </div>` : `
-      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${b.tipo||'tipo s/d'} · ${b.zona||'zona s/d'} · ${b.precioUSD?'hasta USD '+b.precioUSD.toLocaleString('es-AR'):'presupuesto s/d'}${b.dormitorios?' · '+b.dormitorios+' dorm.':''}</div>
-      ${b.criterios ? `<div style="font-size:10px;color:var(--text3);opacity:.8;margin-top:4px">${b.criterios}</div>` : ''}
-      <div style="margin-top:6px"><span class="chip" onclick="editarBusqueda('${b.id}')">✏️ Editar</span></div>`;
-
     const muestraFormHTML = busquedaMuestraAbierta===b.id ? `
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
         <input class="inp" type="date" id="mu-fecha-${b.id}" value="${fechaInputHoy()}" style="flex:0 0 140px">
@@ -850,7 +776,10 @@ function renderBusquedas(){
     return `
     <div class="consulta-card">
       <div style="font-weight:800;font-size:15px;color:var(--gold2)">${nombreClientePorId(b.clienteId)}</div>
-      ${datosHTML}
+      <div style="font-size:10.5px;color:var(--text3);margin-top:2px">
+        ${campoHTML('busqueda',b.id,'tipo',{vacio:'tipo s/d'})} · ${campoHTML('busqueda',b.id,'zona',{vacio:'zona s/d'})} · USD ${campoHTML('busqueda',b.id,'precioUSD',{tipo:'number',formatear:v=>(parseFloat(v)||0).toLocaleString('es-AR')})}${campoHTML('busqueda',b.id,'dormitorios',{tipo:'number',formatear:v=>v?' · '+v+' dorm.':'',vacio:''})}
+      </div>
+      <div style="font-size:10px;color:var(--text3);opacity:.8;margin-top:4px">${campoHTML('busqueda',b.id,'criterios',{textarea:true,vacio:'Sin detalle (tocar para agregar)'})}</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
         <span style="font-size:10px;color:var(--text3)">Muestras</span>
         <span style="font-weight:800">${(b.muestras||[]).length}</span>
@@ -858,30 +787,14 @@ function renderBusquedas(){
       </div>
       ${(b.muestras||[]).length ? `<div style="margin-top:4px">${(b.muestras||[]).map((m,idx)=>{
         const key = b.id+'_'+idx;
-        if(muestraEditKey===key){
-          const dm = muestraDrafts[key] || {fecha:fechaAFechaInput(m.fecha), propiedad:m.propiedad||''};
-          return `<div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;align-items:center">
-            <input class="inp" type="date" value="${dm.fecha}" oninput="draftMuestra('${key}','fecha',this.value)" style="flex:0 0 140px">
-            <input class="inp" value="${dm.propiedad}" placeholder="Propiedad mostrada" oninput="draftMuestra('${key}','propiedad',this.value)" style="flex:1 1 140px">
-            <span class="chip" style="color:var(--green)" onclick="confirmarEdicionMuestra('${b.id}',${idx})">OK</span>
-            <span class="chip" onclick="cancelarEdicionMuestra()">Cancelar</span>
-          </div>`;
-        }
         return `<div style="font-size:9.5px;color:var(--text3);display:flex;gap:6px;align-items:center;margin-top:2px">
-          <span>${m.fecha}${m.propiedad?' · '+m.propiedad:''}</span>
-          <span class="chip" style="padding:1px 6px;font-size:9px" onclick="editarMuestra('${b.id}',${idx})">✏️</span>
+          ${campoHTML('muestra',key,'fecha',{tipo:'date',style:'flex:0 0 130px'})} · ${campoHTML('muestra',key,'propiedad',{vacio:'propiedad s/d'})}
           <span class="chip" style="padding:1px 6px;font-size:9px;color:var(--red)" onclick="eliminarMuestra('${b.id}',${idx})">✕</span>
         </div>`;
       }).join('')}</div>` : ''}
       ${muestraFormHTML}
-      ${b.estado==='reservada' ? (reservaEditId===b.id ? `
-      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
-        <input class="inp" type="date" value="${reservaDrafts[b.id]||fechaAFechaInput(b.fechaReserva)}" oninput="draftReserva('${b.id}',this.value)" style="flex:0 0 140px">
-        <span class="chip" style="color:var(--green)" onclick="confirmarEdicionReserva('${b.id}')">OK</span>
-        <span class="chip" onclick="cancelarEdicionReserva()">Cancelar</span>
-      </div>` : `
-      <div style="font-size:10px;color:var(--text3);margin-top:6px;display:flex;align-items:center;gap:6px">Fecha de reserva: ${b.fechaReserva||'s/d'} <span class="chip" style="padding:1px 6px;font-size:9px" onclick="editarReserva('${b.id}')">✏️</span></div>`) : ''}
-      ${!editando ? `
+      ${b.estado==='reservada' ? `
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">Fecha de reserva: ${campoHTML('busqueda',b.id,'fechaReserva',{tipo:'date',vacio:'tocar para poner fecha'})}</div>` : ''}
       <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
         ${b.estado==='en_proceso' ? `
         <span class="chip" style="color:var(--green)" onclick="abrirMuestraForm('${b.id}')">+ Muestra</span>
@@ -889,7 +802,7 @@ function renderBusquedas(){
         <span class="chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>` : `
         <span class="chip" style="color:var(--green)" onclick="abrirMuestraForm('${b.id}')">+ Muestra</span>
         <span class="chip" onclick="revertirBusqueda('${b.id}')">Volver a "en proceso"</span>`}
-      </div>` : ''}
+      </div>
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
 }
