@@ -607,13 +607,6 @@ function crearBusquedaAsesor(){
   renderBusquedas();
   showToast('Búsqueda agregada');
 }
-function agregarMuestra(busId){
-  const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const propiedad = prompt('Propiedad mostrada:') || '';
-  b.muestras = (b.muestras||[]).concat([{fecha:fechaHoyDDMM(), propiedad}]);
-  dbGuardar('busquedas', filaBusqueda(b));
-  renderBusquedas();
-}
 function marcarReserva(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
   b.estado='reservada'; b.fechaReserva=fechaHoyDDMM();
@@ -627,25 +620,119 @@ function descartarBusqueda(busId){
   dbGuardar('busquedas', filaBusqueda(b));
   renderBusquedas();
 }
+function nombreClientePorId(clienteId){
+  const c = clientes.find(x=>x.id===clienteId);
+  return c ? c.nombre : 'Cliente s/d';
+}
+function fechaInputHoy(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fechaInputAFecha(iso){
+  if(!iso) return fechaHoyDDMM();
+  const [y,m,d] = iso.split('-');
+  return d+'/'+m;
+}
+
+// Edición con borrador: mientras una búsqueda está en edición, los cambios se guardan
+// en busquedaDrafts (memoria, no en el servidor) hasta tocar "OK". Así, si cambiás de
+// pestaña y volvés, no se pierde lo tipeado ni se marca nada como guardado sin confirmar.
+let busquedaEditId = null;
+const busquedaDrafts = {};
+let busquedaMuestraAbierta = null;
+
+function editarBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  busquedaEditId = busId;
+  if(!busquedaDrafts[busId]) busquedaDrafts[busId] = {tipo:b.tipo||'', zona:b.zona||'', precioUSD:b.precioUSD||0, dormitorios:b.dormitorios||0, criterios:b.criterios||''};
+  renderBusquedas();
+}
+function draftBusqueda(busId, campo, val){
+  if(!busquedaDrafts[busId]) busquedaDrafts[busId] = {};
+  busquedaDrafts[busId][campo] = val;
+}
+function confirmarEdicionBusqueda(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const d = busquedaDrafts[busId] || {};
+  b.tipo = d.tipo||''; b.zona = d.zona||''; b.precioUSD = parseFloat(d.precioUSD)||0; b.dormitorios = parseInt(d.dormitorios)||0; b.criterios = d.criterios||'';
+  dbGuardar('busquedas', filaBusqueda(b));
+  delete busquedaDrafts[busId];
+  busquedaEditId = null;
+  renderBusquedas();
+  showToast('Búsqueda actualizada');
+}
+function cancelarEdicionBusqueda(busId){
+  delete busquedaDrafts[busId];
+  busquedaEditId = null;
+  renderBusquedas();
+}
+function abrirMuestraForm(busId){
+  busquedaMuestraAbierta = busId;
+  renderBusquedas();
+}
+function confirmarMuestra(busId){
+  const b = busquedas.find(x=>x.id===busId); if(!b) return;
+  const fechaIso = document.getElementById('mu-fecha-'+busId).value || fechaInputHoy();
+  const propiedad = (document.getElementById('mu-prop-'+busId).value||'').trim();
+  b.muestras = (b.muestras||[]).concat([{fecha:fechaInputAFecha(fechaIso), propiedad}]);
+  dbGuardar('busquedas', filaBusqueda(b));
+  busquedaMuestraAbierta = null;
+  renderBusquedas();
+  showToast('Muestra agregada');
+}
+function cancelarMuestra(){
+  busquedaMuestraAbierta = null;
+  renderBusquedas();
+}
 
 function renderBusquedas(){
   const estadoLbl = {en_proceso:'en proceso', reservada:'reservada', escriturada:'escriturada', descartada:'descartada'};
-  document.getElementById('busq-wrap').innerHTML = '<div class="cards-grid">' + (busquedas.map(b=>`
-    <div class="consulta-card">
-      <div style="font-weight:700;font-size:13px">${b.criterios || 'Sin detalle'}</div>
+  document.getElementById('busq-wrap').innerHTML = '<div class="cards-grid">' + (busquedas.map(b=>{
+    const editando = busquedaEditId === b.id;
+    const d = busquedaDrafts[b.id] || {tipo:b.tipo||'', zona:b.zona||'', precioUSD:b.precioUSD||0, dormitorios:b.dormitorios||0, criterios:b.criterios||''};
+    const datosHTML = editando ? `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:6px">
+        <input class="inp" placeholder="Tipo" value="${d.tipo}" oninput="draftBusqueda('${b.id}','tipo',this.value)">
+        <input class="inp" placeholder="Zona" value="${d.zona}" oninput="draftBusqueda('${b.id}','zona',this.value)">
+        <input class="inp" type="number" placeholder="Presupuesto USD" value="${d.precioUSD||''}" oninput="draftBusqueda('${b.id}','precioUSD',this.value)">
+        <input class="inp" type="number" placeholder="Dormitorios" value="${d.dormitorios||''}" oninput="draftBusqueda('${b.id}','dormitorios',this.value)">
+      </div>
+      <textarea class="inp" style="margin-top:6px;width:100%;min-height:50px" placeholder="Detalles / criterios" oninput="draftBusqueda('${b.id}','criterios',this.value)">${d.criterios}</textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <span class="chip" style="color:var(--green)" onclick="confirmarEdicionBusqueda('${b.id}')">OK · Confirmar</span>
+        <span class="chip" onclick="cancelarEdicionBusqueda('${b.id}')">Cancelar</span>
+      </div>` : `
       <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${b.tipo||'tipo s/d'} · ${b.zona||'zona s/d'} · ${b.precioUSD?'hasta USD '+b.precioUSD.toLocaleString('es-AR'):'presupuesto s/d'}${b.dormitorios?' · '+b.dormitorios+' dorm.':''}</div>
+      ${b.criterios ? `<div style="font-size:10px;color:var(--text3);opacity:.8;margin-top:4px">${b.criterios}</div>` : ''}
+      <div style="margin-top:6px"><span class="chip" onclick="editarBusqueda('${b.id}')">✏️ Editar</span></div>`;
+
+    const muestraFormHTML = busquedaMuestraAbierta===b.id ? `
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+        <input class="inp" type="date" id="mu-fecha-${b.id}" value="${fechaInputHoy()}" style="flex:0 0 140px">
+        <input class="inp" id="mu-prop-${b.id}" placeholder="Propiedad mostrada" style="flex:1 1 140px">
+        <span class="chip" style="color:var(--green)" onclick="confirmarMuestra('${b.id}')">OK</span>
+        <span class="chip" onclick="cancelarMuestra()">Cancelar</span>
+      </div>` : '';
+
+    return `
+    <div class="consulta-card">
+      <div style="font-weight:800;font-size:15px;color:var(--gold2)">${nombreClientePorId(b.clienteId)}</div>
+      ${datosHTML}
       <div style="display:flex;align-items:center;gap:8px;margin-top:10px">
         <span style="font-size:10px;color:var(--text3)">Muestras</span>
         <span style="font-weight:800">${(b.muestras||[]).length}</span>
         <span style="margin-left:auto;font-size:10px;color:var(--text3)">${estadoLbl[b.estado]||b.estado}</span>
       </div>
-      ${b.estado==='en_proceso' ? `
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <span class="chip" style="color:var(--green)" onclick="agregarMuestra('${b.id}')">+ Muestra</span>
+      ${(b.muestras||[]).length ? `<div style="font-size:9.5px;color:var(--text3);margin-top:4px">${(b.muestras||[]).map(m=>`${m.fecha}${m.propiedad?' · '+m.propiedad:''}`).join(' · ')}</div>` : ''}
+      ${muestraFormHTML}
+      ${b.estado==='en_proceso' && !editando ? `
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <span class="chip" style="color:var(--green)" onclick="abrirMuestraForm('${b.id}')">+ Muestra</span>
         <span class="chip" onclick="marcarReserva('${b.id}')">Reserva</span>
         <span class="chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>
       </div>` : ''}
-    </div>`).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
+    </div>`;
+  }).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
 }
 
 // Decoración bokeh (mismas burbujas difuminadas que el fondo de SOLUMITOS)
