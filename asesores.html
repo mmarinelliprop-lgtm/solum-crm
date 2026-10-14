@@ -37,6 +37,7 @@
 body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;position:relative;}
 .bokeh{position:fixed;inset:0;z-index:-1;overflow:hidden;background:var(--bokeh-a);pointer-events:none;}
 .bokeh i{position:absolute;border-radius:50%;filter:blur(22px);opacity:var(--bokeh-op);}
+.bokeh .metatron{position:absolute;pointer-events:none;}
 .header{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border-bottom:1px solid var(--edge);box-shadow:var(--glass-shadow);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
 .header-brand{display:flex;align-items:center;gap:12px;}
 .header-logo{width:38px;height:38px;color:var(--gold);padding:3px;flex:none;}
@@ -878,6 +879,26 @@ function renderBusquedas(){
     const s = 40+r()*140, d = document.createElement('i');
     d.style.cssText = `width:${s}px;height:${s}px;left:${r()*100}%;top:${r()*100}%;background:${cols[Math.floor(r()*cols.length)]};`;
     b.appendChild(d);
+  }
+  // Cubo de Metatrón (13 círculos de la Flor de la Vida + todas sus conexiones), distribuido
+  // disimulado entre las otras figuras del fondo, muy tenue, como otro elemento geométrico más.
+  const metatronSVG = () => {
+    const R1 = 22, R2 = 22*Math.sqrt(3), pts = [[0,0]];
+    for(let a=0;a<360;a+=60) pts.push([R1*Math.cos(a*Math.PI/180), R1*Math.sin(a*Math.PI/180)]);
+    for(let a=30;a<360;a+=60) pts.push([R2*Math.cos(a*Math.PI/180), R2*Math.sin(a*Math.PI/180)]);
+    let lines = '', circles = '';
+    for(let i=0;i<pts.length;i++){
+      circles += `<circle cx="${pts[i][0].toFixed(2)}" cy="${pts[i][1].toFixed(2)}" r="1.6"/>`;
+      for(let j=i+1;j<pts.length;j++) lines += `<line x1="${pts[i][0].toFixed(2)}" y1="${pts[i][1].toFixed(2)}" x2="${pts[j][0].toFixed(2)}" y2="${pts[j][1].toFixed(2)}"/>`;
+    }
+    return `<svg viewBox="-50 -50 100 100" stroke="rgba(227,201,138,.16)" stroke-width="0.4" fill="rgba(227,201,138,.14)">${lines}${circles}</svg>`;
+  };
+  for(let i=0;i<3;i++){
+    const s = 220+r()*160, rot = r()*360, m = document.createElement('div');
+    m.className = 'metatron';
+    m.style.cssText = `width:${s}px;height:${s}px;left:${r()*100}%;top:${r()*100}%;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${0.4+r()*0.3};`;
+    m.innerHTML = metatronSVG();
+    b.appendChild(m);
   }
 })();
 
