@@ -319,25 +319,32 @@ async function cargarTodo(){
 
 // ── Semana: igual lógica que getSemanasMes/getSemanas de index.html ──
 function getSemanasMes(anio, mes){
+  const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const semanas = [];
   const primerDia = new Date(anio, mes-1, 1);
   const ultimoDia = new Date(anio, mes, 0);
   let dia = new Date(primerDia);
+  function pushSemana(inicio, fin){
+    semanas.push({
+      lunes: inicio.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      viernes: fin.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      lunesLabel: DIAS[inicio.getDay()], viernesLabel: DIAS[fin.getDay()]
+    });
+  }
   const diaSemanaInicio = dia.getDay();
   if(diaSemanaInicio>=2 && diaSemanaInicio<=5){
     const inicioParcial = new Date(dia);
     const finParcial = new Date(dia);
-    while(finParcial.getDay()!==0 && finParcial < ultimoDia) finParcial.setDate(finParcial.getDate()+1);
+    while(finParcial.getDay()!==5 && finParcial < ultimoDia) finParcial.setDate(finParcial.getDate()+1);
     const finReal = finParcial <= ultimoDia ? finParcial : ultimoDia;
-    semanas.push({lunes: inicioParcial.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}), viernes: finReal.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+    pushSemana(inicioParcial, finReal);
     dia = new Date(finReal); dia.setDate(dia.getDate()+1);
-  } else {
-    while(dia.getDay()!==1) dia.setDate(dia.getDate()+1);
   }
+  while(dia.getDay()!==1 && dia<=ultimoDia) dia.setDate(dia.getDate()+1);
   while(dia <= ultimoDia){
     const lunes = new Date(dia);
     const viernes = new Date(dia); viernes.setDate(dia.getDate()+4);
-    semanas.push({lunes: lunes.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}), viernes: (viernes<=ultimoDia?viernes:ultimoDia).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})});
+    pushSemana(lunes, viernes<=ultimoDia?viernes:ultimoDia);
     dia.setDate(dia.getDate()+7);
   }
   return semanas;
@@ -428,7 +435,7 @@ function renderSemana(){
     <div class="week-card">
       <div class="week-head">
         <div style="font-weight:700;font-size:13px">Semana ${i+1}</div>
-        <div class="week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
+        <div class="week-range">${sem.lunesLabel} ${sem.lunes} → ${sem.viernesLabel} ${sem.viernes}</div>
       </div>
       <div class="metric-grid">
         ${SEM_METRICAS.map(({label,key})=>{

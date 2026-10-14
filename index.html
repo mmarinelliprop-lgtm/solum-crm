@@ -4920,7 +4920,7 @@ function renderCalendarioSemanal(){
     html += `<div class="cal-week">
       <div class="cal-week-header">
         <div class="cal-week-date">Semana ${i+1} ${partidaLabel}</div>
-        <div class="cal-week-range">Lunes ${sem.lunes} → Viernes ${sem.viernes}</div>
+        <div class="cal-week-range">${sem.lunesLabel} ${sem.lunes} → ${sem.viernesLabel} ${sem.viernes}</div>
       </div>
       <div class="cal-week-body">`;
     semMetricas.forEach(({label,key,obj:o}) => {
@@ -5318,38 +5318,43 @@ function prorratearSemana(vals, lunes, viernes, mesDestino, anioDestino) {
 }
 
 function getSemanasMes(anio, mes){
-  // Devuelve las semanas (lun-vie, o el tramo parcial que corresponda) del mes dado
+  // Devuelve las semanas (lun-vie, o el tramo parcial que corresponda) del mes dado.
+  // Cada semana incluye lunesLabel/viernesLabel con el día real (Jue/Vie/etc.) porque el primer
+  // y el último tramo del mes casi nunca caen justo en lunes/viernes.
+  const DIAS = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const semanas = [];
   const primerDia = new Date(anio, mes-1, 1);
   const ultimoDia = new Date(anio, mes, 0);
   let dia = new Date(primerDia);
 
-  // Si el mes arranca en día hábil que no es lunes (ej: viernes), ese tramo suelto
-  // (desde el día 1 hasta el domingo o fin de mes) cuenta como su propia semana — no se descarta.
+  function pushSemana(inicio, fin){
+    semanas.push({
+      lunes: inicio.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      viernes: fin.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
+      lunesLabel: DIAS[inicio.getDay()],
+      viernesLabel: DIAS[fin.getDay()]
+    });
+  }
+
+  // Si el mes arranca en día hábil que no es lunes (ej: jueves), ese tramo suelto
+  // (desde el día 1 hasta el viernes de esa misma semana o fin de mes) cuenta como su propia semana.
   const diaSemanaInicio = dia.getDay(); // 0=domingo ... 6=sábado
   if(diaSemanaInicio>=2 && diaSemanaInicio<=5){ // martes a viernes: hay al menos 1 día hábil suelto
     const inicioParcial = new Date(dia);
     const finParcial = new Date(dia);
-    while(finParcial.getDay()!==0 && finParcial < ultimoDia) finParcial.setDate(finParcial.getDate()+1);
+    while(finParcial.getDay()!==5 && finParcial < ultimoDia) finParcial.setDate(finParcial.getDate()+1);
     const finReal = finParcial <= ultimoDia ? finParcial : ultimoDia;
-    semanas.push({
-      lunes: inicioParcial.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
-      viernes: finReal.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})
-    });
+    pushSemana(inicioParcial, finReal);
     dia = new Date(finReal);
     dia.setDate(dia.getDate()+1);
-  } else {
-    // Domingo, sábado o ya es lunes: ir al primer lunes del mes normalmente
-    while(dia.getDay()!==1) dia.setDate(dia.getDate()+1);
   }
+  // Alinear al lunes siguiente (salta el fin de semana post-tramo suelto, o si el mes arranca sáb/dom)
+  while(dia.getDay()!==1 && dia<=ultimoDia) dia.setDate(dia.getDate()+1);
 
   while(dia <= ultimoDia){
     const lunes = new Date(dia);
     const viernes = new Date(dia); viernes.setDate(dia.getDate()+4);
-    semanas.push({
-      lunes: lunes.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}),
-      viernes: (viernes<=ultimoDia?viernes:ultimoDia).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'})
-    });
+    pushSemana(lunes, viernes<=ultimoDia?viernes:ultimoDia);
     dia.setDate(dia.getDate()+7);
   }
   return semanas;
