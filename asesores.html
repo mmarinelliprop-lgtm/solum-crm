@@ -266,6 +266,7 @@ let clientes = [];
 let captaciones = [];
 let busquedas = [];
 let operacionesPropias = []; // solo las del asesor logueado, leídas de la misma tabla "operaciones" que usa Martina
+let segObjetivosPropios = {}; // {mes: {metrica: valor}} — overrides que Martina carga por vendedor/mes en index.html
 
 // Mismo mapeo de nombres que usa index.html al leer la tabla "operaciones" de Sheets.
 const MAP_AGENTE_OPS = {
@@ -299,8 +300,8 @@ function normFechaOp(f){
 }
 
 async function cargarTodo(){
-  const [semRows, accRows, clienteRows, captRows, busqRows, opRows] = await Promise.all([
-    dbLeer('seguimiento_semanal'), dbLeer('seguimiento_acciones'), dbLeer('clientes'), dbLeer('captaciones'), dbLeer('busquedas'), dbLeer('operaciones')
+  const [semRows, accRows, clienteRows, captRows, busqRows, opRows, segRows] = await Promise.all([
+    dbLeer('seguimiento_semanal'), dbLeer('seguimiento_acciones'), dbLeer('clientes'), dbLeer('captaciones'), dbLeer('busquedas'), dbLeer('operaciones'), dbLeer('seguimiento')
   ]);
 
   if(semRows.length>1) semRows.slice(1).forEach(r=>{
@@ -310,6 +311,17 @@ async function cargarTodo(){
     while(segData[mes].semanas.length<=semIdx) segData[mes].semanas.push({fecha:'',vals:{}});
     if(key==='fecha') segData[mes].semanas[semIdx].fecha = val;
     else segData[mes].semanas[semIdx].vals[key] = val;
+  });
+
+  // Objetivos mensuales personalizados que Martina edita por vendedor/mes en index.html
+  // (tabla "seguimiento", filas "obj_<metrica>"). Sin esto, acá siempre se usaba el objetivo
+  // base genérico aunque Martina lo haya cambiado para este vendedor en particular.
+  if(segRows.length>1) segRows.slice(1).forEach(r=>{
+    const vendedor=r[1], mes=parseInt(r[2]), key=String(r[3]), val=parseFloat(r[4])||0;
+    if(vendedor!==sesionActiva || isNaN(mes) || !key.startsWith('obj_')) return;
+    const metrica = key.replace('obj_','');
+    if(!segObjetivosPropios[mes]) segObjetivosPropios[mes]={};
+    segObjetivosPropios[mes][metrica] = val;
   });
 
   if(accRows.length>1) accRows.slice(1).forEach(r=>{
@@ -425,10 +437,15 @@ function kpiTileHTML(label, val, objetivo, color){
   </div>`;
 }
 
+// Objetivo base del vendedor para ese mes, pisado por lo que Martina haya personalizado en index.html.
+function objVendedorMes(mes){
+  return {...(OBJ_BASE[sesionActiva]||OBJ_BASE['Kito']), ...(segObjetivosPropios[mes]||{})};
+}
+
 function renderKpisYMotivacion(){
-  const obj = OBJ_BASE[sesionActiva] || OBJ_BASE['Kito'];
   const anio = new Date().getFullYear();
   const mesActual = new Date().getMonth()+1;
+  const obj = objVendedorMes(mesActual);
   const hoy = new Date();
   const diaHoy = hoy.getDate();
   const diasDelMes = new Date(anio, mesActual, 0).getDate();
@@ -496,7 +513,7 @@ function renderSemana(){
   const anio = new Date().getFullYear();
   const semanas = getSemanasMes(anio, mes);
   const semData = segData[mes]?.semanas || [];
-  const obj = OBJ_BASE[sesionActiva] || OBJ_BASE['Kito'];
+  const obj = objVendedorMes(mes);
   const diasMes = diasHabilesMes(anio, mes);
   // Objetivo semanal proporcional a los días hábiles reales de cada semana (una semana de 1 o 2
   // días, típico del primer o último tramo del mes, pide proporcionalmente menos que una completa).
