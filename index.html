@@ -4920,19 +4920,25 @@ function renderCalendarioSemanal(){
   const semanas = getSemanasMes(anio, mes);
   const semData = getSemanas(vendedor, mes);
 
-  const semMetricas = [
-    {label:'Prospección',key:'p',obj:Math.ceil(obj.p/4)},
-    {label:'Entrevistas captación',key:'ec',obj:Math.ceil((obj.ec||2)/4)||2},
-    {label:'ACM',key:'acm',obj:2},
-    {label:'Promo',key:'pr',obj:2},
-    {label:'Consultas',key:'cg',obj:Math.ceil(obj.cg/4)},
-    {label:'Muestras',key:'m',obj:Math.ceil(obj.m/4)},
-  ];
+  // Objetivo semanal proporcional a los días hábiles reales de cada semana — una semana de 1 o 2
+  // días (típica del primer o último tramo del mes) pide proporcionalmente menos que una completa.
+  const diasHabilesMes = (() => { const u=new Date(anio,mes,0).getDate(); let c=0; for(let d=1;d<=u;d++){ const dia=new Date(anio,mes-1,d).getDay(); if(dia>=1&&dia<=5) c++; } return c; })();
+  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasHabilesMes/5, pr: 2*diasHabilesMes/5, cg: obj.cg||0, m: obj.m||0};
 
   let html = '';
   semanas.forEach((sem, i) => {
     const semVals = semData[i]?.vals || {};
-    
+    const [ld,lm] = sem.lunes.split('/').map(Number), [vd,vm] = sem.viernes.split('/').map(Number);
+    const diasSemana = Math.round((new Date(anio,vm-1,vd) - new Date(anio,lm-1,ld))/86400000) + 1;
+    const semMetricas = [
+      {label:'Prospección',key:'p'},
+      {label:'Entrevistas captación',key:'ec'},
+      {label:'ACM',key:'acm'},
+      {label:'Promo',key:'pr'},
+      {label:'Consultas',key:'cg'},
+      {label:'Muestras',key:'m'},
+    ].map(mt => ({...mt, obj: Math.max(1, Math.round(objMensualEquivalente[mt.key]*diasSemana/diasHabilesMes))}));
+
     // Detectar si la semana está partida entre dos meses
     const lunesParts = sem.lunes.split('/');
     const viernesParts = sem.viernes.split('/');

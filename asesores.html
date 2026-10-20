@@ -478,22 +478,39 @@ function renderKpisYMotivacion(){
   document.getElementById('pep-banner').innerHTML = `<div class="pep-banner ${cls}">${frase}</div>`;
 }
 
+// Días hábiles (lun-vie) que tiene una semana ya recortada al mes (sem.lunes/viernes "dd/mm").
+function diasHabilesSemana(sem, anio){
+  const [ld,lm] = sem.lunes.split('/').map(Number), [vd,vm] = sem.viernes.split('/').map(Number);
+  const lunes = new Date(anio, lm-1, ld), viernes = new Date(anio, vm-1, vd);
+  return Math.round((viernes-lunes)/86400000) + 1;
+}
+function diasHabilesMes(anio, mes){
+  const ultimo = new Date(anio, mes, 0).getDate();
+  let c = 0;
+  for(let d=1; d<=ultimo; d++){ const dia = new Date(anio, mes-1, d).getDay(); if(dia>=1 && dia<=5) c++; }
+  return c;
+}
+
 function renderSemana(){
   const mes = parseInt(document.getElementById('sem-mes-sel').value);
   const anio = new Date().getFullYear();
   const semanas = getSemanasMes(anio, mes);
   const semData = segData[mes]?.semanas || [];
   const obj = OBJ_BASE[sesionActiva] || OBJ_BASE['Kito'];
-  // Objetivo semanal: mismo criterio que la tabla de Martina (mensual/4, con ACM y Promo fijos en 2 por semana)
-  const objSemana = {
-    p: Math.ceil((obj.p||0)/4), ec: Math.ceil((obj.ec||2)/4)||2, acm: 2, pr: 2,
-    cg: Math.ceil((obj.cg||0)/4), m: Math.ceil((obj.m||0)/4)
-  };
+  const diasMes = diasHabilesMes(anio, mes);
+  // Objetivo semanal proporcional a los días hábiles reales de cada semana (una semana de 1 o 2
+  // días, típico del primer o último tramo del mes, pide proporcionalmente menos que una completa).
+  // objMensualEquivalente: total del mes para cada métrica (ACM/Promo no tienen objetivo mensual propio
+  // en OBJ_BASE, se arman desde el criterio histórico de "2 por semana completa" × semanas del mes).
+  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasMes/5, pr: 2*diasMes/5, cg: obj.cg||0, m: obj.m||0};
 
   document.getElementById('semanas-wrap').innerHTML = semanas.map((sem,i)=>{
     const vals = semData[i]?.vals || {};
     const acciones = segAcciones?.[mes]?.[i] || {};
     const items = Object.entries(acciones).sort((a,b)=>a[0]-b[0]);
+    const diasSemana = diasHabilesSemana(sem, anio);
+    const objSemana = {};
+    Object.keys(objMensualEquivalente).forEach(k=>{ objSemana[k] = Math.max(1, Math.round(objMensualEquivalente[k]*diasSemana/diasMes)); });
     return `
     <div class="week-card">
       <div class="week-head">
@@ -529,11 +546,23 @@ function renderSemana(){
   }).join('');
 }
 
+// Además de guardar la fila semanal (que lee el calendario semanal de index.html), hay que
+// sumar y guardar el total mensual en la tabla "seguimiento" — esa es la que usan el ranking
+// del equipo y la ficha del vendedor en la app principal (getSegMes lee segData[vendedor][mes][key],
+// NO las semanas sueltas). Sin este paso, lo que carga cada asesor nunca llega a esas pantallas.
+function actualizarMensualPropia(mes){
+  const semanasMes = segData[mes]?.semanas || [];
+  SEM_METRICAS.forEach(({key})=>{
+    const total = semanasMes.reduce((s,sem)=>s+(parseFloat(sem.vals?.[key])||0),0);
+    dbGuardar('seguimiento', [Date.now(), sesionActiva, mes, key, total]);
+  });
+}
 function guardarMetricaSemana(mes, semIdx, key, val){
   if(!segData[mes]) segData[mes]={semanas:[]};
   while(segData[mes].semanas.length<=semIdx) segData[mes].semanas.push({fecha:'',vals:{}});
   segData[mes].semanas[semIdx].vals[key] = parseFloat(val)||0;
   dbGuardar('seguimiento_semanal', [Date.now(), sesionActiva, mes, semIdx, key, parseFloat(val)||0]);
+  actualizarMensualPropia(mes);
   if(mes === new Date().getMonth()+1) renderKpisYMotivacion();
   showToast('Guardado');
 }
