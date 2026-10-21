@@ -1976,6 +1976,9 @@ const OBJ_BASE = {
   'Jose':    {p:25,ec:4,acm:4,cp:2,pr:4,cg:60,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
   'Luli':    {p:15,ec:6,acm:4,cp:3,pr:8,cg:120,ca:100,b:5,m:20,r:2,v:1,f:3000,cap:1},
   'Joaquin': {p:20,ec:6,acm:4,cp:3,pr:8,cg:100,ca:40,b:5,m:20,r:2,v:1,f:0,cap:1},
+  // Franco: nuevo, objetivo provisional (igual al de Luli) — ajustar cuando haya un número real.
+  // No está en AGENTES_EQUIPO_VISIBLE: nunca cuenta en facturación/ranking/embudos del equipo.
+  'Franco':  {p:15,ec:6,acm:4,cp:3,pr:8,cg:120,ca:0,b:0,m:20,r:0,v:0,f:0,cap:0},
 };
 
 const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
@@ -4468,7 +4471,10 @@ function renderSegTablaSemanal(){
   const sem = semanas[semIdx];
   if(!sem){ document.getElementById('seg-eq-sem-head').innerHTML=''; document.getElementById('seg-eq-sem-rows').innerHTML=''; document.getElementById('seg-eq-sem-rank').innerHTML=''; return; }
   const diasSemana = diasHabilesDeLaSemana(sem, anio);
-  const vendedores = SEG_EQUIPO_AGENTES;
+  // Esta tabla (y el resumen de acciones de abajo) incluye también a Franco y Martina — es solo
+  // seguimiento de actividad semanal, no toca facturación/ranking/embudos del equipo (esos siguen
+  // usando SEG_EQUIPO_AGENTES sin estos dos), así que no suman ni restan a los números oficiales.
+  const vendedores = SEG_EQUIPO_AGENTES.concat(['Franco','Martina']);
 
   document.getElementById('seg-eq-sem-head').innerHTML = '<th class="sgw-th">Métrica</th>' + vendedores.map(v=>
     `<th class="sgw-th"><span class="av" style="width:18px;height:18px;font-size:9px;display:inline-flex;background:${AV_COLORS[v]||'#94A3B8'};margin-right:5px;vertical-align:middle">${v[0]}</span>${v}</th>`
