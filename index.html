@@ -4474,7 +4474,7 @@ function renderSegTablaSemanal(){
     `<th class="sgw-th"><span class="av" style="width:18px;height:18px;font-size:9px;display:inline-flex;background:${AV_COLORS[v]||'#94A3B8'};margin-right:5px;vertical-align:middle">${v[0]}</span>${v}</th>`
   ).join('');
 
-  // obj/real de cada vendedor para esta semana, una sola vez (se reusa en la tabla y el resumen)
+  // obj/real de las 6 métricas numéricas, por vendedor, para la tabla de arriba.
   const porVendedor = {};
   vendedores.forEach(v=>{
     const obj = segObjetivos?.[v]?.[mes] || OBJ_BASE[v] || OBJ_BASE['Martina'];
@@ -4501,24 +4501,26 @@ function renderSegTablaSemanal(){
     return `<tr><td class="sgw-td sgw-mname">${met.label}</td>${cells}</tr>`;
   }).join('');
 
-  // Resumen por vendedor: sólo promedia las métricas que cargó esa semana.
+  // Resumen por vendedor: SOLO las "acciones a cumplir" que cada uno carga abajo de su semana
+  // (el checklist libre), no las 6 métricas numéricas de la tabla de arriba.
   const rank = vendedores.map(v=>{
-    const cargadas = porVendedor[v].filter(c=>c.real!==null);
-    if(!cargadas.length) return {v, pct:null};
-    const sumReal = cargadas.reduce((s,c)=>s+c.real,0), sumObj = cargadas.reduce((s,c)=>s+c.obj,0);
-    return {v, pct: sumObj>0 ? Math.round(sumReal/sumObj*100) : 0};
+    const acciones = segAcciones?.[v]?.[mes]?.[semIdx] || {};
+    const items = Object.values(acciones);
+    if(!items.length) return {v, pct:null, cumplidas:0, total:0};
+    const cumplidas = items.filter(a=>a.cumplida).length;
+    return {v, pct: Math.round(cumplidas/items.length*100), cumplidas, total: items.length};
   }).sort((a,b)=>(b.pct??-1)-(a.pct??-1));
 
   document.getElementById('seg-eq-sem-rank').innerHTML = rank.map(r=>{
     if(r.pct===null) return `<div class="sgw-rank-item sgw-x" onclick="irSeguimientoVendedor('${r.v}')">
       <span class="av" style="background:${AV_COLORS[r.v]||'#94A3B8'}">${r.v[0]}</span>
-      <div class="sgw-rank-name">${r.v}</div><span class="sgw-empty">sin cargar esta semana</span>
+      <div class="sgw-rank-name">${r.v}</div><span class="sgw-empty">sin acciones cargadas esta semana</span>
     </div>`;
     const cls = r.pct>=100?'sgw-g':'sgw-r';
     return `<div class="sgw-rank-item ${cls}" onclick="irSeguimientoVendedor('${r.v}')">
       <span class="av" style="background:${AV_COLORS[r.v]||'#94A3B8'}">${r.v[0]}</span>
       <div class="sgw-rank-name">${r.v}</div>
-      <span class="sgw-rank-badge">${r.pct>=100?'Cumplió':'No cumplió'}</span>
+      <span class="sgw-rank-badge">${r.cumplidas}/${r.total} acciones</span>
       <span class="sgw-rank-pct">${r.pct}%</span>
     </div>`;
   }).join('');
