@@ -1877,6 +1877,7 @@ async function cargarDatosDB() {
   renderDashboard();
   detectarIncongruencias();
   migrarCaptacionesCompetencia();
+  seedDatosFranco();
 }
 
 // ═══════════════════════════════════════════════
@@ -1982,7 +1983,7 @@ const OBJ_BASE = {
   'Joaquin': {p:20,ec:6,acm:4,cp:3,pr:8,cg:100,ca:40,b:5,m:20,r:2,v:1,f:0,cap:1},
   // Franco: nuevo, objetivo provisional (igual al de Luli) — ajustar cuando haya un número real.
   // No está en AGENTES_EQUIPO_VISIBLE: nunca cuenta en facturación/ranking/embudos del equipo.
-  'Franco':  {p:15,ec:6,acm:4,cp:3,pr:8,cg:120,ca:0,b:0,m:20,r:0,v:0,f:0,cap:0},
+  'Franco':  {p:20,ec:10,acm:7,cp:5,pr:3,cg:50,ca:50,b:6,m:36,r:4,v:3,f:4167,cap:0},
 };
 
 const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
@@ -2153,9 +2154,9 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 // El % de comisión es fijo durante todo el año: lo determina lo que el agente facturó el año pasado.
 // Vendedores del equipo (sin Martina, sin Kito): 50% hasta $40.000 → 60% hasta $50.000 → 70% en adelante
 // Kito: % fijo (60%), objetivo propio distinto
-const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000 }; // resto: 30000
+const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000, 'Franco':50000 }; // resto: 30000
 const OBJETIVO_EQUIPO_ANUAL = 180000; // suma facturación bruta de todo el equipo, sin Martina
-const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000 }; // resto (sistema del 50%): 34000
+const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000, 'Franco':56000 }; // resto (sistema del 50%): 34000
 
 function objetivoBaseVendedor(agente){
   const n = normAgente(agente);
@@ -2301,10 +2302,17 @@ function normAgente(a){
 // Alertas activas: {id, tipo, msg, opId?}
 let alertasActivas = [];
 
+// Vendedores que no tienen (ni van a tener) operaciones cargadas en la pestaña Operaciones —
+// su v/f/r se cargan 100% a mano en la tabla anual, sin que getSegMes los pise con el cálculo
+// desde `operaciones` (que para ellos siempre daría 0).
+const SEG_SIN_OPERACIONES = ['Franco'];
+
 function getSegMes(vendedor, mes, anio) {
   anio = anio || new Date().getFullYear();
   const manual = segData?.[vendedor]?.[mes] || {};
   const merged = {...manual};
+
+  if(SEG_SIN_OPERACIONES.includes(vendedor)) return merged;
 
   // v y f siempre desde operaciones (fuente de verdad)
   const opsDelMes = operaciones.filter(o=>o.anio===anio&&o.mes===mes&&(
@@ -6223,6 +6231,30 @@ function showToast(msg, type='green'){
 // ═══════════════════════════════════════════════
 
 function confirmarApiKey(){ /* key manejada por Netlify */ }
+
+// ═══════════════════════════════════════════════
+// CARGA ÚNICA: números reales de Franco (enero-octubre 2026), a mano porque no tiene
+// operaciones cargadas (ver SEG_SIN_OPERACIONES en getSegMes). Corre sola una vez.
+// ═══════════════════════════════════════════════
+async function seedDatosFranco(){
+  if(segData?.Franco?.[1]?.cp !== undefined) return; // guard: ya cargado
+  const cpPorMes = {1:4, 2:2, 3:4, 4:3, 5:1, 6:2, 7:2, 8:4, 9:1, 10:3};
+  // $36.345 facturados a la fecha, prorrateados en los 9 meses ya cerrados (ene-sep).
+  const fPorMes = {1:4038, 2:4038, 3:4038, 4:4038, 5:4038, 6:4038, 7:4038, 8:4038, 9:4041};
+  const filas = [];
+  Object.entries(cpPorMes).forEach(([mes,val])=>{
+    if(!segData.Franco) segData.Franco = {};
+    if(!segData.Franco[mes]) segData.Franco[mes] = {};
+    segData.Franco[mes].cp = val;
+    filas.push([Date.now()+Math.random(), 'Franco', parseInt(mes), 'cp', val]);
+  });
+  Object.entries(fPorMes).forEach(([mes,val])=>{
+    if(!segData.Franco[mes]) segData.Franco[mes] = {};
+    segData.Franco[mes].f = val;
+    filas.push([Date.now()+Math.random(), 'Franco', parseInt(mes), 'f', val]);
+  });
+  await dbGuardarLote('seguimiento', filas);
+}
 
 // ═══════════════════════════════════════════════
 // MIGRACIÓN ÚNICA: captaciones importadas desde planilla de la competencia
