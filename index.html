@@ -5306,9 +5306,12 @@ function captCardsHTML(capts){
     const desvio = cap.publicacion && completas < etapas.length;
     return `
     <div class="capt-card ${desvio?'desvio':''}">
-      <div style="font-size:17px;font-weight:800;color:var(--gold2)">${cap.fechaInicio||'s/d'}</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="font-weight:800;font-size:16px">${cap.direccion}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--red);white-space:nowrap;margin-left:8px">${normFecha(cap.fechaInicio)||'s/d'}</div>
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px">
-        <div><div style="font-weight:700;font-size:13px">${cap.direccion}</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">${cap.tipo||''} · ${cap.zona||''} · USD ${fmtN2(cap.precioUSD)}</div></div>
+        <div style="font-size:10.5px;color:var(--text3)">${cap.tipo||''} · ${cap.zona||''} · USD ${fmtN2(cap.precioUSD)}</div>
         ${desvio ? `<span class="fc-status" style="background:var(--amberbg);color:var(--amber)">⚠ desvío</span>` : `<div style="font-weight:800;color:var(--gold2)">${pct}%</div>`}
       </div>
       <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">

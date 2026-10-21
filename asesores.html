@@ -902,9 +902,11 @@ function captCardHTML(cap){
   const pct = Math.round(completas/FC_ETAPAS.length*100);
   return `
   <div class="capt-card" style="border-left:4px solid ${colorEtapaCaptacion(cap)}">
-    <div style="font-size:17px;font-weight:800;color:var(--gold2)">${cap.fechaInicio||'s/d'}</div>
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px">
-      <div style="font-weight:700;font-size:13px">${campoHTML('captacion',cap.id,'direccion',{vacio:'Sin dirección'})}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div style="font-weight:800;font-size:16px">${campoHTML('captacion',cap.id,'direccion',{vacio:'Sin dirección'})}</div>
+      <div style="font-size:13px;font-weight:800;color:var(--red);white-space:nowrap;margin-left:8px">${normFechaOp(cap.fechaInicio)||'s/d'}</div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:4px">
       <div style="font-weight:800;color:var(--gold2)">${pct}%</div>
     </div>
     <div style="font-size:10.5px;color:var(--text3);margin-top:2px">
@@ -935,9 +937,11 @@ function renderCaptaciones(){
     <div style="font-size:11px;font-weight:700;color:var(--text3);margin:16px 0 8px;text-transform:uppercase">Cerradas / descartadas (${descartadas.length})</div>
     <div class="cards-grid">${descartadas.map(cap=>`
       <div class="capt-card" style="opacity:.85;border-left:4px solid ${CAPT_RESULTADO_COLOR[cap.estado]||'#FF4D97'}">
-        <div style="font-size:15px;font-weight:800;color:var(--gold2)">${cap.fechaInicio||'s/d'}</div>
-        <div style="display:flex;justify-content:space-between;margin-top:4px">
-          <div style="font-weight:700;font-size:13px">${cap.direccion}</div>
+        <div style="display:flex;justify-content:space-between">
+          <div style="font-weight:800;font-size:16px">${cap.direccion}</div>
+          <div style="font-size:12px;font-weight:800;color:var(--red);white-space:nowrap;margin-left:8px">${normFechaOp(cap.fechaInicio)||'s/d'}</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:4px">
           <div style="color:${CAPT_RESULTADO_COLOR[cap.estado]||'var(--text3)'};font-size:11px;font-weight:700">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</div>
         </div>
         <div style="font-size:10px;color:var(--text3);margin-top:4px">${cap.fechaCierre?'Cierre: '+cap.fechaCierre:''}${cap.motivoCierre?' · '+cap.motivoCierre:''}</div>
