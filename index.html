@@ -4651,7 +4651,8 @@ async function generarAnalisisVendedorFinal(vendedor){
   container.innerHTML = `<div style="text-align:center;padding:30px;color:var(--text3)">⏳ Analizando datos y comparando contra el equipo...</div>`;
 
   const anio = new Date().getFullYear();
-  const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
+  const mesParaObj = new Date().getMonth()+1;
+  const obj = segObjetivos?.[vendedor]?.[mesParaObj] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
   const getMd = m2 => getSegMes(vendedor, m2, anio);
   const mesActual = new Date().getMonth()+1;
   const allM = Array.from({length:mesActual},(_,i)=>i+1);
@@ -4914,7 +4915,7 @@ function renderCalendarioSemanal(){
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   const mes = parseInt(document.getElementById('seg-cal-mes').value);
   const anio = 2026;
-  const obj = segObjetivos[vendedor] || OBJ_BASE['Martina'];
+  const obj = segObjetivos?.[vendedor]?.[mes] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
 
   // Calcular semanas del mes (lunes a viernes)
   const semanas = getSemanasMes(anio, mes);
