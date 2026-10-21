@@ -1260,6 +1260,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <option value="Ceci">Ceci</option>
         <option value="Luli">Luli</option>
         <option value="Joaquin">Joaquín</option>
+        <option value="Franco">Franco</option>
       </select>
       <select class="filter-select" id="seg-mes-sel" onchange="segMesActivo=parseInt(this.value);renderSeguimiento()"></select>
       <button class="btn btn-gold btn-sm" onclick="guardarSeguimiento()">💾 Guardar</button>
@@ -1952,7 +1953,9 @@ let gastosPesos = [];
 // ═══════════════════════════════════════════════
 // SEGUIMIENTO — DATOS Y LÓGICA CORRECTA
 // ═══════════════════════════════════════════════
-const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Jose','Luli','Joaquin'];
+// Franco está acá (ficha individual, tabla anual, calendario semanal) pero NO en
+// AGENTES_EQUIPO_VISIBLE/SEG_EQUIPO_AGENTES — nunca cuenta en facturación, ranking ni embudos del equipo.
+const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Jose','Luli','Joaquin','Franco'];
 
 // 13 métricas exactas de la planilla
 const METRICAS_SEG = [
@@ -2926,7 +2929,7 @@ function mapAgenteToSeg(agente) {
   return map[agente] || map[agente?.trim()] || agente;
 }
 
-const AV_COLORS = {Martina:'#B9794A',Joaquin:'#7FC8A9',Vicky:'#E3C98A',Manu:'#2DD4C4',Marce:'#A596C4',Kito:'#E39A8B',Cris:'#7FC8A9',Ceci:'#5F7FA6',Joaco:'#D9B25C',Luli:'#94A3B8',Jose:'#7FC8A9'};
+const AV_COLORS = {Martina:'#B9794A',Joaquin:'#7FC8A9',Vicky:'#E3C98A',Manu:'#2DD4C4',Marce:'#A596C4',Kito:'#E39A8B',Cris:'#7FC8A9',Ceci:'#5F7FA6',Joaco:'#D9B25C',Luli:'#94A3B8',Jose:'#7FC8A9',Franco:'#C97B63'};
 let dashInclMartina = false;
 try{ dashInclMartina = localStorage.getItem("solum-dash-martina")==="1"; }catch(e){}
 function syncDashMartinaBtn(){
