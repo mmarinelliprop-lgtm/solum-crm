@@ -86,7 +86,8 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 .pep-good{background:linear-gradient(135deg,rgba(45,212,196,.16),rgba(45,212,196,.04));border:1px solid rgba(45,212,196,.3);color:var(--green);}
 .pep-mid{background:linear-gradient(135deg,rgba(227,201,138,.16),rgba(227,201,138,.04));border:1px solid rgba(227,201,138,.3);color:var(--gold2);}
 .pep-low{background:linear-gradient(135deg,rgba(255,79,160,.14),rgba(255,79,160,.04));border:1px solid rgba(255,79,160,.3);color:var(--red);}
-.semanas-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;align-items:start;}
+.semanas-grid{display:grid;grid-template-columns:repeat(var(--semanas,5),1fr);gap:10px;align-items:start;}
+@media (max-width:1100px){ .semanas-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));} }
 .cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-items:start;}
 .login-box{max-width:380px;margin:70px auto;background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:var(--radius2);padding:30px;text-align:center;position:relative;z-index:1;}
 .login-box .logo{width:52px;height:52px;margin:0 auto 10px;color:var(--gold);}
@@ -500,13 +501,15 @@ function colorRitmo(val, objetivo, fraccionMes){
   if(pctVal <= pctEsperado - 15) return 'var(--red)';
   return 'var(--amber)';
 }
+const RITMO_BG = {'var(--green)':'rgba(45,212,196,.13)', 'var(--amber)':'rgba(217,178,92,.13)', 'var(--red)':'rgba(227,154,139,.16)', 'var(--text3)':'var(--pop)'};
 function kpiTileHTML(label, val, objetivo, color, fraccionMes){
   const pct = objetivo>0 ? Math.min(100, Math.round(val/objetivo*100)) : 0;
-  const numColor = fraccionMes!=null ? colorRitmo(val, objetivo, fraccionMes) : color;
-  return `<div class="kpi-tile">
-    <div class="kt-l">${label}</div><div class="kt-v" style="color:${numColor}">${val}</div>
-    <div class="kpi-bar-wrap"><div class="kpi-bar" style="width:${pct}%;background:${color}"></div></div>
-    <div class="kpi-obj">${val}/${objetivo} · ${pct}%</div>
+  const ritmo = fraccionMes!=null ? colorRitmo(val, objetivo, fraccionMes) : color;
+  return `<div class="kpi-tile" style="background:${RITMO_BG[ritmo]||RITMO_BG['var(--text3)']};border-color:${ritmo}">
+    <div class="kt-l">${label}</div>
+    <div class="kpi-bar-wrap"><div class="kpi-bar" style="width:${pct}%;background:${ritmo}"></div></div>
+    <div class="kt-v" style="color:${ritmo}">${val}/${objetivo}</div>
+    <div class="kpi-obj">${pct}%</div>
   </div>`;
 }
 
@@ -543,13 +546,6 @@ function renderFichaPersonal(){
   const leftObj = Math.min(100, Math.round(objetivoBase/scaleMax*100));
   const leftViaje = Math.min(100, Math.round(premioViaje/scaleMax*100));
 
-  const cpMes = segMensualPropio[mesActual]?.cp || 0;
-  const mMes = segMensualPropio[mesActual]?.m || 0;
-  const reservasMes = operacionesPropias.filter(o=>o.mesReserva===mesActual && o.anioReserva===anio).length;
-  const ventasMes = operacionesPropias.filter(o=>o.mes===mesActual && o.anio===anio && o.estado==='Cobrada').length;
-  const objCpMes = Math.round((obj.cp||0) * pesoMensualAs(mesActual) * 4) || 1; // objetivo semanal*4≈mensual
-  const objMMes = Math.round((obj.m||0) * pesoMensualAs(mesActual) * 4) || 1;
-
   let cpAnio = 0; for(let m=1;m<=mesActual;m++) cpAnio += (segMensualPropio[m]?.cp||0);
   const ventasAnio = operacionesPropias.filter(o=>o.anio===anio && o.estado==='Cobrada').length;
   const objCpAnio = Math.round((obj.cp||0) * 12) || 1;
@@ -571,15 +567,6 @@ function renderFichaPersonal(){
         <span>Por cobrar: <b>${fmtN2(facPorCobrar)}</b></span>
         <span>Faltan para objetivo: <b>${fmtN2(Math.max(0,objetivoBase-facturacion))}</b></span>
         <span>Faltan para premio: <b>${fmtN2(Math.max(0,premioViaje-facturacion))}</b></span>
-      </div>
-    </div>
-    <div class="kpi-tier">
-      <div class="kpi-tier-label">Mes en curso — ${MESES_NOMBRES[mesActual]}</div>
-      <div class="kpi-mini-grid">
-        ${miniTileHTML('Captac. nuevas', cpMes, objCpMes, '#4A9EFF')}
-        ${miniTileHTML('Muestras', mMes, objMMes, '#D9B25C')}
-        ${miniTileHTML('Reservas', reservasMes, Math.max(1,Math.round((obj.r||1)/4)), '#A596C4')}
-        ${miniTileHTML('Ventas', ventasMes, Math.max(1,Math.round((obj.v||1)/4)), '#2DD4C4')}
       </div>
     </div>
     <div class="kpi-tier">
@@ -622,12 +609,13 @@ function renderKpisYMotivacion(){
   const reservasMes = operacionesPropias.filter(o=>o.mesReserva===mesActual && o.anioReserva===anio).length;
   const ventasMes = operacionesPropias.filter(o=>o.mes===mesActual && o.anio===anio && o.estado==='Cobrada').length;
   const tilesOps = [
-    {label:'Reservas (mes)', val: reservasMes, color:'var(--lila,#A596C4)'},
-    {label:'Ventas (mes)', val: ventasMes, color:'var(--green)'}
+    {label:'Reservas (mes)', val: reservasMes, objMensual: obj.r||0},
+    {label:'Ventas (mes)', val: ventasMes, objMensual: obj.v||0}
   ];
 
-  document.getElementById('kpi-wrap').innerHTML = tiles.map(t=>kpiTileHTML(t.label, t.val, t.objMensual||1, t.color, fraccionMes)).join('')
-    + tilesOps.map(t=>`<div class="kpi-tile"><div class="kt-l">${t.label}</div><div class="kt-v" style="color:${t.color}">${t.val}</div><div class="kpi-obj" style="color:var(--text3)">Desde Operaciones</div></div>`).join('');
+  document.getElementById('kpi-wrap').innerHTML =
+    tiles.map(t=>kpiTileHTML(t.label, t.val, t.objMensual||1, t.color, fraccionMes)).join('') +
+    tilesOps.map(t=>kpiTileHTML(t.label, t.val, t.objMensual||1, t.color, fraccionMes)).join('');
 
   // % de cumplimiento general del mes a esta altura, vs. lo esperable según el día del mes
   const pcts = tiles.filter(t=>t.objMensual>0).map(t=>Math.min(150, t.val/t.objMensual*100));
@@ -671,6 +659,7 @@ function renderSemana(){
   // en OBJ_BASE, se arman desde el criterio histórico de "2 por semana completa" × semanas del mes).
   const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasMes/5, pr: 2*diasMes/5, cg: obj.cg||0, m: obj.m||0};
 
+  document.getElementById('semanas-wrap').style.setProperty('--semanas', Math.max(1, semanas.length));
   document.getElementById('semanas-wrap').innerHTML = semanas.map((sem,i)=>{
     const vals = semData[i]?.vals || {};
     const acciones = segAcciones?.[mes]?.[i] || {};
