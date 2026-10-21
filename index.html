@@ -2174,6 +2174,12 @@ function gananciaVendedor(op){
 // Facturación (comisión bruta cobrada) de un agente en un año calendario dado
 function facturacionAnioDeAgente(agente, anio){
   const n = normAgente(agente);
+  if(SEG_SIN_OPERACIONES.includes(n)){
+    // Sin operaciones cargadas: la facturación sale de lo cargado a mano en la tabla anual (mes a mes).
+    let total = 0;
+    for(let m=1; m<=12; m++) total += (segData?.[n]?.[m]?.f || 0);
+    return total;
+  }
   return operaciones
     .filter(o=>normAgente(o.agente)===n && o.anio===anio && o.estado==='Cobrada')
     .reduce((s,o)=>s+(o.comision||0),0);
@@ -2306,6 +2312,14 @@ let alertasActivas = [];
 // su v/f/r se cargan 100% a mano en la tabla anual, sin que getSegMes los pise con el cálculo
 // desde `operaciones` (que para ellos siempre daría 0).
 const SEG_SIN_OPERACIONES = ['Franco'];
+// "Por cobrar" de los vendedores de SEG_SIN_OPERACIONES — a mano, porque no hay operaciones de
+// donde calcularlo. Ajustar acá cuando cambie.
+const SEG_POR_COBRAR_MANUAL = { 'Franco': 2550 };
+function facPorCobrarDeAgente(vendedor){
+  if(SEG_SIN_OPERACIONES.includes(vendedor)) return SEG_POR_COBRAR_MANUAL[vendedor] || 0;
+  const anioSeg = new Date().getFullYear();
+  return operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+}
 
 function getSegMes(vendedor, mes, anio) {
   anio = anio || new Date().getFullYear();
@@ -4591,7 +4605,7 @@ function renderSeguimiento(){
   // ── Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) — solo los logrados ──
   // Datos financieros globales del vendedor, usados más abajo para armar el tablero KPI unificado
   const est = estadoNivelVendedor(vendedor, anioSeg);
-  const facPorCobrar = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  const facPorCobrar = facPorCobrarDeAgente(vendedor);
   const objetivoBase = objetivoBaseVendedor(vendedor);
   const premioViaje = viajeUmbralVendedor(vendedor);
   const mesHoy = segMesActivo || (new Date().getMonth()+1);
@@ -4665,7 +4679,7 @@ function renderSeguimiento(){
   // facPorCobrarSeg: facturación de operaciones YA cargadas como "Por cobrar" (getSegMes().f solo
   // suma Cobradas, así que si no se suma acá la proyección ignora lo que ya está confirmado pero
   // todavía no cobrado)
-  const facPorCobrarSeg = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  const facPorCobrarSeg = facPorCobrarDeAgente(vendedor);
   // Proyección de FACTURACIÓN BRUTA del vendedor seleccionado (no ganancia de Martina) — misma estacionalidad trimestral que Operaciones
   let pesoTranscurridoSeg = 0;
   for(let mm=1; mm<=mesActual; mm++) pesoTranscurridoSeg += pesoMensual(mm);
