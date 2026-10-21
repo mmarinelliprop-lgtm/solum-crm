@@ -1961,34 +1961,35 @@ let gastosPesos = [];
 const VENDEDORES_SEG = ['Martina','Marce','Kito','Vicky','Manu','Cris','Ceci','Jose','Luli','Joaquin','Franco'];
 
 // 13 métricas exactas de la planilla
+// "Consultas generadas" se dejó de trackear en todos los seguimientos — solo queda "Consultas atendidas".
 const METRICAS_SEG = [
   'Acciones de prospección','Entrevistas de captación','ACM presentados',
-  'Captaciones publicadas','Promo personal en redes','Consultas generadas',
+  'Captaciones publicadas','Promo personal en redes',
   'Consultas atendidas','Búsquedas','Muestras','Reservas','Ventas',
   'Facturación','Capacitaciones'
 ];
 
 // 6 métricas del semanal
-const METRICAS_SEM = ['Prospección','Entrevistas de captación','ACM','Promo','Consultas gen.','Muestras'];
+const METRICAS_SEM = ['Prospección','Entrevistas de captación','ACM','Promo','Consultas atendidas','Muestras'];
 
 // Objetivos base por vendedor (de las pestañas reales)
 const OBJ_BASE = {
-  'Martina': {p:20,ec:6,acm:6,cp:5,pr:16,cg:400,ca:200,b:10,m:60,r:6,v:4,f:16600,cap:1},
-  'Marce':   {p:20,ec:10,acm:5,cp:5,pr:4,cg:80,ca:70,b:2,m:40,r:4,v:3,f:8000,cap:0},
-  'Kito':    {p:15,ec:6,acm:6,cp:3,pr:8,cg:120,ca:100,b:10,m:32,r:2,v:1,f:5000,cap:1},
-  'Vicky':   {p:20,ec:7,acm:3,cp:2,pr:8,cg:108,ca:40,b:4,m:24,r:3,v:1,f:4500,cap:3},
-  'Manu':    {p:20,ec:6,acm:4,cp:3,pr:8,cg:150,ca:20,b:5,m:20,r:2,v:1,f:2400,cap:1},
-  'Cris':    {p:20,ec:6,acm:6,cp:3,pr:8,cg:120,ca:100,b:5,m:20,r:3,v:2,f:3400,cap:1},
-  'Ceci':    {p:12,ec:6,acm:4,cp:3,pr:4,cg:160,ca:80,b:6,m:16,r:2,v:1,f:2500,cap:0},
-  'Jose':    {p:25,ec:4,acm:4,cp:2,pr:4,cg:60,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
-  'Luli':    {p:15,ec:6,acm:4,cp:3,pr:8,cg:120,ca:100,b:5,m:20,r:2,v:1,f:3000,cap:1},
-  'Joaquin': {p:20,ec:6,acm:4,cp:3,pr:8,cg:100,ca:40,b:5,m:20,r:2,v:1,f:0,cap:1},
+  'Martina': {p:20,ec:6,acm:6,cp:5,pr:16,ca:200,b:10,m:60,r:6,v:4,f:16600,cap:1},
+  'Marce':   {p:20,ec:10,acm:5,cp:5,pr:4,ca:70,b:2,m:40,r:4,v:3,f:8000,cap:0},
+  'Kito':    {p:15,ec:6,acm:6,cp:3,pr:8,ca:100,b:10,m:32,r:2,v:1,f:5000,cap:1},
+  'Vicky':   {p:20,ec:7,acm:3,cp:2,pr:8,ca:40,b:4,m:24,r:3,v:1,f:4500,cap:3},
+  'Manu':    {p:20,ec:6,acm:4,cp:3,pr:8,ca:20,b:5,m:20,r:2,v:1,f:2400,cap:1},
+  'Cris':    {p:20,ec:6,acm:6,cp:3,pr:8,ca:100,b:5,m:20,r:3,v:2,f:3400,cap:1},
+  'Ceci':    {p:12,ec:6,acm:4,cp:3,pr:4,ca:80,b:6,m:16,r:2,v:1,f:2500,cap:0},
+  'Jose':    {p:25,ec:4,acm:4,cp:2,pr:4,ca:25,b:4,m:16,r:1,v:1,f:0,cap:0},
+  'Luli':    {p:15,ec:6,acm:4,cp:3,pr:8,ca:100,b:5,m:20,r:2,v:1,f:3000,cap:1},
+  'Joaquin': {p:20,ec:6,acm:4,cp:3,pr:8,ca:40,b:5,m:20,r:2,v:1,f:0,cap:1},
   // Franco: nuevo, objetivo provisional (igual al de Luli) — ajustar cuando haya un número real.
   // No está en AGENTES_EQUIPO_VISIBLE: nunca cuenta en facturación/ranking/embudos del equipo.
-  'Franco':  {p:20,ec:10,acm:7,cp:5,pr:3,cg:50,ca:50,b:6,m:36,r:4,v:3,f:4167,cap:0},
+  'Franco':  {p:20,ec:10,acm:7,cp:5,pr:3,ca:50,b:6,m:36,r:4,v:3,f:4167,cap:0},
 };
 
-const OBJ_KEYS = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
+const OBJ_KEYS = ['p','ec','acm','cp','pr','ca','b','m','r','v','f','cap'];
 
 // Datos reales extraídos de las pestañas del sheets
 // Formato: {mes: {p,ec,acm,cp,pr,cg,ca,b,m,r,v,f,cap}}
@@ -2052,11 +2053,11 @@ function setSemana(vendedor, mes, idx, key, val){
     segData[vendedor][mes].semanas[idx].vals[key]=parseInt(val)||0;
     registrarCambioSemanalPendiente(vendedor, mes, idx, key, parseInt(val)||0);
     // Recalcular total mensual sumando todas las semanas del mes
-    const semMetKeys = ['p','pre','acm','pro','cg','m'];
+    const semMetKeys = ['p','pre','acm','pro','ca','m'];
     if(semMetKeys.includes(key)){
       const totSem = calcTotalMensualDesdeSemanas(vendedor, mes);
       // Mapear key semanal a key mensual
-      const semToMes = {p:'p', pre:'cp', acm:'acm', pro:'pr', cg:'cg', m:'m'};
+      const semToMes = {p:'p', pre:'cp', acm:'acm', pro:'pr', ca:'ca', m:'m'};
       if(semToMes[key]){
         if(!segData[vendedor][mes]) segData[vendedor][mes]={};
         // Solo actualizar si no hay dato real que lo pise
@@ -2368,7 +2369,7 @@ function getMesCalendario(fechaSem) {
 function calcTotalMensualDesdeSemanas(vendedor, mes) {
   const semanas = getSemanas(vendedor, mes);
   const totales = {};
-  const semMetKeys = ['p','pre','acm','pro','cg','m'];
+  const semMetKeys = ['p','pre','acm','pro','ca','m'];
   semMetKeys.forEach(k => totales[k] = 0);
   semanas.forEach(sem => {
     const mesSem = getMesCalendario(sem.fecha);
@@ -3116,7 +3117,7 @@ function renderDashboard(){
 // (Ctrl+P → Guardar como PDF). Solo agentes visibles de cara al equipo.
 // Actividad real vs. objetivo del año en curso (para la ficha por asesor)
 const SEG_METRICA_LABEL = {p:'Prospección',ec:'Entrevistas de captación',acm:'ACM presentados',
-  cp:'Captaciones publicadas',pr:'Promo personal en redes',cg:'Consultas generadas',
+  cp:'Captaciones publicadas',pr:'Promo personal en redes',
   ca:'Consultas atendidas',b:'Búsquedas',m:'Muestras',r:'Reservas',v:'Ventas',f:'Facturación',cap:'Capacitaciones'};
 function analizarActividadAsesor(nombre, anioF){
   const mesActual = anioF===new Date().getFullYear() ? new Date().getMonth()+1 : 12;
@@ -4342,7 +4343,7 @@ function accionesSemanaPct(vendedor, mes, anio){
     {key:'ec', obj:Math.ceil((obj.ec||2)/4)||2},
     {key:'acm', obj:2},
     {key:'pr', obj:2},
-    {key:'cg', obj:Math.ceil((obj.cg||0)/4)},
+    {key:'ca', obj:Math.ceil((obj.ca||0)/4)},
     {key:'m', obj:Math.ceil((obj.m||0)/4)},
   ];
   const semVals = getSemanas(vendedor, mes)[idx]?.vals || {};
@@ -4601,7 +4602,7 @@ function renderSeguimiento(){
     return segObjetivos?.[vendedor]?.[m]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
   };
   const obj = segObjetivos?.[vendedor]?.[1] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
-  const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
+  const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
   const anioSeg = new Date().getFullYear();
 
   // ── Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) — solo los logrados ──
@@ -4823,7 +4824,7 @@ async function generarAnalisisVendedorFinal(vendedor){
 
   const resumen = METRICAS_SEG.map((met,i)=>{
     const key = OBJ_KEYS[i];
-    const objV = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.cg,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap][i]||0;
+    const objV = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap][i]||0;
     const real = allM.reduce((s,m)=>s+(getMd(m)[key]||0),0);
     const pct = objV>0?Math.round(real/(objV*mesActual)*100):0;
     return `${met}: real=${real} obj=${objV*mesActual} cumpl=${pct}%`;
@@ -5091,14 +5092,15 @@ const SEM_METRICAS_LABELS = [
   {label:'Entrevistas captación',key:'ec'},
   {label:'ACM',key:'acm'},
   {label:'Promo',key:'pr'},
-  {label:'Consultas',key:'cg'},
+  {label:'Consultas',key:'ca'},
   {label:'Muestras',key:'m'},
 ];
 // Objetivo semanal de las 6 métricas, proporcional a los días hábiles reales de la semana —
 // una semana de 1 o 2 días (típica del primer/último tramo del mes) pide proporcionalmente
 // menos que una completa. `obj` es el objetivo mensual del vendedor (segObjetivos o OBJ_BASE).
+// Consultas usa el objetivo de ATENDIDAS (ca), no generadas (cg) — se dejó de trackear cg en el semanal.
 function objSemanaProporcional(obj, diasSemana, diasHabilesMes){
-  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasHabilesMes/5, pr: 2*diasHabilesMes/5, cg: obj.cg||0, m: obj.m||0};
+  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasHabilesMes/5, pr: 2*diasHabilesMes/5, ca: obj.ca||0, m: obj.m||0};
   const out = {};
   SEM_METRICAS_LABELS.forEach(({key}) => { out[key] = Math.max(1, Math.round(objMensualEquivalente[key]*diasSemana/diasHabilesMes)); });
   return out;
@@ -5340,8 +5342,8 @@ function captCardsHTML(capts){
             <td class="metric">${cap.direccion}</td>
             <td>USD ${fmtN2(cap.precioUSD)}</td>
             <td>${cap.agente||''}</td>
-            <td>${cap.fechaPublicacion||'—'}</td>
-            <td>${cap.fechaCierre||'—'}</td>
+            <td>${normFecha(cap.fechaPublicacion)||'—'}</td>
+            <td>${normFecha(cap.fechaCierre)||'—'}</td>
             <td style="color:${CAPT_RESULTADO_COLOR[cap.estado]||'var(--text)'};font-weight:700">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</td>
             <td style="font-size:10px;color:var(--text3)">${cap.motivoCierre||'—'}</td>
             <td>${cap.estado==='descartada' ? `<span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span>` : ''}</td>
@@ -5387,7 +5389,7 @@ function renderFichaCliente(clienteId){
   const busqs = busquedas.filter(x=>x.clienteId===clienteId);
   document.getElementById('fc-contenido').innerHTML = `
     <div class="modal-title">${c.nombre}</div>
-    <div style="font-size:11px;color:var(--text3);margin-bottom:16px">${c.cuit||'sin CUIT'} · ${c.telefono||'sin teléfono'} · ${c.mail||'sin mail'} · alta ${c.fechaAlta||''}</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:16px">${c.cuit||'sin CUIT'} · ${c.telefono||'sin teléfono'} · ${c.mail||'sin mail'} · alta ${normFecha(c.fechaAlta)||''}</div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:13px;font-weight:700">Captaciones</div>
       <span class="fc-chip" onclick="nuevaCaptacion('${c.id}')">+ Nueva captación</span>
@@ -5584,7 +5586,7 @@ function actualizarMensualDesdeSemanal(vendedor, mes, anio) {
   // Suma todas las semanas del mes prorrateando las partidas
   const semanas = getSemanasMes(anio, mes);
   const semData = getSemanas(vendedor, mes);
-  const keys = ['p','ec','acm','cp','pr','cg','ca','b','m','r','v','f','cap'];
+  const keys = ['p','ec','acm','cp','pr','ca','b','m','r','v','f','cap'];
   const totales = {};
   keys.forEach(k => totales[k] = 0);
   

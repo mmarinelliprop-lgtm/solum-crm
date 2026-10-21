@@ -477,24 +477,25 @@ function getSemanasMes(anio, mes){
   }
   return semanas;
 }
+// Consultas usa el objetivo de ATENDIDAS (ca), no generadas — se dejó de trackear "generadas" en el semanal.
 const SEM_METRICAS = [
   {label:'Prospección', key:'p'}, {label:'Entrevistas captación', key:'ec'}, {label:'ACM', key:'acm'},
-  {label:'Promo', key:'pr'}, {label:'Consultas', key:'cg'}, {label:'Muestras', key:'m'}
+  {label:'Promo', key:'pr'}, {label:'Consultas', key:'ca'}, {label:'Muestras', key:'m'}
 ];
 
 // Objetivos de referencia (mismos valores que OBJ_BASE en index.html — si Martina los cambia ahí,
 // avisarle que también los actualice acá para que las barras de progreso sigan siendo correctas).
 const OBJ_BASE = {
-  'Marce':{p:20,ec:10,acm:5,cp:5,pr:4,cg:80,m:40},
-  'Kito':{p:15,ec:6,acm:6,cp:3,pr:8,cg:120,m:32},
-  'Vicky':{p:20,ec:7,acm:3,cp:2,pr:8,cg:108,m:24},
-  'Manu':{p:20,ec:6,acm:4,cp:3,pr:8,cg:150,m:20},
-  'Ceci':{p:12,ec:6,acm:4,cp:3,pr:4,cg:160,m:16},
-  'Luli':{p:15,ec:6,acm:4,cp:3,pr:8,cg:120,m:20},
-  'Joaquin':{p:20,ec:6,acm:4,cp:3,pr:8,cg:100,m:20},
+  'Marce':{p:20,ec:10,acm:5,cp:5,pr:4,ca:70,m:40},
+  'Kito':{p:15,ec:6,acm:6,cp:3,pr:8,ca:100,m:32},
+  'Vicky':{p:20,ec:7,acm:3,cp:2,pr:8,ca:40,m:24},
+  'Manu':{p:20,ec:6,acm:4,cp:3,pr:8,ca:20,m:20},
+  'Ceci':{p:12,ec:6,acm:4,cp:3,pr:4,ca:80,m:16},
+  'Luli':{p:15,ec:6,acm:4,cp:3,pr:8,ca:100,m:20},
+  'Joaquin':{p:20,ec:6,acm:4,cp:3,pr:8,ca:40,m:20},
   // Martina: mismos valores que su fila en el OBJ_BASE de index.html.
-  'Martina':{p:20,ec:6,acm:6,cp:5,pr:16,cg:400,m:60},
-  'Franco':{p:20,ec:10,acm:7,cp:5,pr:3,cg:50,m:36},
+  'Martina':{p:20,ec:6,acm:6,cp:5,pr:16,ca:200,m:60},
+  'Franco':{p:20,ec:10,acm:7,cp:5,pr:3,ca:50,m:36},
 };
 // Color del número principal según el ritmo real vs. lo esperable a esta altura del mes
 // (mismo criterio que el banner de arriba, pero por métrica): verde si va adelantado,
@@ -662,7 +663,7 @@ function renderSemana(){
   // días, típico del primer o último tramo del mes, pide proporcionalmente menos que una completa).
   // objMensualEquivalente: total del mes para cada métrica (ACM/Promo no tienen objetivo mensual propio
   // en OBJ_BASE, se arman desde el criterio histórico de "2 por semana completa" × semanas del mes).
-  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasMes/5, pr: 2*diasMes/5, cg: obj.cg||0, m: obj.m||0};
+  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasMes/5, pr: 2*diasMes/5, ca: obj.ca||0, m: obj.m||0};
 
   document.getElementById('semanas-wrap').style.setProperty('--semanas', Math.max(1, semanas.length));
   document.getElementById('semanas-wrap').innerHTML = semanas.map((sem,i)=>{
