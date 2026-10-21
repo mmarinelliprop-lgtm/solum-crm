@@ -320,9 +320,9 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 .cal-accion-item.done .ca-texto{color:var(--text3);text-decoration:line-through;}
 .cal-accion-item .ca-del{cursor:pointer;color:var(--text3);font-size:13px;flex:none;}
 .cal-accion-item .ca-del:hover{color:var(--red);}
-.cal-accion-add{display:flex;gap:6px;margin-top:6px;}
-.cal-accion-add input{flex:1;background:var(--card2);border:1px solid rgba(var(--w),0.08);color:var(--text);padding:5px 8px;border-radius:5px;font-size:12px;}
-.cal-accion-add button{background:var(--gold);color:var(--on-gold);border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+.cal-accion-add{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.cal-accion-add input{width:100%;box-sizing:border-box;background:var(--card2);border:1px solid rgba(var(--w),0.08);color:var(--text);padding:5px 8px;border-radius:5px;font-size:12px;}
+.cal-accion-add button{width:100%;background:var(--gold);color:var(--on-gold);border:none;border-radius:5px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 
 /* Ficha de cliente: captaciones (pipeline de 5 etapas) y búsquedas/consultas */
 .bc-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}

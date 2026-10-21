@@ -102,8 +102,9 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 .accion-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;}
 .accion-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--gold);}
 .accion-item.done span{color:var(--text3);text-decoration:line-through;}
-.accion-add{display:flex;gap:6px;margin-top:8px;}
-.accion-add input{flex:1;}
+.accion-add{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+.accion-add input{width:100%;box-sizing:border-box;}
+.accion-add button{width:100%;padding:8px 6px;white-space:nowrap;}
 .chip{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;border-radius:14px;font-size:10.5px;font-weight:700;border:1px solid var(--border);color:var(--text3);background:var(--card2);cursor:pointer;}
 .chip.on{background:var(--green);color:#06241f;border-color:var(--green);}
 .capt-card,.consulta-card{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:14px;padding:14px;margin-bottom:10px;}
