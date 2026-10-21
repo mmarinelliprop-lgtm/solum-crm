@@ -6251,7 +6251,7 @@ function confirmarApiKey(){ /* key manejada por Netlify */ }
 // operaciones cargadas (ver SEG_SIN_OPERACIONES en getSegMes). Corre sola una vez.
 // ═══════════════════════════════════════════════
 async function seedDatosFranco(){
-  if(segData?.Franco?.[1]?.cp !== undefined) return; // guard: ya cargado
+  if(segData?.Franco?.[1]?.cp !== undefined && segData?.Franco?.[1]?.f !== undefined) return; // guard: ya cargado completo
   const cpPorMes = {1:4, 2:2, 3:4, 4:3, 5:1, 6:2, 7:2, 8:4, 9:1, 10:3};
   // $36.345 facturados a la fecha, prorrateados en los 9 meses ya cerrados (ene-sep).
   const fPorMes = {1:4038, 2:4038, 3:4038, 4:4038, 5:4038, 6:4038, 7:4038, 8:4038, 9:4041};
