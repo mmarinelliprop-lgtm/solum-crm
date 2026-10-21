@@ -1205,7 +1205,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     <div class="filters">
       <button class="btn btn-outline btn-sm" id="btn-vista-ind" onclick="switchSegVista('tabla')" style="border-color:var(--gold);color:var(--gold2)">Tabla anual</button>
       <button class="btn btn-outline btn-sm" id="btn-vista-cal" onclick="switchSegVista('calendario')">Calendario semanal</button>
-      <select class="filter-select" id="seg-vendedor-sel" onchange="verificarPendientesAntesDe(()=>{segVendedorActivo=this.value;renderSeguimiento()})">
+      <select class="filter-select" id="seg-vendedor-sel" onchange="verificarPendientesAntesDe(()=>{segVendedorActivo=this.value;renderSeguimiento();renderCalendarioSemanal();})">
         <option value="Martina">Martina</option>
         <option value="Marce">Marce</option>
         <option value="Kito">Kito</option>
