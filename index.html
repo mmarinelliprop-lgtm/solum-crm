@@ -480,6 +480,28 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 .cleg i{width:9px;height:9px;border-radius:3px;display:inline-block;}
 .callout{text-align:center;margin-top:8px;}
 .callout div{display:inline-block;font-size:11px;font-weight:700;color:var(--gold2);border:1px solid var(--gold3);border-radius:14px;padding:4px 14px;background:rgba(var(--w),.04);}
+/* Seguimiento semanal del equipo — planilla tipo Excel */
+.sgw-th{background:var(--bg3);color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;padding:7px 4px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--edge);}
+.sgw-th:first-child{position:sticky;left:0;background:var(--navy3);z-index:2;text-align:left;padding-left:10px;}
+.sgw-td{border-bottom:1px solid rgba(var(--w),0.04);padding:6px 3px;text-align:center;width:72px;min-width:72px;}
+.sgw-mname{position:sticky;left:0;background:var(--card);text-align:left;padding:7px 10px;font-weight:500;font-size:12px;color:var(--text);white-space:nowrap;}
+.sgw-num{font-size:12px;font-weight:800;}
+.sgw-bar{height:3px;border-radius:2px;background:rgba(var(--w),0.08);margin-top:3px;overflow:hidden;}
+.sgw-bar i{display:block;height:100%;border-radius:2px;}
+.sgw-g{background:rgba(46,230,184,0.13);} .sgw-g .sgw-num{color:var(--green);} .sgw-g .sgw-bar i{background:var(--green);}
+.sgw-r{background:rgba(255,77,151,0.13);} .sgw-r .sgw-num{color:var(--red);} .sgw-r .sgw-bar i{background:var(--red);}
+.sgw-empty{color:var(--text3);font-size:11px;}
+.sgw-rank-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer;}
+.sgw-rank-item.sgw-g{background:rgba(46,230,184,0.10);}
+.sgw-rank-item.sgw-r{background:rgba(255,77,151,0.10);}
+.sgw-rank-item.sgw-x{background:rgba(var(--w),0.03);}
+.sgw-rank-name{font-weight:600;font-size:12.5px;flex:1;}
+.sgw-rank-pct{font-weight:800;font-size:12.5px;}
+.sgw-rank-item.sgw-g .sgw-rank-pct{color:var(--green);}
+.sgw-rank-item.sgw-r .sgw-rank-pct{color:var(--red);}
+.sgw-rank-badge{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.3px;}
+.sgw-rank-item.sgw-g .sgw-rank-badge{background:rgba(46,230,184,0.22);color:var(--green);}
+.sgw-rank-item.sgw-r .sgw-rank-badge{background:rgba(255,77,151,0.22);color:var(--red);}
 @media (max-width:1100px){
   .dg{grid-template-columns:1fr;}
   .dg .hero,.dg .rank,.dg .bottom{grid-column:1;grid-row:auto;}
@@ -1192,6 +1214,30 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
           <div class="eyebrow">Embudo de venta</div>
           <div class="funnel-wrap" id="seg-eq-funnel-venta" style="margin-top:10px"></div>
         </div>
+      </div>
+
+      <!-- SEGUIMIENTO SEMANAL DEL EQUIPO — planilla tipo Excel, por métrica x vendedor, + resumen por vendedor -->
+      <div class="glass" style="grid-column:1/-1;padding:20px 24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div class="eyebrow" style="margin:0">📊 Seguimiento semanal del equipo</div>
+          <select class="filter-select" id="seg-eq-semana" onchange="renderSegTablaSemanal()"></select>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="border-collapse:collapse;font-size:12px;width:100%">
+            <thead><tr id="seg-eq-sem-head"></tr></thead>
+            <tbody id="seg-eq-sem-rows"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:12px;font-size:10.5px;color:var(--text3)">
+          <span style="display:flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:var(--green);display:inline-block"></i>Cumplió</span>
+          <span style="display:flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:var(--red);display:inline-block"></i>No cumplió</span>
+          <span style="display:flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:var(--text3);display:inline-block"></i>Sin cargar</span>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text3);margin:22px 0 10px;display:flex;align-items:center;gap:8px">
+          <span>Objetivo general por vendedor — esta semana</span><span style="flex:1;height:1px;background:var(--edge)"></span>
+        </div>
+        <div id="seg-eq-sem-rank" style="display:flex;flex-direction:column;gap:7px"></div>
       </div>
     </div>
   </div>
@@ -4394,6 +4440,88 @@ function renderSeguimientoEquipo(){
         <div class="seg-accion-tag" style="color:${r.accPct===null?'var(--text3)':(r.accPct>=70?'#2DD4C4':'#FF4FA0')}">Acciones: ${r.accPct===null?'—':r.accPct+'%'}</div>
       </div>
     </div>`).join('');
+
+  renderSegTablaSemanal();
+}
+
+// ── Seguimiento semanal del equipo: planilla tipo Excel (métrica x vendedor) + resumen por vendedor ──
+// Importante: cada celda/resumen sólo tiene en cuenta las métricas que ESE vendedor ya cargó para
+// ESA semana — una métrica sin cargar no cuenta como incumplida ni se mezcla con las demás semanas.
+function renderSegTablaSemanal(){
+  const mes = parseInt(document.getElementById('seg-eq-mes')?.value) || (new Date().getMonth()+1);
+  const anio = new Date().getFullYear();
+  const semanas = getSemanasMes(anio, mes);
+  const diasHabilesMes = diasHabilesDelMes(anio, mes);
+
+  const selSem = document.getElementById('seg-eq-semana');
+  if(selSem){
+    const opciones = semanas.map((s,i)=>`<option value="${i}">Semana ${i+1} · ${s.lunes}→${s.viernes}</option>`).join('');
+    if(selSem.dataset.mes !== String(mes)){
+      selSem.innerHTML = opciones;
+      selSem.dataset.mes = String(mes);
+      // Por defecto, la semana que contiene hoy si el mes elegido es el actual; si no, la primera.
+      const idxHoy = semanaDeHoy(mes, anio);
+      selSem.value = idxHoy!==null ? idxHoy : 0;
+    }
+  }
+  const semIdx = parseInt(selSem?.value) || 0;
+  const sem = semanas[semIdx];
+  if(!sem){ document.getElementById('seg-eq-sem-head').innerHTML=''; document.getElementById('seg-eq-sem-rows').innerHTML=''; document.getElementById('seg-eq-sem-rank').innerHTML=''; return; }
+  const diasSemana = diasHabilesDeLaSemana(sem, anio);
+  const vendedores = SEG_EQUIPO_AGENTES;
+
+  document.getElementById('seg-eq-sem-head').innerHTML = '<th class="sgw-th">Métrica</th>' + vendedores.map(v=>
+    `<th class="sgw-th"><span class="av" style="width:18px;height:18px;font-size:9px;display:inline-flex;background:${AV_COLORS[v]||'#94A3B8'};margin-right:5px;vertical-align:middle">${v[0]}</span>${v}</th>`
+  ).join('');
+
+  // obj/real de cada vendedor para esta semana, una sola vez (se reusa en la tabla y el resumen)
+  const porVendedor = {};
+  vendedores.forEach(v=>{
+    const obj = segObjetivos?.[v]?.[mes] || OBJ_BASE[v] || OBJ_BASE['Martina'];
+    const objSemanaVals = objSemanaProporcional(obj, diasSemana, diasHabilesMes);
+    const semData = getSemanas(v, mes);
+    const vals = semData[semIdx]?.vals || {};
+    porVendedor[v] = SEM_METRICAS_LABELS.map(({key}) => {
+      const real = vals[key];
+      return {key, real: (real===undefined||real===null||real==='') ? null : parseFloat(real), obj: objSemanaVals[key]};
+    });
+  });
+
+  document.getElementById('seg-eq-sem-rows').innerHTML = SEM_METRICAS_LABELS.map((met,mi)=>{
+    const cells = vendedores.map(v=>{
+      const c = porVendedor[v][mi];
+      if(c.real===null) return `<td class="sgw-td"><span class="sgw-empty">—</span></td>`;
+      const cls = c.real>=c.obj ? 'sgw-g' : 'sgw-r';
+      const pct = c.obj>0 ? Math.min(100, Math.round(c.real/c.obj*100)) : 0;
+      return `<td class="sgw-td ${cls}">
+        <div class="sgw-num">${c.real}/${c.obj}</div>
+        <div class="sgw-bar"><i style="width:${pct}%"></i></div>
+      </td>`;
+    }).join('');
+    return `<tr><td class="sgw-td sgw-mname">${met.label}</td>${cells}</tr>`;
+  }).join('');
+
+  // Resumen por vendedor: sólo promedia las métricas que cargó esa semana.
+  const rank = vendedores.map(v=>{
+    const cargadas = porVendedor[v].filter(c=>c.real!==null);
+    if(!cargadas.length) return {v, pct:null};
+    const sumReal = cargadas.reduce((s,c)=>s+c.real,0), sumObj = cargadas.reduce((s,c)=>s+c.obj,0);
+    return {v, pct: sumObj>0 ? Math.round(sumReal/sumObj*100) : 0};
+  }).sort((a,b)=>(b.pct??-1)-(a.pct??-1));
+
+  document.getElementById('seg-eq-sem-rank').innerHTML = rank.map(r=>{
+    if(r.pct===null) return `<div class="sgw-rank-item sgw-x" onclick="irSeguimientoVendedor('${r.v}')">
+      <span class="av" style="background:${AV_COLORS[r.v]||'#94A3B8'}">${r.v[0]}</span>
+      <div class="sgw-rank-name">${r.v}</div><span class="sgw-empty">sin cargar esta semana</span>
+    </div>`;
+    const cls = r.pct>=100?'sgw-g':'sgw-r';
+    return `<div class="sgw-rank-item ${cls}" onclick="irSeguimientoVendedor('${r.v}')">
+      <span class="av" style="background:${AV_COLORS[r.v]||'#94A3B8'}">${r.v[0]}</span>
+      <div class="sgw-rank-name">${r.v}</div>
+      <span class="sgw-rank-badge">${r.pct>=100?'Cumplió':'No cumplió'}</span>
+      <span class="sgw-rank-pct">${r.pct}%</span>
+    </div>`;
+  }).join('');
 }
 
 // Tile de KPI con mini barra de progreso contra su objetivo (todas las métricas tienen objetivo real en OBJ_BASE/segObjetivos)
@@ -4911,6 +5039,35 @@ function analizarConversion(vendedor, getMd, allM, obj){
   el.innerHTML = lineas.join('<br>');
 }
 
+// Días hábiles (lun-vie) de un mes.
+function diasHabilesDelMes(anio, mes){
+  const u = new Date(anio,mes,0).getDate(); let c=0;
+  for(let d=1; d<=u; d++){ const dia=new Date(anio,mes-1,d).getDay(); if(dia>=1 && dia<=5) c++; }
+  return c;
+}
+// Cuántos días hábiles tiene una semana ya recortada al mes (sem.lunes/viernes "dd/mm").
+function diasHabilesDeLaSemana(sem, anio){
+  const [ld,lm] = sem.lunes.split('/').map(Number), [vd,vm] = sem.viernes.split('/').map(Number);
+  return Math.round((new Date(anio,vm-1,vd) - new Date(anio,lm-1,ld))/86400000) + 1;
+}
+const SEM_METRICAS_LABELS = [
+  {label:'Prospección',key:'p'},
+  {label:'Entrevistas captación',key:'ec'},
+  {label:'ACM',key:'acm'},
+  {label:'Promo',key:'pr'},
+  {label:'Consultas',key:'cg'},
+  {label:'Muestras',key:'m'},
+];
+// Objetivo semanal de las 6 métricas, proporcional a los días hábiles reales de la semana —
+// una semana de 1 o 2 días (típica del primer/último tramo del mes) pide proporcionalmente
+// menos que una completa. `obj` es el objetivo mensual del vendedor (segObjetivos o OBJ_BASE).
+function objSemanaProporcional(obj, diasSemana, diasHabilesMes){
+  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasHabilesMes/5, pr: 2*diasHabilesMes/5, cg: obj.cg||0, m: obj.m||0};
+  const out = {};
+  SEM_METRICAS_LABELS.forEach(({key}) => { out[key] = Math.max(1, Math.round(objMensualEquivalente[key]*diasSemana/diasHabilesMes)); });
+  return out;
+}
+
 function renderCalendarioSemanal(){
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   const mes = parseInt(document.getElementById('seg-cal-mes').value);
@@ -4920,25 +5077,14 @@ function renderCalendarioSemanal(){
   // Calcular semanas del mes (lunes a viernes)
   const semanas = getSemanasMes(anio, mes);
   const semData = getSemanas(vendedor, mes);
-
-  // Objetivo semanal proporcional a los días hábiles reales de cada semana — una semana de 1 o 2
-  // días (típica del primer o último tramo del mes) pide proporcionalmente menos que una completa.
-  const diasHabilesMes = (() => { const u=new Date(anio,mes,0).getDate(); let c=0; for(let d=1;d<=u;d++){ const dia=new Date(anio,mes-1,d).getDay(); if(dia>=1&&dia<=5) c++; } return c; })();
-  const objMensualEquivalente = {p: obj.p||0, ec: obj.ec||8, acm: 2*diasHabilesMes/5, pr: 2*diasHabilesMes/5, cg: obj.cg||0, m: obj.m||0};
+  const diasHabilesMes = diasHabilesDelMes(anio, mes);
 
   let html = '';
   semanas.forEach((sem, i) => {
     const semVals = semData[i]?.vals || {};
-    const [ld,lm] = sem.lunes.split('/').map(Number), [vd,vm] = sem.viernes.split('/').map(Number);
-    const diasSemana = Math.round((new Date(anio,vm-1,vd) - new Date(anio,lm-1,ld))/86400000) + 1;
-    const semMetricas = [
-      {label:'Prospección',key:'p'},
-      {label:'Entrevistas captación',key:'ec'},
-      {label:'ACM',key:'acm'},
-      {label:'Promo',key:'pr'},
-      {label:'Consultas',key:'cg'},
-      {label:'Muestras',key:'m'},
-    ].map(mt => ({...mt, obj: Math.max(1, Math.round(objMensualEquivalente[mt.key]*diasSemana/diasHabilesMes))}));
+    const diasSemana = diasHabilesDeLaSemana(sem, anio);
+    const objSemanaVals = objSemanaProporcional(obj, diasSemana, diasHabilesMes);
+    const semMetricas = SEM_METRICAS_LABELS.map(mt => ({...mt, obj: objSemanaVals[mt.key]}));
 
     // Detectar si la semana está partida entre dos meses
     const lunesParts = sem.lunes.split('/');
