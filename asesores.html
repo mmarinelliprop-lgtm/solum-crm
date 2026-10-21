@@ -316,11 +316,13 @@ function facturacionAnioPropia(){
     for(let m=1; m<=12; m++) total += (segMensualPropio[m]?.f || 0);
     return total;
   }
-  return operacionesPropias.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
+  const anio = new Date().getFullYear();
+  return operacionesPropias.filter(o=>o.anio===anio && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
 }
 function facPorCobrarPropio(){
   if(SEG_SIN_OPERACIONES.includes(sesionActiva)) return SEG_POR_COBRAR_MANUAL[sesionActiva] || 0;
-  return operacionesPropias.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  const anio = new Date().getFullYear();
+  return operacionesPropias.filter(o=>o.anio===anio && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
 }
 
 // Mismo mapeo de nombres que usa index.html al leer la tabla "operaciones" de Sheets.
@@ -900,7 +902,8 @@ function captCardHTML(cap){
   const pct = Math.round(completas/FC_ETAPAS.length*100);
   return `
   <div class="capt-card" style="border-left:4px solid ${colorEtapaCaptacion(cap)}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+    <div style="font-size:17px;font-weight:800;color:var(--gold2)">${cap.fechaInicio||'s/d'}</div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:4px">
       <div style="font-weight:700;font-size:13px">${campoHTML('captacion',cap.id,'direccion',{vacio:'Sin dirección'})}</div>
       <div style="font-weight:800;color:var(--gold2)">${pct}%</div>
     </div>
@@ -932,7 +935,8 @@ function renderCaptaciones(){
     <div style="font-size:11px;font-weight:700;color:var(--text3);margin:16px 0 8px;text-transform:uppercase">Cerradas / descartadas (${descartadas.length})</div>
     <div class="cards-grid">${descartadas.map(cap=>`
       <div class="capt-card" style="opacity:.85;border-left:4px solid ${CAPT_RESULTADO_COLOR[cap.estado]||'#FF4D97'}">
-        <div style="display:flex;justify-content:space-between">
+        <div style="font-size:15px;font-weight:800;color:var(--gold2)">${cap.fechaInicio||'s/d'}</div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
           <div style="font-weight:700;font-size:13px">${cap.direccion}</div>
           <div style="color:${CAPT_RESULTADO_COLOR[cap.estado]||'var(--text3)'};font-size:11px;font-weight:700">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</div>
         </div>
