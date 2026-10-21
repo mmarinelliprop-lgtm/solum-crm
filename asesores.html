@@ -697,7 +697,7 @@ function renderSemana(){
           </div>`).join('') || '<div style="font-size:11px;color:var(--text3)">Sin acciones cargadas</div>'}
         <div class="accion-add">
           <input type="text" placeholder="Nueva acción..." id="nueva-accion-${mes}-${i}" onkeydown="if(event.key==='Enter') agregarAccion(${mes},${i})">
-          <button class="btn btn-outline" onclick="agregarAccion(${mes},${i})">+ Agregar</button>
+          <button class="btn btn-outline" style="width:100%;border-width:1px;padding:6px;font-size:11px;outline:none" onclick="agregarAccion(${mes},${i})">+ Agregar</button>
         </div>
       </div>
     </div>`;

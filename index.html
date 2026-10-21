@@ -5183,7 +5183,7 @@ function renderAccionesSemanaHTML(vendedor, mes, semIdx){
       <div class="cal-accion-add">
         <input type="text" placeholder="Nueva acción..." id="nueva-accion-${vendedor}-${mes}-${semIdx}"
           onkeydown="if(event.key==='Enter') agregarAccionSemana('${vendedor}',${mes},${semIdx})">
-        <button onclick="agregarAccionSemana('${vendedor}',${mes},${semIdx})">+ Agregar</button>
+        <button style="width:100%;border-width:1px;padding:5px 6px;outline:none" onclick="agregarAccionSemana('${vendedor}',${mes},${semIdx})">+ Agregar</button>
       </div>
     </div>`;
 }
