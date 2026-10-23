@@ -83,6 +83,28 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 .kpi-mini-tile .mt-bar-wrap{height:4px;border-radius:3px;background:rgba(var(--w),.1);overflow:hidden;margin-top:6px;}
 .kpi-mini-tile .mt-bar{height:100%;border-radius:3px;}
 .kpi-mini-tile .mt-obj{font-size:8px;color:var(--text3);margin-top:3px;}
+/* Chat para cargar reservas (igual que index.html, acotado) */
+.chat-wrap{display:flex;flex-direction:column;height:460px;background:var(--card);backdrop-filter:var(--glass-blur);border:1px solid var(--edge);border-radius:16px;overflow:hidden;box-shadow:var(--glass-shadow);}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.msg{max-width:80%;padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.5;}
+.msg-user{background:var(--navy2);color:var(--text);align-self:flex-end;border-bottom-right-radius:4px;}
+.msg-claude{background:var(--card2);color:var(--text2);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid var(--edge);}
+.msg-system{background:rgba(46,230,184,0.08);color:var(--green);align-self:center;font-size:11px;padding:6px 14px;border-radius:20px;border:1px solid rgba(46,230,184,0.2);}
+.chat-input-area{padding:14px;border-top:1px solid var(--edge);display:flex;gap:10px;align-items:flex-end;}
+.chat-input{flex:1;background:var(--pop);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-size:13px;resize:none;outline:none;min-height:40px;max-height:110px;font-family:inherit;}
+.chat-input:focus{border-color:var(--gold3);}
+.chat-input-actions{display:flex;gap:8px;align-items:center;}
+.upload-btn{background:var(--pop);border:1px solid var(--border);color:var(--text3);padding:9px;border-radius:8px;cursor:pointer;font-size:15px;}
+.upload-btn:hover{border-color:var(--gold3);color:var(--gold2);}
+.file-preview{background:var(--card2);border:1px solid var(--edge);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:8px;}
+.typing{display:flex;gap:4px;padding:4px 0;}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:bounce .8s infinite;}
+.typing span:nth-child(2){animation-delay:.15s;}
+.typing span:nth-child(3){animation-delay:.3s;}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+.mis-ops-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px;}
+.mis-ops-table th{text-align:left;font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--text3);padding:6px 8px;border-bottom:1px solid var(--edge);}
+.mis-ops-table td{padding:7px 8px;border-bottom:1px solid rgba(var(--w),0.04);}
 .pep-banner{border-radius:16px;padding:14px 18px;margin-bottom:16px;font-size:13px;font-weight:700;text-align:center;}
 .pep-good{background:linear-gradient(135deg,rgba(45,212,196,.16),rgba(45,212,196,.04));border:1px solid rgba(45,212,196,.3);color:var(--green);}
 .pep-mid{background:linear-gradient(135deg,rgba(227,201,138,.16),rgba(227,201,138,.04));border:1px solid rgba(227,201,138,.3);color:var(--gold2);}
@@ -148,6 +170,7 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
     <button class="tab-btn active" id="tab-semana-btn" onclick="switchTab('semana')">📅 Mi semana</button>
     <button class="tab-btn" id="tab-capt-btn" onclick="switchTab('capt')">📋 Mis captaciones</button>
     <button class="tab-btn" id="tab-busq-btn" onclick="switchTab('busq')">🔎 Mis búsquedas</button>
+    <button class="tab-btn" id="tab-ops-btn" onclick="switchTab('ops')">📸 Mis operaciones</button>
   </div>
 
   <div class="content" id="content-semana">
@@ -194,6 +217,28 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
       <button class="btn btn-gold" style="margin-top:10px" onclick="crearBusquedaAsesor()">Agregar búsqueda</button>
     </div>
     <div id="busq-wrap"></div>
+  </div>
+
+  <div class="content hidden" id="content-ops">
+    <div class="card-title" style="padding-left:2px">Cargar una reserva</div>
+    <div class="chat-wrap">
+      <div class="chat-messages" id="chatMessagesAs">
+        <div class="msg msg-claude">Hola 👋 Subí una foto de la reserva o escribime los datos (propiedad, precio, punta, fecha, cliente) y te la cargo como "Por cobrar" a tu nombre.</div>
+      </div>
+      <div id="filePreviewAreaAs"></div>
+      <div class="chat-input-area">
+        <textarea class="chat-input" id="chatInputAs" placeholder="Escribí acá o subí un archivo..." rows="1" onkeydown="handleChatKeyAs(event)" oninput="autoResize(this)"></textarea>
+        <div class="chat-input-actions">
+          <label class="upload-btn" title="Subir archivo">
+            📎 <input type="file" id="fileUploadAs" accept="image/*,.pdf" style="display:none" onchange="handleFileUploadAs(event)">
+          </label>
+          <button class="btn btn-gold" id="sendBtnAs" onclick="sendChatAs()">Enviar</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-title" style="padding-left:2px;margin-top:20px">Mis operaciones</div>
+    <div id="mis-ops-wrap"></div>
   </div>
 </div>
 
@@ -284,10 +329,11 @@ async function entrarApp(){
 }
 
 function switchTab(tab){
-  ['semana','capt','busq'].forEach(t=>{
+  ['semana','capt','busq','ops'].forEach(t=>{
     document.getElementById('tab-'+t+'-btn').classList.toggle('active', t===tab);
     document.getElementById('content-'+t).classList.toggle('hidden', t!==tab);
   });
+  if(tab==='ops') renderMisOperaciones();
 }
 
 // ── Carga inicial: semanas propias, captaciones propias, búsquedas propias, clientes ──
@@ -440,7 +486,8 @@ async function cargarTodo(){
       const fReserva = parseFechaDDMM(fechaReserva);
       const mesReserva = fReserva ? fReserva.getMonth()+1 : mes;
       const anioReserva = fReserva ? fReserva.getFullYear() : anio;
-      return { agente, estado: r[11], mes, anio, mesReserva, anioReserva, comision: parseFloat(r[5])||0 };
+      return { id:r[0], propiedad:r[1], agente, estado: r[11], mes, anio, mesReserva, anioReserva,
+        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0, comision_vendedor: parseFloat(r[6])||0, fechaEsc };
     }).filter(o=>o.agente===sesionActiva);
   }
 }
@@ -925,10 +972,18 @@ function captCardHTML(cap){
     <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}
   </div>`;
 }
+// Más nuevas primero, por fecha de ingreso (dd/mm/aaaa).
+function ordenarPorFechaInicioDesc(lista){
+  return lista.slice().sort((a,b)=>{
+    const fa = parseFechaDDMM(normFechaOp(a.fechaInicio)) || new Date(0);
+    const fb = parseFechaDDMM(normFechaOp(b.fechaInicio)) || new Date(0);
+    return fb - fa;
+  });
+}
 function renderCaptaciones(){
-  const pendientes = captaciones.filter(c=>c.estado==='activa' && !c.publicacion);
-  const publicadas = captaciones.filter(c=>c.estado==='activa' && c.publicacion);
-  const descartadas = captaciones.filter(c=>c.estado!=='activa');
+  const pendientes = ordenarPorFechaInicioDesc(captaciones.filter(c=>c.estado==='activa' && !c.publicacion));
+  const publicadas = ordenarPorFechaInicioDesc(captaciones.filter(c=>c.estado==='activa' && c.publicacion));
+  const descartadas = ordenarPorFechaInicioDesc(captaciones.filter(c=>c.estado!=='activa'));
 
   const seccion = (titulo, lista, vacioTxt) => `
     <div style="font-size:11px;font-weight:700;color:var(--text3);margin:16px 0 8px;text-transform:uppercase">${titulo} (${lista.length})</div>
@@ -1081,6 +1136,227 @@ function renderBusquedas(){
       </div>
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
+}
+
+
+// ═══════════════════════════════════════════════
+// MIS OPERACIONES — chat acotado para cargar UNA reserva propia, + tabla de solo lectura.
+// El asesor solo puede crear (nunca editar) una operación a su propio nombre, estado "Por
+// cobrar". El cálculo de comisiones lo hace el sistema (no Claude), con el mismo criterio
+// que usa Martina en index.html (COMISIONES).
+// ═══════════════════════════════════════════════
+const PCT_ASESOR = {Martina:0.80, Kito:0.60, Vicky:0.50, Manu:0.50, Marce:0.50, Cris:0.50, Ceci:0.50, Jose:0.50, Luli:0.50, Joaquin:0.50, Franco:0.50};
+
+function fileToBase64As(file){
+  return new Promise((res,rej)=>{
+    if(file.type.startsWith('image/')){
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if(w > MAX || h > MAX){
+          if(w > h){ h = Math.round(h*MAX/w); w = MAX; }
+          else { w = Math.round(w*MAX/h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const b64 = canvas.toDataURL('image/jpeg', 0.60).split(',')[1];
+        URL.revokeObjectURL(url);
+        res(b64);
+      };
+      img.onerror = rej;
+      img.src = url;
+    } else {
+      const reader = new FileReader();
+      reader.onload = () => res(reader.result.split(',')[1]);
+      reader.onerror = rej;
+      reader.readAsDataURL(file);
+    }
+  });
+}
+
+let pendingFileAs = null;
+let chatHistoryAs = [];
+
+function handleChatKeyAs(e){ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); sendChatAs(); } }
+function handleFileUploadAs(e){
+  const file = e.target.files[0]; if(!file) return;
+  pendingFileAs = file;
+  document.getElementById('filePreviewAreaAs').innerHTML = `
+    <div style="padding:8px 16px">
+      <div class="file-preview">📎 ${file.name} (${(file.size/1024).toFixed(1)} KB)
+        <button onclick="clearFileAs()" style="background:none;border:none;color:var(--text3);cursor:pointer;margin-left:auto">✕</button>
+      </div>
+    </div>`;
+}
+function clearFileAs(){ pendingFileAs=null; document.getElementById('filePreviewAreaAs').innerHTML=''; document.getElementById('fileUploadAs').value=''; }
+function addMsgAs(text, role){
+  const el = document.createElement('div');
+  el.className = `msg msg-${role}`;
+  el.textContent = text;
+  document.getElementById('chatMessagesAs').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+  return el;
+}
+function addTypingAs(){
+  const el = document.createElement('div');
+  el.className='msg msg-claude';
+  el.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+  document.getElementById('chatMessagesAs').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+  return el;
+}
+function extraerAccionesAs(text){
+  const acciones = [];
+  let i = text.indexOf('ACCION:');
+  while(i !== -1){
+    let start = text.indexOf('{', i);
+    if(start === -1) break;
+    let depth = 0, j = start, inStr = false, escape = false;
+    while(j < text.length){
+      const c = text[j];
+      if(escape){ escape=false; }
+      else if(c==='\\'){ escape=true; }
+      else if(c==='"' && !escape){ inStr=!inStr; }
+      else if(!inStr){
+        if(c==='{') depth++;
+        else if(c==='}'){
+          depth--;
+          if(depth===0){
+            try{ acciones.push(JSON.parse(text.slice(start, j+1))); }catch(e){}
+            break;
+          }
+        }
+      }
+      j++;
+    }
+    i = text.indexOf('ACCION:', i+7);
+  }
+  return acciones;
+}
+
+function filaOperacionAs(op){
+  return [op.id, op.propiedad, op.agente, op.punta, op.precio, op.comision, op.comision_vendedor||0,
+    op.ganancia_martina||0, op.ganancia_solum||0, op.fechaEsc||'', op.fechaReserva||'', op.estado,
+    op.mes, op.anio, false, op.notas||'', 'pendiente_asesor'];
+}
+
+async function procesarAccionReservaAsesor(accion){
+  if(accion.tipo !== 'reserva_asesor') return false;
+  const d = accion.datos||{};
+  const precio = parseFloat(d.precio)||0;
+  if(!precio || !d.propiedad) return false;
+  const pctComision = parseFloat(d.pct_comision) || 0.03;
+  const comision = Math.round(precio*pctComision*100)/100;
+  const pct = PCT_ASESOR[sesionActiva] ?? 0.50;
+  const esMartinaProp = sesionActiva==='Martina';
+  const ganancia_solum = Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
+  const comision_vendedor = esMartinaProp ? 0 : Math.round(comision*pct*100)/100;
+  const ganancia_martina = esMartinaProp ? Math.round((comision-ganancia_solum)*100)/100 : Math.round((comision-comision_vendedor-ganancia_solum)*100)/100;
+  const fechaReserva = d.fechaReserva || fechaHoyDDMM();
+  const fReserva = parseFechaDDMM(fechaReserva) || new Date();
+  const notasPartes = [];
+  if(d.cliente) notasPartes.push('Cliente: '+d.cliente);
+  if(d.cuit) notasPartes.push('DNI/CUIT: '+d.cuit);
+  if(d.telefono) notasPartes.push('Tel: '+d.telefono);
+  if(d.mail) notasPartes.push('Mail: '+d.mail);
+
+  const op = {
+    id: 'as_'+Date.now(), propiedad: d.propiedad, agente: sesionActiva,
+    punta: d.punta||'Vendedor', precio, comision, comision_vendedor, ganancia_martina, ganancia_solum,
+    fechaEsc: '', fechaReserva, estado:'Por cobrar',
+    mes: fReserva.getMonth()+1, anio: fReserva.getFullYear(),
+    notas: notasPartes.join(' — ')
+  };
+  operacionesPropias.push({id:op.id, propiedad:op.propiedad, agente:op.agente, estado:op.estado,
+    mes:op.mes, anio:op.anio, mesReserva:op.mes, anioReserva:op.anio, precio:op.precio, comision:op.comision,
+    comision_vendedor:op.comision_vendedor, fechaEsc:op.fechaReserva});
+  await dbGuardar('operaciones', filaOperacionAs(op));
+  return true;
+}
+
+async function sendChatAs(){
+  const input = document.getElementById('chatInputAs');
+  const text = input.value.trim();
+  if(!text && !pendingFileAs) return;
+  const btn = document.getElementById('sendBtnAs');
+  btn.disabled = true;
+  addMsgAs(text||(pendingFileAs?`[Archivo: ${pendingFileAs.name}]`:''), 'user');
+  input.value = ''; input.style.height='auto';
+  const typingEl = addTypingAs();
+
+  try {
+    let content = [];
+    if(pendingFileAs){
+      const b64 = await fileToBase64As(pendingFileAs);
+      const isImg = pendingFileAs.type.startsWith('image/');
+      content.push(isImg ? {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}}
+                          : {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}});
+    }
+    if(text) content.push({type:'text',text});
+
+    const systemPrompt = `Estás ayudando a ${labelDe(sesionActiva)}, asesor/a inmobiliario/a de SOLUM Negocios Inmobiliarios, a cargar UNA reserva propia (nunca de otro asesor). Todo en USD.
+Extraé de la imagen/texto los mismos datos que se cargan en el sistema principal: dirección de la propiedad, precio de la operación (USD), punta (Vendedor o Comprador), fecha de la reserva (dd/mm/aaaa), % de comisión si dice algo distinto al 3% estándar (pct_comision, ej. 0.03), y si figuran: nombre completo del cliente, DNI/CUIT, teléfono, mail.
+No calcules comisión en USD ni porcentajes de reparto del asesor — eso lo hace el sistema. No le pongas estado ni agente, siempre es una reserva nueva a nombre de quien está logueado/a.
+Si falta el precio o la dirección, preguntá antes de generar la acción, con este formato exacto:
+[PREGUNTA: texto]
+1. opción
+2. opción
+Cuando tengas los datos, mostrá un resumen corto y generá EXACTAMENTE un bloque así al final:
+ACCION:{"tipo":"reserva_asesor","datos":{"propiedad":"","precio":0,"punta":"Vendedor","fechaReserva":"","pct_comision":0.03,"cliente":"","cuit":"","telefono":"","mail":""}}
+No generes ningún otro tipo de ACCION. No menciones nombres de otros asesores ni información financiera interna de la inmobiliaria.`;
+
+    chatHistoryAs.push({role:'user', content: content.length ? content : text});
+    const resp = await fetch('/.netlify/functions/claude',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1000, system:systemPrompt, messages:chatHistoryAs})
+    });
+    const data = await resp.json();
+    const reply = data.content?.[0]?.text || 'Error al conectar.';
+    chatHistoryAs.push({role:'assistant', content:reply});
+    typingEl.remove();
+    addMsgAs(reply, 'claude');
+
+    const acciones = extraerAccionesAs(reply);
+    let count = 0;
+    for(const a of acciones){
+      try{ if(await procesarAccionReservaAsesor(a)) count++; }catch(e){ console.error(e); }
+    }
+    if(count>0){
+      renderMisOperaciones();
+      showToast('✅ Reserva cargada');
+    }
+    clearFileAs();
+  } catch(err){
+    typingEl.remove();
+    addMsgAs('Error al conectar, probá de nuevo.', 'claude');
+    console.error(err);
+  }
+  btn.disabled = false;
+}
+
+function renderMisOperaciones(){
+  const el = document.getElementById('mis-ops-wrap'); if(!el) return;
+  const ops = operacionesPropias.slice().sort((a,b)=>{
+    const fa = parseFechaDDMM(a.fechaEsc)||new Date(0), fb = parseFechaDDMM(b.fechaEsc)||new Date(0);
+    return fb-fa;
+  });
+  if(!ops.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
+  const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--blue)'};
+  el.innerHTML = `<table class="mis-ops-table"><thead><tr>
+    <th>Propiedad</th><th>Precio</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha</th>
+  </tr></thead><tbody>
+    ${ops.map(o=>`<tr>
+      <td>${o.propiedad||''}</td>
+      <td>${fmtN2(o.precio||0)}</td>
+      <td>${fmtN2(o.comision)}</td>
+      <td>${fmtN2(o.comision_vendedor)}</td>
+      <td style="color:${estadoColor[o.estado]||'var(--text3)'};font-weight:700">${o.estado}</td>
+      <td>${o.fechaEsc||'—'}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
 }
 
 // Decoración bokeh (mismas burbujas difuminadas que el fondo de SOLUMITOS)

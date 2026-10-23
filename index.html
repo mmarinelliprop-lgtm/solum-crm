@@ -5297,10 +5297,18 @@ const FC_ETAPAS = [['prelisting','Prelisting'],['acm','ACM'],['documentacion','D
 const CAPT_RESULTADO_LABEL = {vendida_propia:'Vendido por mí', vendida_otro:'Vendido por otro', baja:'Baja', descartada:'Descartada'};
 const CAPT_RESULTADO_COLOR = {vendida_propia:'var(--green)', vendida_otro:'var(--blue)', baja:'var(--amber)', descartada:'var(--red)'};
 
+// Más nuevas primero, por fecha de ingreso (dd/mm/aaaa).
+function ordenarPorFechaInicioDesc(lista){
+  return lista.slice().sort((a,b)=>{
+    const fa = parseFechaDDMM(normFecha(a.fechaInicio)) || new Date(0);
+    const fb = parseFechaDDMM(normFecha(b.fechaInicio)) || new Date(0);
+    return fb - fa;
+  });
+}
 function captCardsHTML(capts){
   const etapas = FC_ETAPAS;
-  const activas = capts.filter(c=>c.estado==='activa');
-  const cerradas = capts.filter(c=>c.estado!=='activa');
+  const activas = ordenarPorFechaInicioDesc(capts.filter(c=>c.estado==='activa'));
+  const cerradas = ordenarPorFechaInicioDesc(capts.filter(c=>c.estado!=='activa'));
 
   const tarjetas = activas.map(cap=>{
     const completas = etapas.filter(([k])=>cap[k]).length;
