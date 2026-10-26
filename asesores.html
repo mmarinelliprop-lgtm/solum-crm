@@ -1267,23 +1267,29 @@ async function procesarAccionReservaAsesor(accion){
     ganancia_martina = esMartinaProp ? Math.round((comision-ganancia_solum)*100)/100 : Math.round((comision-comision_vendedor-ganancia_solum)*100)/100;
   }
   const fechaReserva = d.fechaReserva || fechaHoyDDMM();
-  const fReserva = parseFechaDDMM(fechaReserva) || new Date();
+  const fechaEsc = d.fechaEsc || fechaReserva;
+  // mes/año se derivan de la fecha de cobro (fechaEsc), igual criterio que procesarAccion() en index.html.
+  const fEsc = parseFechaDDMM(fechaEsc) || new Date();
+  const fReserva = parseFechaDDMM(fechaReserva) || fEsc;
   const notasPartes = [];
   if(d.cliente) notasPartes.push('Cliente: '+d.cliente);
   if(d.cuit) notasPartes.push('DNI/CUIT: '+d.cuit);
   if(d.telefono) notasPartes.push('Tel: '+d.telefono);
   if(d.mail) notasPartes.push('Mail: '+d.mail);
 
+  // El asesor solo puede dejar la reserva en Pendiente o Por cobrar — nunca Cobrada ni Caída desde acá.
+  const estado = (d.estado==='Pendiente') ? 'Pendiente' : 'Por cobrar';
   const op = {
     id: _siguienteIdOp++, propiedad: d.propiedad, agente: sesionActiva,
     punta: d.punta||'Vendedor', precio, comision, comision_vendedor, ganancia_martina, ganancia_solum,
-    fechaEsc: '', fechaReserva, estado:'Por cobrar',
-    mes: fReserva.getMonth()+1, anio: fReserva.getFullYear(),
+    fechaEsc, fechaReserva, estado,
+    mes: fEsc.getMonth()+1, anio: fEsc.getFullYear(),
     notas: notasPartes.join(' — ')
   };
+  const mesReservaOp = fReserva.getMonth()+1, anioReservaOp = fReserva.getFullYear();
   operacionesPropias.push({id:op.id, propiedad:op.propiedad, agente:op.agente, estado:op.estado,
-    mes:op.mes, anio:op.anio, mesReserva:op.mes, anioReserva:op.anio, precio:op.precio, comision:op.comision,
-    comision_vendedor:op.comision_vendedor, fechaEsc:'', fechaReserva:op.fechaReserva});
+    mes:op.mes, anio:op.anio, mesReserva:mesReservaOp, anioReserva:anioReservaOp, precio:op.precio, comision:op.comision,
+    comision_vendedor:op.comision_vendedor, fechaEsc:op.fechaEsc, fechaReserva:op.fechaReserva});
   await dbGuardar('operaciones', filaOperacionAs(op));
   return true;
 }
@@ -1315,20 +1321,22 @@ Extraé de la imagen/texto estos campos, igual que en el sistema principal:
 2. Precio de la operación (USD) → "precio". Si no figura, preguntá.
 3. Punta → "Vendedor" o "Comprador". Si no está claro, preguntá.
 4. Fecha de reserva → "fechaReserva" (dd/mm/aaaa): la fecha escrita al pie de la reserva, el día en que se firma. Es un dato obligatorio — si no figura en la imagen/texto, PREGUNTALA explícitamente, no la completes con la fecha de hoy ni la dejes vacía.
-5. % de comisión → "pct_comision" SOLO si dice algo distinto al 3% estándar (ej. 0.03 para 3%, 0.04 para 4%).
-6. Datos del cliente si figuran: nombre completo → "cliente", DNI/CUIT → "cuit", teléfono → "telefono", mail → "mail".
+5. Fecha de cobro estimada → "fechaEsc" (dd/mm/aaaa): fecha del boleto o de la escritura, la que ocurra primero — es la fecha en la que se espera cobrar la comisión. También es obligatoria; si no figura, PREGUNTALA (puede ser una fecha estimada a futuro, no hace falta que ya haya pasado).
+6. Estado → "estado": "Pendiente" si la reserva todavía no fue aceptada/firmada por las dos partes (es una oferta/seña en curso), o "Por cobrar" si ya está firmada y confirmada por ambas partes. Es obligatorio — preguntá cuál de las dos es si no queda claro. Nunca uses otro valor (no existe la opción de cargar como ya cobrada o caída desde acá).
+7. % de comisión → "pct_comision" SOLO si dice algo distinto al 3% estándar (ej. 0.03 para 3%, 0.04 para 4%).
+8. Datos del cliente si figuran: nombre completo → "cliente", DNI/CUIT → "cuit", teléfono → "telefono", mail → "mail".
 
-No calcules comisión en USD ni porcentajes de reparto del asesor — eso lo hace el sistema. No le pongas estado ni agente, siempre es una reserva nueva a nombre de quien está logueado/a.
+No calcules comisión en USD ni porcentajes de reparto del asesor — eso lo hace el sistema. No le pongas agente, siempre es una reserva nueva a nombre de quien está logueado/a.
 
-Si falta algún dato obligatorio (propiedad, precio o fecha de reserva), preguntá antes de seguir, con este formato exacto:
+Si falta algún dato obligatorio (propiedad, precio, fecha de reserva, fecha de cobro estimada o estado), preguntá antes de seguir, con este formato exacto:
 [PREGUNTA: texto]
 1. opción
 2. opción
 
-Cuando tengas TODOS los datos obligatorios, mostrá un resumen corto (propiedad, precio, punta, fecha de reserva) y preguntá "¿Confirmás que cargue esta reserva?" — y ESPERÁ la confirmación del asesor (que te va a responder "sí", "dale", "confirmo" o similar) en un mensaje aparte. NUNCA generes el bloque ACCION en el mismo mensaje que el resumen.
+Cuando tengas TODOS los datos obligatorios, mostrá un resumen corto (propiedad, precio, punta, fecha de reserva, fecha de cobro estimada, estado) y preguntá "¿Confirmás que cargue esta reserva?" — y ESPERÁ la confirmación del asesor (que te va a responder "sí", "dale", "confirmo" o similar) en un mensaje aparte. NUNCA generes el bloque ACCION en el mismo mensaje que el resumen.
 
 Solo después de que el asesor confirme, respondé con el bloque ACCION (y nada más que eso y una confirmación breve):
-ACCION:{"tipo":"reserva_asesor","datos":{"propiedad":"","precio":0,"punta":"Vendedor","fechaReserva":"","pct_comision":0.03,"cliente":"","cuit":"","telefono":"","mail":""}}
+ACCION:{"tipo":"reserva_asesor","datos":{"propiedad":"","precio":0,"punta":"Vendedor","fechaReserva":"","fechaEsc":"","estado":"Por cobrar","pct_comision":0.03,"cliente":"","cuit":"","telefono":"","mail":""}}
 
 No generes ningún otro tipo de ACCION. No menciones nombres de otros asesores ni información financiera interna de la inmobiliaria.`;
 
