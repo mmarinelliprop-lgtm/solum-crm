@@ -343,6 +343,7 @@ let clientes = [];
 let captaciones = [];
 let busquedas = [];
 let operacionesPropias = []; // solo las del asesor logueado, leídas de la misma tabla "operaciones" que usa Martina
+let _siguienteIdOp = 1; // próximo ID correlativo libre, calculado sobre toda la tabla al cargar
 let segObjetivosPropios = {}; // {mes: {metrica: valor}} — overrides que Martina carga por vendedor/mes en index.html
 let segMensualPropio = {}; // {mes: {metrica: valor real}} — igual que segData[vendedor][mes] en index.html
 
@@ -472,6 +473,9 @@ async function cargarTodo(){
     busquedas = Object.values(porId);
   }
   if(opRows.length>1){
+    // ID correlativo: el próximo número libre, calculado sobre TODAS las operaciones (no solo
+    // las propias) para no pisar IDs que ya use Martina u otro asesor.
+    _siguienteIdOp = Math.max(0, ...opRows.slice(1).map(r=>Number(r[0])||0)) + 1;
     operacionesPropias = opRows.slice(1).map(r=>{
       let agente = String(r[2]||'').trim();
       agente = MAP_AGENTE_OPS[agente] || agente;
@@ -487,7 +491,7 @@ async function cargarTodo(){
       const mesReserva = fReserva ? fReserva.getMonth()+1 : mes;
       const anioReserva = fReserva ? fReserva.getFullYear() : anio;
       return { id:r[0], propiedad:r[1], agente, estado: r[11], mes, anio, mesReserva, anioReserva,
-        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0, comision_vendedor: parseFloat(r[6])||0, fechaEsc };
+        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0, comision_vendedor: parseFloat(r[6])||0, fechaEsc, fechaReserva };
     }).filter(o=>o.agente===sesionActiva);
   }
 }
@@ -1252,9 +1256,16 @@ async function procesarAccionReservaAsesor(accion){
   const comision = Math.round(precio*pctComision*100)/100;
   const pct = PCT_ASESOR[sesionActiva] ?? 0.50;
   const esMartinaProp = sesionActiva==='Martina';
-  const ganancia_solum = Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
-  const comision_vendedor = esMartinaProp ? 0 : Math.round(comision*pct*100)/100;
-  const ganancia_martina = esMartinaProp ? Math.round((comision-ganancia_solum)*100)/100 : Math.round((comision-comision_vendedor-ganancia_solum)*100)/100;
+  // Franco no es parte del equipo: se queda con toda su comisión, sin cortar para Martina ni SOLUM.
+  const esFranco = sesionActiva==='Franco';
+  let ganancia_solum, comision_vendedor, ganancia_martina;
+  if(esFranco){
+    ganancia_solum = 0; ganancia_martina = 0; comision_vendedor = comision;
+  } else {
+    ganancia_solum = Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
+    comision_vendedor = esMartinaProp ? 0 : Math.round(comision*pct*100)/100;
+    ganancia_martina = esMartinaProp ? Math.round((comision-ganancia_solum)*100)/100 : Math.round((comision-comision_vendedor-ganancia_solum)*100)/100;
+  }
   const fechaReserva = d.fechaReserva || fechaHoyDDMM();
   const fReserva = parseFechaDDMM(fechaReserva) || new Date();
   const notasPartes = [];
@@ -1264,7 +1275,7 @@ async function procesarAccionReservaAsesor(accion){
   if(d.mail) notasPartes.push('Mail: '+d.mail);
 
   const op = {
-    id: 'as_'+Date.now(), propiedad: d.propiedad, agente: sesionActiva,
+    id: _siguienteIdOp++, propiedad: d.propiedad, agente: sesionActiva,
     punta: d.punta||'Vendedor', precio, comision, comision_vendedor, ganancia_martina, ganancia_solum,
     fechaEsc: '', fechaReserva, estado:'Por cobrar',
     mes: fReserva.getMonth()+1, anio: fReserva.getFullYear(),
@@ -1272,7 +1283,7 @@ async function procesarAccionReservaAsesor(accion){
   };
   operacionesPropias.push({id:op.id, propiedad:op.propiedad, agente:op.agente, estado:op.estado,
     mes:op.mes, anio:op.anio, mesReserva:op.mes, anioReserva:op.anio, precio:op.precio, comision:op.comision,
-    comision_vendedor:op.comision_vendedor, fechaEsc:op.fechaReserva});
+    comision_vendedor:op.comision_vendedor, fechaEsc:'', fechaReserva:op.fechaReserva});
   await dbGuardar('operaciones', filaOperacionAs(op));
   return true;
 }
@@ -1298,14 +1309,27 @@ async function sendChatAs(){
     if(text) content.push({type:'text',text});
 
     const systemPrompt = `Estás ayudando a ${labelDe(sesionActiva)}, asesor/a inmobiliario/a de SOLUM Negocios Inmobiliarios, a cargar UNA reserva propia (nunca de otro asesor). Todo en USD.
-Extraé de la imagen/texto los mismos datos que se cargan en el sistema principal: dirección de la propiedad, precio de la operación (USD), punta (Vendedor o Comprador), fecha de la reserva (dd/mm/aaaa), % de comisión si dice algo distinto al 3% estándar (pct_comision, ej. 0.03), y si figuran: nombre completo del cliente, DNI/CUIT, teléfono, mail.
+
+Extraé de la imagen/texto estos campos, igual que en el sistema principal:
+1. Dirección de la propiedad → "propiedad". SIEMPRE la dirección TEXTUAL EXACTA tal como figura (calle + altura, barrio/piso/depto si están). Si no es legible, NO inventes: preguntá.
+2. Precio de la operación (USD) → "precio". Si no figura, preguntá.
+3. Punta → "Vendedor" o "Comprador". Si no está claro, preguntá.
+4. Fecha de reserva → "fechaReserva" (dd/mm/aaaa): la fecha escrita al pie de la reserva, el día en que se firma. Es un dato obligatorio — si no figura en la imagen/texto, PREGUNTALA explícitamente, no la completes con la fecha de hoy ni la dejes vacía.
+5. % de comisión → "pct_comision" SOLO si dice algo distinto al 3% estándar (ej. 0.03 para 3%, 0.04 para 4%).
+6. Datos del cliente si figuran: nombre completo → "cliente", DNI/CUIT → "cuit", teléfono → "telefono", mail → "mail".
+
 No calcules comisión en USD ni porcentajes de reparto del asesor — eso lo hace el sistema. No le pongas estado ni agente, siempre es una reserva nueva a nombre de quien está logueado/a.
-Si falta el precio o la dirección, preguntá antes de generar la acción, con este formato exacto:
+
+Si falta algún dato obligatorio (propiedad, precio o fecha de reserva), preguntá antes de seguir, con este formato exacto:
 [PREGUNTA: texto]
 1. opción
 2. opción
-Cuando tengas los datos, mostrá un resumen corto y generá EXACTAMENTE un bloque así al final:
+
+Cuando tengas TODOS los datos obligatorios, mostrá un resumen corto (propiedad, precio, punta, fecha de reserva) y preguntá "¿Confirmás que cargue esta reserva?" — y ESPERÁ la confirmación del asesor (que te va a responder "sí", "dale", "confirmo" o similar) en un mensaje aparte. NUNCA generes el bloque ACCION en el mismo mensaje que el resumen.
+
+Solo después de que el asesor confirme, respondé con el bloque ACCION (y nada más que eso y una confirmación breve):
 ACCION:{"tipo":"reserva_asesor","datos":{"propiedad":"","precio":0,"punta":"Vendedor","fechaReserva":"","pct_comision":0.03,"cliente":"","cuit":"","telefono":"","mail":""}}
+
 No generes ningún otro tipo de ACCION. No menciones nombres de otros asesores ni información financiera interna de la inmobiliaria.`;
 
     chatHistoryAs.push({role:'user', content: content.length ? content : text});
@@ -1340,13 +1364,13 @@ No generes ningún otro tipo de ACCION. No menciones nombres de otros asesores n
 function renderMisOperaciones(){
   const el = document.getElementById('mis-ops-wrap'); if(!el) return;
   const ops = operacionesPropias.slice().sort((a,b)=>{
-    const fa = parseFechaDDMM(a.fechaEsc)||new Date(0), fb = parseFechaDDMM(b.fechaEsc)||new Date(0);
+    const fa = parseFechaDDMM(a.fechaReserva||a.fechaEsc)||new Date(0), fb = parseFechaDDMM(b.fechaReserva||b.fechaEsc)||new Date(0);
     return fb-fa;
   });
   if(!ops.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
   const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--blue)'};
   el.innerHTML = `<table class="mis-ops-table"><thead><tr>
-    <th>Propiedad</th><th>Precio</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha</th>
+    <th>Propiedad</th><th>Precio</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha de reserva</th><th>Fecha de cobro</th>
   </tr></thead><tbody>
     ${ops.map(o=>`<tr>
       <td>${o.propiedad||''}</td>
@@ -1354,6 +1378,7 @@ function renderMisOperaciones(){
       <td>${fmtN2(o.comision)}</td>
       <td>${fmtN2(o.comision_vendedor)}</td>
       <td style="color:${estadoColor[o.estado]||'var(--text3)'};font-weight:700">${o.estado}</td>
+      <td>${o.fechaReserva||'—'}</td>
       <td>${o.fechaEsc||'—'}</td>
     </tr>`).join('')}
   </tbody></table>`;
