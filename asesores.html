@@ -852,7 +852,16 @@ function crearCaptacionAsesor(){
 function toggleEtapaCaptacion(capId, etapa){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
   cap[etapa] = !cap[etapa];
-  if(etapa==='publicacion') cap.fechaPublicacion = cap.publicacion ? fechaHoyDDMM() : '';
+  if(etapa==='publicacion'){
+    if(cap.publicacion){
+      const sugerida = fechaHoyDDMM();
+      const resp = prompt('Fecha de publicación (dd/mm/aaaa):', sugerida);
+      if(resp===null){ cap.publicacion = false; return; } // canceló: no publicar
+      cap.fechaPublicacion = resp.trim() || sugerida;
+    } else {
+      cap.fechaPublicacion = '';
+    }
+  }
   dbGuardar('captaciones', filaCaptacion(cap));
   renderCaptaciones();
 }

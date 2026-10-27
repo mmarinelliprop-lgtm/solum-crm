@@ -1880,6 +1880,7 @@ async function cargarDatosDB() {
   detectarIncongruencias();
   migrarCaptacionesCompetencia();
   seedDatosFranco();
+  backfillFechaPublicacion();
 }
 
 // ═══════════════════════════════════════════════
@@ -2352,8 +2353,16 @@ function getSegMes(vendedor, mes, anio) {
       const {mes:mR, anio:aR} = mesAnioReservaOp(o);
       return mR===mes && aR===anio;
     }).length;
+
+    // Captaciones publicadas: se cuentan por la fecha de publicación real (fechaPublicacion),
+    // igual criterio que las reservas — ya no es un número que se tipea a mano.
+    merged.cp = (typeof captaciones!=='undefined' ? captaciones : []).filter(c=>{
+      if(c.agente!==vendedor || !c.publicacion || !c.fechaPublicacion) return false;
+      const fPub = parseFechaDDMM(c.fechaPublicacion);
+      return fPub && fPub.getMonth()+1===mes && fPub.getFullYear()===anio;
+    }).length;
   }
-  // Si es anterior a la creación del sistema, merged.r ya trae el valor manual precargado y no se toca.
+  // Si es anterior a la creación del sistema, merged.r/merged.cp ya traen el valor manual precargado y no se tocan.
 
   return merged;
 }
@@ -5447,7 +5456,16 @@ function nuevaBusquedaDesdeVendedor(){
 function toggleEtapaCaptacion(capId, etapa){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
   cap[etapa] = !cap[etapa];
-  if(etapa==='publicacion') cap.fechaPublicacion = cap.publicacion ? fechaHoyDDMM() : '';
+  if(etapa==='publicacion'){
+    if(cap.publicacion){
+      const sugerida = fechaHoyDDMM();
+      const resp = prompt('Fecha de publicación (dd/mm/aaaa):', sugerida);
+      if(resp===null){ cap.publicacion = false; return; } // canceló: no publicar
+      cap.fechaPublicacion = resp.trim() || sugerida;
+    } else {
+      cap.fechaPublicacion = '';
+    }
+  }
   guardarCaptacion(cap);
   refrescarCaptBusq(cap.clienteId);
 }
@@ -6285,6 +6303,19 @@ async function seedDatosFranco(){
     filas.push([Date.now()+Math.random(), 'Franco', parseInt(mes), 'f', val]);
   });
   await dbGuardarLote('seguimiento', filas);
+}
+
+// ═══════════════════════════════════════════════
+// BACKFILL ÚNICO: captaciones ya marcadas como publicadas antes de pedir la fecha real de
+// publicación. No hay forma de recuperar la fecha histórica exacta, así que se completa con
+// la fecha de hoy (mejor eso que dejarlas afuera del contador de captaciones publicadas).
+// Corre sola una vez por captación (guard: solo toca las que tienen publicacion=true y
+// fechaPublicacion vacía).
+// ═══════════════════════════════════════════════
+function backfillFechaPublicacion(){
+  const faltantes = captaciones.filter(c=>c.publicacion && !c.fechaPublicacion);
+  if(!faltantes.length) return;
+  faltantes.forEach(c=>{ c.fechaPublicacion = fechaHoyDDMM(); guardarCaptacion(c); });
 }
 
 // ═══════════════════════════════════════════════
