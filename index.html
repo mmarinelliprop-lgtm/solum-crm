@@ -1880,7 +1880,6 @@ async function cargarDatosDB() {
   detectarIncongruencias();
   migrarCaptacionesCompetencia();
   seedDatosFranco();
-  backfillFechaPublicacion();
 }
 
 // ═══════════════════════════════════════════════
@@ -2354,13 +2353,18 @@ function getSegMes(vendedor, mes, anio) {
       return mR===mes && aR===anio;
     }).length;
 
-    // Captaciones publicadas: se cuentan por la fecha de publicación real (fechaPublicacion),
-    // igual criterio que las reservas — ya no es un número que se tipea a mano.
-    merged.cp = (typeof captaciones!=='undefined' ? captaciones : []).filter(c=>{
-      if(c.agente!==vendedor || !c.publicacion || !c.fechaPublicacion) return false;
+    // Captaciones publicadas: se cuentan por la fecha de publicación real (fechaPublicacion).
+    // Solo se reemplaza el valor cargado a mano cuando hay captaciones reales que coincidan —
+    // si no hay ninguna (meses viejos, o datos migrados sin fecha), se conserva lo cargado a mano
+    // en vez de pisarlo con 0.
+    const cpCalc = (typeof captaciones!=='undefined' ? captaciones : []).filter(c=>{
+      if(!c.publicacion || !c.fechaPublicacion) return false;
+      const esDelVendedorCap = normAgente(c.agente)===vendedor || c.agente===vendedor;
+      if(!esDelVendedorCap) return false;
       const fPub = parseFechaDDMM(c.fechaPublicacion);
       return fPub && fPub.getMonth()+1===mes && fPub.getFullYear()===anio;
     }).length;
+    if(cpCalc>0 || manual.cp===undefined) merged.cp = cpCalc;
   }
   // Si es anterior a la creación del sistema, merged.r/merged.cp ya traen el valor manual precargado y no se tocan.
 
@@ -5346,6 +5350,9 @@ function captCardsHTML(capts){
       <div style="display:flex;gap:8px;margin-top:10px">
         <span class="fc-chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span>
       </div>`}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <span class="fc-chip" onclick="editarCaptacion('${cap.id}')">✎ Editar</span>
+      </div>
     </div>`;
   }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin captaciones activas</div>';
 
@@ -5363,7 +5370,10 @@ function captCardsHTML(capts){
             <td>${normFecha(cap.fechaCierre)||'—'}</td>
             <td style="color:${CAPT_RESULTADO_COLOR[cap.estado]||'var(--text)'};font-weight:700">${CAPT_RESULTADO_LABEL[cap.estado]||cap.estado}</td>
             <td style="font-size:10px;color:var(--text3)">${cap.motivoCierre||'—'}</td>
-            <td>${cap.estado==='descartada' ? `<span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span>` : ''}</td>
+            <td style="display:flex;gap:6px">
+              ${cap.estado==='descartada' ? `<span class="fc-chip" style="color:var(--green)" onclick="reactivarCaptacion('${cap.id}')">Reactivar</span>` : ''}
+              <span class="fc-chip" onclick="editarCaptacion('${cap.id}')">✎ Editar</span>
+            </td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -5431,6 +5441,37 @@ function nuevaCaptacion(clienteId){
   captaciones.push(cap);
   guardarCaptacion(cap);
   refrescarCaptBusq(clienteId);
+}
+
+// Edición completa de una captación (solo desde la app principal). Permite corregir cualquier
+// dato cargado mal, incluyendo agente, precio, fechas y motivo de cierre.
+function editarCaptacion(capId){
+  const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
+  const direccion = prompt('Dirección:', cap.direccion||''); if(direccion===null) return;
+  const tipo = prompt('Tipo (Casa/Depto/Local/Terreno):', cap.tipo||''); if(tipo===null) return;
+  const zona = prompt('Zona/barrio:', cap.zona||''); if(zona===null) return;
+  const precioInput = prompt('Precio USD:', String(cap.precioUSD||0)); if(precioInput===null) return;
+  const dormitoriosInput = prompt('Dormitorios:', String(cap.dormitorios||0)); if(dormitoriosInput===null) return;
+  const agente = prompt('Agente:', cap.agente||''); if(agente===null) return;
+  const fechaInicio = prompt('Fecha en la que se agregó al sistema (dd/mm/aaaa):', cap.fechaInicio||''); if(fechaInicio===null) return;
+  const fechaPublicacion = prompt('Fecha de publicación (dd/mm/aaaa, vacío si no está publicada):', cap.fechaPublicacion||'');
+  if(fechaPublicacion===null) return;
+  if(cap.estado!=='activa'){
+    const fechaCierre = prompt('Fecha de cierre (dd/mm/aaaa):', cap.fechaCierre||''); if(fechaCierre===null) return;
+    const motivoCierre = prompt('Motivo de cierre:', cap.motivoCierre||''); if(motivoCierre===null) return;
+    cap.fechaCierre = fechaCierre.trim();
+    cap.motivoCierre = motivoCierre.trim();
+  }
+  cap.direccion = direccion.trim();
+  cap.tipo = tipo.trim();
+  cap.zona = zona.trim();
+  cap.precioUSD = parseFloat(precioInput)||0;
+  cap.dormitorios = parseInt(dormitoriosInput)||0;
+  cap.agente = agente.trim();
+  cap.fechaInicio = fechaInicio.trim();
+  cap.fechaPublicacion = fechaPublicacion.trim();
+  guardarCaptacion(cap);
+  refrescarCaptBusq(cap.clienteId);
 }
 // Busca un cliente por nombre (case-insensitive) o lo crea si no existe. Usado al cargar
 // captaciones/búsquedas directamente desde la ficha del vendedor, sin pasar por el modal de cliente.
@@ -6303,19 +6344,6 @@ async function seedDatosFranco(){
     filas.push([Date.now()+Math.random(), 'Franco', parseInt(mes), 'f', val]);
   });
   await dbGuardarLote('seguimiento', filas);
-}
-
-// ═══════════════════════════════════════════════
-// BACKFILL ÚNICO: captaciones ya marcadas como publicadas antes de pedir la fecha real de
-// publicación. No hay forma de recuperar la fecha histórica exacta, así que se completa con
-// la fecha de hoy (mejor eso que dejarlas afuera del contador de captaciones publicadas).
-// Corre sola una vez por captación (guard: solo toca las que tienen publicacion=true y
-// fechaPublicacion vacía).
-// ═══════════════════════════════════════════════
-function backfillFechaPublicacion(){
-  const faltantes = captaciones.filter(c=>c.publicacion && !c.fechaPublicacion);
-  if(!faltantes.length) return;
-  faltantes.forEach(c=>{ c.fechaPublicacion = fechaHoyDDMM(); guardarCaptacion(c); });
 }
 
 // ═══════════════════════════════════════════════
