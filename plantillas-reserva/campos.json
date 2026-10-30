@@ -1,0 +1,263 @@
+{
+  "venta-simple": {
+    "label": "Venta simple",
+    "archivo": "venta-simple.docx",
+    "nombreSalida": "Reserva Venta Simple",
+    "grupos": [
+      {
+        "titulo": "Datos del cliente / reservante",
+        "campos": [
+          { "key": "cliente_nombre", "label": "Nombre y apellido", "tipo": "text", "req": true },
+          { "key": "cliente_dni", "label": "DNI", "tipo": "text", "req": true },
+          { "key": "cliente_fecha_nacimiento", "label": "Fecha de nacimiento", "tipo": "text" },
+          { "key": "cliente_apellido_materno", "label": "Apellido materno", "tipo": "text" },
+          { "key": "cliente_domicilio_ciudad", "label": "Domicilio (ciudad)", "tipo": "text", "req": true },
+          { "key": "cliente_estado_civil", "label": "Estado civil", "tipo": "text", "req": true },
+          { "key": "domicilio_electronico_comprador", "label": "Domicilio electrónico (email) del comprador", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Propiedad y operación",
+        "campos": [
+          { "key": "propiedad_direccion", "label": "Dirección de la propiedad", "tipo": "text", "req": true },
+          { "key": "reserva_texto", "label": "Importe de la reserva (en letras)", "tipo": "text", "req": true },
+          { "key": "reserva_numero", "label": "Importe de la reserva (u$s)", "tipo": "text", "req": true },
+          { "key": "precio_total_texto", "label": "Precio total de venta (en letras)", "tipo": "text", "req": true },
+          { "key": "precio_total_numero", "label": "Precio total de venta (u$s)", "tipo": "text", "req": true },
+          { "key": "saldo_texto", "label": "Saldo a pagar en escritura (en letras)", "tipo": "text" },
+          { "key": "saldo_numero", "label": "Saldo a pagar en escritura (u$s)", "tipo": "text" },
+          { "key": "fecha_escritura", "label": "Fecha límite de escritura", "tipo": "text", "req": true },
+          { "key": "fecha_limite_aceptacion", "label": "Fecha límite de aceptación del vendedor", "tipo": "text", "req": true },
+          { "key": "gastos_desistimiento", "label": "Gastos por desistimiento del comprador (u$s, 1,5%)", "tipo": "text" },
+          { "key": "dia_firma", "label": "Día de la firma", "tipo": "text", "req": true },
+          { "key": "mes_firma", "label": "Mes de la firma", "tipo": "text", "req": true }
+        ]
+      }
+    ]
+  },
+  "credito-hipotecario": {
+    "label": "Crédito hipotecario",
+    "archivo": "credito-hipotecario.docx",
+    "nombreSalida": "Reserva Credito Hipotecario",
+    "grupos": [
+      {
+        "titulo": "Datos del cliente / reservante",
+        "campos": [
+          { "key": "cliente_nombre", "label": "Nombre y apellido", "tipo": "text", "req": true },
+          { "key": "cliente_dni", "label": "DNI", "tipo": "text", "req": true },
+          { "key": "cliente_fecha_nacimiento", "label": "Fecha de nacimiento", "tipo": "text" },
+          { "key": "cliente_apellido_materno", "label": "Apellido materno", "tipo": "text" },
+          { "key": "cliente_domicilio_ciudad", "label": "Domicilio (ciudad)", "tipo": "text", "req": true },
+          { "key": "cliente_estado_civil", "label": "Estado civil", "tipo": "text", "req": true },
+          { "key": "domicilio_electronico_comprador", "label": "Domicilio electrónico (email) del comprador", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Propiedad, operación y crédito",
+        "campos": [
+          { "key": "propiedad_direccion", "label": "Dirección de la propiedad", "tipo": "text", "req": true },
+          { "key": "reserva_texto", "label": "Importe de la reserva (en letras)", "tipo": "text", "req": true },
+          { "key": "reserva_numero", "label": "Importe de la reserva (u$s)", "tipo": "text", "req": true },
+          { "key": "precio_total_texto", "label": "Precio total de venta (en letras)", "tipo": "text", "req": true },
+          { "key": "precio_total_numero", "label": "Precio total de venta (u$s)", "tipo": "text", "req": true },
+          { "key": "saldo_texto", "label": "Saldo vía crédito (en letras)", "tipo": "text" },
+          { "key": "saldo_numero", "label": "Saldo vía crédito (u$s)", "tipo": "text" },
+          { "key": "fecha_escritura", "label": "Fecha límite de escritura", "tipo": "text", "req": true },
+          { "key": "banco", "label": "Banco otorgante del crédito", "tipo": "text", "req": true },
+          { "key": "sucursal_banco", "label": "Sucursal del banco", "tipo": "text" },
+          { "key": "fecha_limite_aceptacion", "label": "Fecha límite de aceptación del vendedor", "tipo": "text", "req": true },
+          { "key": "gastos_desistimiento", "label": "Gastos por desistimiento del comprador (u$s, 1,5%)", "tipo": "text" },
+          { "key": "dia_firma", "label": "Día de la firma", "tipo": "text", "req": true },
+          { "key": "mes_firma", "label": "Mes de la firma", "tipo": "text", "req": true }
+        ]
+      }
+    ]
+  },
+  "credito-hipotecario-permuta": {
+    "label": "Crédito hipotecario con permuta",
+    "archivo": "credito-hipotecario-permuta.docx",
+    "nombreSalida": "Reserva Credito Hipotecario con Permuta",
+    "grupos": [
+      {
+        "titulo": "Datos del cliente / reservante",
+        "campos": [
+          { "key": "cliente_nombre", "label": "Nombre y apellido", "tipo": "text", "req": true },
+          { "key": "cliente_dni", "label": "DNI", "tipo": "text", "req": true },
+          { "key": "cliente_fecha_nacimiento", "label": "Fecha de nacimiento", "tipo": "text" },
+          { "key": "cliente_apellido_materno", "label": "Apellido materno", "tipo": "text" },
+          { "key": "cliente_domicilio_ciudad", "label": "Domicilio (ciudad)", "tipo": "text", "req": true },
+          { "key": "cliente_estado_civil", "label": "Estado civil", "tipo": "text", "req": true },
+          { "key": "domicilio_electronico_comprador", "label": "Domicilio electrónico (email) del comprador", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Propiedad, operación y crédito",
+        "campos": [
+          { "key": "propiedad_direccion", "label": "Dirección de la propiedad a comprar", "tipo": "text", "req": true },
+          { "key": "reserva_texto", "label": "Importe de la reserva (en letras)", "tipo": "text", "req": true },
+          { "key": "reserva_numero", "label": "Importe de la reserva (u$s)", "tipo": "text", "req": true },
+          { "key": "precio_total_texto", "label": "Precio total de venta (en letras)", "tipo": "text", "req": true },
+          { "key": "precio_total_numero", "label": "Precio total de venta (u$s)", "tipo": "text", "req": true },
+          { "key": "saldo_texto", "label": "Saldo vía crédito (en letras)", "tipo": "text" },
+          { "key": "saldo_numero", "label": "Saldo vía crédito (u$s)", "tipo": "text" },
+          { "key": "fecha_escritura", "label": "Fecha límite de escritura", "tipo": "text", "req": true },
+          { "key": "banco", "label": "Banco otorgante del crédito", "tipo": "text", "req": true },
+          { "key": "sucursal_banco", "label": "Sucursal del banco", "tipo": "text" },
+          { "key": "fecha_limite_aceptacion", "label": "Fecha límite de aceptación del vendedor", "tipo": "text", "req": true },
+          { "key": "gastos_desistimiento", "label": "Gastos por desistimiento del comprador (u$s, 1,5%)", "tipo": "text" },
+          { "key": "dia_firma", "label": "Día de la firma", "tipo": "text", "req": true },
+          { "key": "mes_firma", "label": "Mes de la firma", "tipo": "text", "req": true }
+        ]
+      },
+      {
+        "titulo": "Inmueble entregado en permuta",
+        "campos": [
+          { "key": "permuta_direccion", "label": "Dirección del inmueble entregado en permuta", "tipo": "text", "req": true },
+          { "key": "permuta_ciudad", "label": "Ciudad del inmueble en permuta", "tipo": "text", "req": true },
+          { "key": "permuta_valuacion_texto", "label": "Valuación del inmueble en permuta (en letras)", "tipo": "text" },
+          { "key": "permuta_valuacion_numero", "label": "Valuación del inmueble en permuta (u$s)", "tipo": "text" },
+          { "key": "permuta_fecha_entrega", "label": "Fecha de entrega del inmueble en permuta", "tipo": "text" }
+        ]
+      }
+    ]
+  },
+  "entrega-inmueble": {
+    "label": "Entrega de inmueble (permuta)",
+    "archivo": "entrega-inmueble.docx",
+    "nombreSalida": "Reserva con Entrega de Inmueble",
+    "grupos": [
+      {
+        "titulo": "Datos del cliente / reservante",
+        "campos": [
+          { "key": "cliente_nombre", "label": "Nombre y apellido", "tipo": "text", "req": true },
+          { "key": "cliente_dni", "label": "DNI", "tipo": "text", "req": true },
+          { "key": "cliente_fecha_nacimiento", "label": "Fecha de nacimiento", "tipo": "text" },
+          { "key": "cliente_apellido_materno", "label": "Apellido materno", "tipo": "text" },
+          { "key": "cliente_domicilio_calle", "label": "Domicilio (calle)", "tipo": "text", "req": true },
+          { "key": "cliente_ciudad", "label": "Ciudad del domicilio", "tipo": "text", "req": true },
+          { "key": "cliente_estado_civil", "label": "Estado civil", "tipo": "text", "req": true },
+          { "key": "domicilio_electronico_comprador", "label": "Domicilio electrónico (email) del comprador", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Propiedad y operación",
+        "campos": [
+          { "key": "propiedad_direccion", "label": "Dirección de la propiedad a comprar", "tipo": "text", "req": true },
+          { "key": "reserva_texto", "label": "Importe de la reserva (en letras)", "tipo": "text", "req": true },
+          { "key": "reserva_numero", "label": "Importe de la reserva (u$s)", "tipo": "text", "req": true },
+          { "key": "precio_total_texto", "label": "Precio total de venta (en letras)", "tipo": "text", "req": true },
+          { "key": "precio_total_numero", "label": "Precio total de venta (u$s)", "tipo": "text", "req": true },
+          { "key": "saldo_texto", "label": "Saldo a pagar (en letras)", "tipo": "text" },
+          { "key": "saldo_numero", "label": "Saldo a pagar (u$s)", "tipo": "text" },
+          { "key": "fecha_escritura", "label": "Fecha límite de escritura", "tipo": "text", "req": true },
+          { "key": "fecha_limite_aceptacion", "label": "Fecha límite de aceptación del vendedor", "tipo": "text", "req": true },
+          { "key": "gastos_desistimiento", "label": "Gastos por desistimiento del comprador (u$s, 1,5%)", "tipo": "text" },
+          { "key": "dia_firma", "label": "Día de la firma", "tipo": "text", "req": true },
+          { "key": "mes_firma", "label": "Mes de la firma", "tipo": "text", "req": true }
+        ]
+      },
+      {
+        "titulo": "Inmueble entregado en permuta",
+        "campos": [
+          { "key": "permuta_direccion", "label": "Dirección del inmueble entregado", "tipo": "text", "req": true },
+          { "key": "permuta_ciudad", "label": "Ciudad del inmueble entregado", "tipo": "text", "req": true },
+          { "key": "permuta_valuacion_texto", "label": "Valuación (en letras)", "tipo": "text" },
+          { "key": "permuta_valuacion_numero", "label": "Valuación (u$s)", "tipo": "text" },
+          { "key": "permuta_fecha_entrega", "label": "Fecha de entrega", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Gastos de escrituración (ambos inmuebles)",
+        "campos": [
+          { "key": "escrituracion_direccion1", "label": "Dirección inmueble 1", "tipo": "text" },
+          { "key": "escrituracion_ciudad1", "label": "Ciudad inmueble 1", "tipo": "text" },
+          { "key": "escrituracion_direccion2", "label": "Dirección inmueble 2", "tipo": "text" },
+          { "key": "escrituracion_ciudad2", "label": "Ciudad inmueble 2", "tipo": "text" },
+          { "key": "escrituracion_responsable2", "label": "Responsable de gastos del inmueble 2", "tipo": "text" }
+        ]
+      }
+    ]
+  },
+  "construccion": {
+    "label": "Inmueble en construcción",
+    "archivo": "construccion.docx",
+    "nombreSalida": "Reserva Inmueble en Construccion",
+    "grupos": [
+      {
+        "titulo": "Datos del cliente / reservante",
+        "campos": [
+          { "key": "cliente_nombre", "label": "Nombre y apellido", "tipo": "text", "req": true },
+          { "key": "cliente_dni", "label": "DNI", "tipo": "text", "req": true },
+          { "key": "cliente_fecha_nacimiento", "label": "Fecha de nacimiento", "tipo": "text" },
+          { "key": "cliente_apellido_materno", "label": "Apellido materno", "tipo": "text" },
+          { "key": "cliente_domicilio_calle", "label": "Domicilio (calle)", "tipo": "text", "req": true },
+          { "key": "cliente_ciudad", "label": "Ciudad del domicilio", "tipo": "text", "req": true },
+          { "key": "cliente_estado_civil", "label": "Estado civil", "tipo": "text", "req": true },
+          { "key": "domicilio_electronico_comprador", "label": "Domicilio electrónico (email) del comprador", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Propiedad y operación",
+        "campos": [
+          { "key": "propiedad_direccion", "label": "Dirección de la propiedad (en construcción)", "tipo": "text", "req": true },
+          { "key": "reserva_texto", "label": "Importe de la reserva (en letras)", "tipo": "text", "req": true },
+          { "key": "reserva_numero", "label": "Importe de la reserva (u$s)", "tipo": "text", "req": true },
+          { "key": "precio_total_texto", "label": "Precio total de venta (en letras)", "tipo": "text", "req": true },
+          { "key": "precio_total_numero", "label": "Precio total de venta (u$s)", "tipo": "text", "req": true },
+          { "key": "saldo_texto", "label": "Importe al firmar boleto (en letras)", "tipo": "text" },
+          { "key": "saldo_numero", "label": "Importe al firmar boleto (u$s)", "tipo": "text" },
+          { "key": "fecha_boleto", "label": "Fecha límite de firma del boleto", "tipo": "text", "req": true },
+          { "key": "saldo2_texto", "label": "Saldo a financiar en cuotas (en letras)", "tipo": "text" },
+          { "key": "cantidad_cuotas", "label": "Cantidad de cuotas", "tipo": "text", "req": true },
+          { "key": "monto_cuota", "label": "Monto de cada cuota", "tipo": "text", "req": true },
+          { "key": "dia_vencimiento_primera_cuota", "label": "Fecha de vencimiento de la 1ª cuota", "tipo": "text" },
+          { "key": "fecha_limite_aceptacion", "label": "Fecha límite de aceptación del vendedor", "tipo": "text", "req": true },
+          { "key": "gastos_desistimiento", "label": "Gastos por desistimiento del comprador (u$s, 1,5%)", "tipo": "text" },
+          { "key": "dia_firma", "label": "Día de la firma", "tipo": "text", "req": true },
+          { "key": "mes_firma", "label": "Mes de la firma", "tipo": "text", "req": true }
+        ]
+      }
+    ]
+  },
+  "locacion": {
+    "label": "Locación / alquiler",
+    "archivo": "locacion.docx",
+    "nombreSalida": "Reserva de Locacion",
+    "grupos": [
+      {
+        "titulo": "Datos del dador de la reserva (futuro locatario)",
+        "campos": [
+          { "key": "dador_nombre", "label": "Nombre y apellido", "tipo": "text", "req": true },
+          { "key": "dador_dni", "label": "DNI", "tipo": "text", "req": true },
+          { "key": "dador_domicilio", "label": "Domicilio (calle)", "tipo": "text", "req": true },
+          { "key": "dador_ciudad", "label": "Ciudad", "tipo": "text", "req": true },
+          { "key": "domicilio_electronico_locatario", "label": "Domicilio electrónico (email)", "tipo": "text" }
+        ]
+      },
+      {
+        "titulo": "Inmueble y condiciones de la reserva",
+        "campos": [
+          { "key": "direccion_inmueble_locacion", "label": "Dirección del inmueble a alquilar", "tipo": "text", "req": true },
+          { "key": "monto_reserva_numero", "label": "Monto de la reserva ($)", "tipo": "text", "req": true },
+          { "key": "monto_reserva_texto", "label": "Monto de la reserva (en letras)", "tipo": "text", "req": true },
+          { "key": "fecha_tope_contrato", "label": "Fecha tope para firmar el contrato", "tipo": "text", "req": true }
+        ]
+      },
+      {
+        "titulo": "Condiciones del contrato de locación",
+        "campos": [
+          { "key": "inmueble_b_detalle", "label": "Detalle del inmueble a locar", "tipo": "text" },
+          { "key": "plazo_contrato", "label": "Plazo de duración del contrato", "tipo": "text", "req": true },
+          { "key": "fecha_tope_contrato_firma", "label": "Fecha tope para la celebración del contrato", "tipo": "text" },
+          { "key": "valor_mes_locativo", "label": "Valor del mes locativo ($)", "tipo": "text", "req": true },
+          { "key": "tipo_ajuste", "label": "Tipo de ajuste (ej: trimestrales)", "tipo": "text" },
+          { "key": "indice_ajuste", "label": "Índice de ajuste (ej: ICL)", "tipo": "text" },
+          { "key": "monto_deposito_numero", "label": "Depósito en garantía ($)", "tipo": "text" },
+          { "key": "monto_deposito_texto", "label": "Depósito en garantía (en letras)", "tipo": "text" },
+          { "key": "dia_firma", "label": "Día de la firma", "tipo": "text", "req": true },
+          { "key": "mes_firma", "label": "Mes de la firma", "tipo": "text", "req": true }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Armar Reserva · SOLUM</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2317355B%22/><text x=%2250%22 y=%2268%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22%23B6A284%22 font-family=%22Georgia,serif%22>S</text></svg>">
+<style>
+  :root{
+    --navy:#1b3a52; --gold:#E3C98A; --gold2:#cBAE70;
+    --bg:#0b1a26; --bg2:#10222f; --bg3:#16303f;
+    --card:rgba(18,32,48,.65); --border:rgba(255,255,255,.14);
+    --text:#ffffff; --text2:#cbd5e1; --text3:#94A3B8;
+    --green:#2DD4C4; --red:#E39A8B;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:linear-gradient(135deg,#0a1b27 0%,#12303c 45%,#0c1822 100%);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    padding:24px 16px 64px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+  header{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+  .logo{
+    width:44px;height:44px;border-radius:10px;background:var(--navy);
+    display:flex;align-items:center;justify-content:center;
+    font-family:Georgia,serif;font-size:26px;color:var(--gold);flex:none;
+  }
+  h1{font-size:22px;margin:0;font-weight:600;letter-spacing:.2px;}
+  .sub{color:var(--text3);font-size:13.5px;margin-top:2px;}
+  a.back{color:var(--gold);text-decoration:none;font-size:13.5px;margin-left:auto;}
+  a.back:hover{text-decoration:underline;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px 20px 22px;
+    margin-bottom:18px;
+    backdrop-filter:blur(14px) saturate(140%);
+  }
+  .card h2{font-size:15px;margin:0 0 14px;color:var(--gold);font-weight:600;letter-spacing:.3px;text-transform:uppercase;font-size:12.5px;}
+
+  label{display:block;font-size:13px;color:var(--text2);margin-bottom:5px;}
+  .req{color:var(--red);}
+  select, input[type=text], textarea{
+    width:100%;
+    background:rgba(255,255,255,.05);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:9px;
+    padding:10px 12px;
+    font-size:14px;
+    outline:none;
+    transition:border-color .15s;
+    font-family:inherit;
+  }
+  select:focus, input[type=text]:focus, textarea:focus{border-color:var(--gold);}
+  select option{color:#000;}
+
+  .field{margin-bottom:14px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:620px){.grid{grid-template-columns:1fr;}}
+
+  .tipo-select{font-size:15px;padding:12px 14px;}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:linear-gradient(135deg,var(--gold),var(--gold2));
+    color:#17263a;
+    border:none;border-radius:10px;
+    padding:13px 22px;
+    font-size:15px;font-weight:600;
+    cursor:pointer;
+    transition:transform .1s, box-shadow .15s;
+    box-shadow:0 6px 18px rgba(227,201,138,.25);
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .btn.secondary{
+    background:transparent;color:var(--text2);border:1px solid var(--border);
+    box-shadow:none;font-weight:500;
+  }
+
+  .actions{display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;}
+  .status{font-size:13.5px;color:var(--text3);}
+  .status.ok{color:var(--green);}
+  .status.err{color:var(--red);}
+
+  .hint{font-size:12px;color:var(--text3);margin-top:3px;}
+  .empty-msg{color:var(--text3);font-size:14px;padding:6px 2px;}
+  footer{text-align:center;color:var(--text3);font-size:12px;margin-top:30px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">S</div>
+    <div>
+      <h1>Armar Reserva</h1>
+      <div class="sub">Generá el documento de reserva (.docx) listo para firmar</div>
+    </div>
+    <a class="back" href="index.html">&larr; Volver al CRM</a>
+  </header>
+
+  <div class="card">
+    <h2>1. Tipo de reserva</h2>
+    <div class="field">
+      <label for="tipo">Elegí el tipo de operación</label>
+      <select id="tipo" class="tipo-select">
+        <option value="">Seleccionar...</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Agente que genera la reserva</h2>
+    <div class="grid">
+      <div class="field">
+        <label for="agente_nombre">Nombre del agente</label>
+        <input type="text" id="agente_nombre" placeholder="Ej: Leonel Emmi">
+      </div>
+      <div class="field">
+        <label for="agente_email">Email del agente (opcional)</label>
+        <input type="text" id="agente_email" placeholder="agente@solumnegociosinmobiliarios.com.ar">
+      </div>
+    </div>
+  </div>
+
+  <div id="camposContainer"></div>
+
+  <div class="card" id="actionsCard" style="display:none;">
+    <div class="actions">
+      <button class="btn" id="btnGenerar">Generar y descargar reserva (.docx)</button>
+      <span class="status" id="statusMsg"></span>
+    </div>
+    <div class="hint">El documento se genera en tu navegador, a partir de la plantilla oficial de SOLUM, con el formato original intacto.</div>
+  </div>
+
+  <footer>SOLUM Negocios Inmobiliarios · Armado de reservas</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.44.0/docxtemplater.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script>
+(function(){
+  var CAMPOS = null;
+  var tipoSelect = document.getElementById('tipo');
+  var camposContainer = document.getElementById('camposContainer');
+  var actionsCard = document.getElementById('actionsCard');
+  var statusMsg = document.getElementById('statusMsg');
+  var btnGenerar = document.getElementById('btnGenerar');
+
+  fetch('plantillas-reserva/campos.json')
+    .then(function(r){
+      if(!r.ok) throw new Error('No se pudo cargar campos.json (' + r.status + ')');
+      return r.json();
+    })
+    .then(function(data){
+      CAMPOS = data;
+      Object.keys(CAMPOS).forEach(function(key){
+        var opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = CAMPOS[key].label;
+        tipoSelect.appendChild(opt);
+      });
+    })
+    .catch(function(err){
+      camposContainer.innerHTML = '<div class="card"><div class="empty-msg">Error cargando la configuración de plantillas: ' + escapeHtml(err.message) + '</div></div>';
+    });
+
+  tipoSelect.addEventListener('change', function(){
+    renderCampos(tipoSelect.value);
+  });
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function renderCampos(tipo){
+    camposContainer.innerHTML = '';
+    actionsCard.style.display = 'none';
+    statusMsg.textContent = '';
+    statusMsg.className = 'status';
+    if(!tipo || !CAMPOS || !CAMPOS[tipo]){
+      return;
+    }
+    var conf = CAMPOS[tipo];
+    conf.grupos.forEach(function(grupo){
+      var card = document.createElement('div');
+      card.className = 'card';
+      var h2 = document.createElement('h2');
+      h2.textContent = grupo.titulo;
+      card.appendChild(h2);
+
+      var grid = document.createElement('div');
+      grid.className = 'grid';
+
+      grupo.campos.forEach(function(campo){
+        var field = document.createElement('div');
+        field.className = 'field';
+        var label = document.createElement('label');
+        label.setAttribute('for', 'f_' + campo.key);
+        label.innerHTML = escapeHtml(campo.label) + (campo.req ? ' <span class="req">*</span>' : '');
+        field.appendChild(label);
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'f_' + campo.key;
+        input.dataset.key = campo.key;
+        input.dataset.req = campo.req ? '1' : '0';
+        field.appendChild(input);
+        grid.appendChild(field);
+      });
+
+      card.appendChild(grid);
+      camposContainer.appendChild(card);
+    });
+    actionsCard.style.display = '';
+  }
+
+  btnGenerar.addEventListener('click', function(){
+    var tipo = tipoSelect.value;
+    if(!tipo || !CAMPOS || !CAMPOS[tipo]){
+      setStatus('Elegí primero un tipo de reserva.', 'err');
+      return;
+    }
+    var conf = CAMPOS[tipo];
+    var inputs = camposContainer.querySelectorAll('input[data-key]');
+    var data = {};
+    var faltantes = [];
+    inputs.forEach(function(inp){
+      var val = inp.value.trim();
+      data[inp.dataset.key] = val;
+      if(inp.dataset.req === '1' && !val){
+        faltantes.push(inp.dataset.key);
+      }
+    });
+    if(faltantes.length){
+      setStatus('Completá los campos obligatorios (*) antes de generar.', 'err');
+      var firstMissing = camposContainer.querySelector('input[data-key="' + faltantes[0] + '"]');
+      if(firstMissing){ firstMissing.focus(); firstMissing.style.borderColor = 'var(--red)'; }
+      return;
+    }
+
+    btnGenerar.disabled = true;
+    setStatus('Generando documento...', '');
+
+    fetch('plantillas-reserva/' + conf.archivo)
+      .then(function(r){
+        if(!r.ok) throw new Error('No se pudo cargar la plantilla (' + r.status + ')');
+        return r.arrayBuffer();
+      })
+      .then(function(buf){
+        var zip = new PizZip(buf);
+        var doc = new window.docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+          nullGetter: function(){ return ''; }
+        });
+        doc.render(data);
+        var out = doc.getZip().generate({
+          type: 'blob',
+          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        });
+        var nombreBase = conf.nombreSalida || 'Reserva';
+        var refProp = (data.propiedad_direccion || data.direccion_inmueble_locacion || data.cliente_nombre || data.dador_nombre || '').trim();
+        var nombreArchivo = nombreBase + (refProp ? ' - ' + refProp : '') + '.docx';
+        nombreArchivo = nombreArchivo.replace(/[\\/:*?"<>|]/g, '-');
+        saveAs(out, nombreArchivo);
+        setStatus('Documento generado y descargado: ' + nombreArchivo, 'ok');
+      })
+      .catch(function(err){
+        console.error(err);
+        setStatus('Error al generar el documento: ' + err.message, 'err');
+      })
+      .finally(function(){
+        btnGenerar.disabled = false;
+      });
+  });
+
+  function setStatus(msg, cls){
+    statusMsg.textContent = msg;
+    statusMsg.className = 'status' + (cls ? ' ' + cls : '');
+  }
+})();
+</script>
+</body>
+</html>
