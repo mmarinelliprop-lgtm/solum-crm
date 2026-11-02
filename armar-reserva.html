@@ -133,6 +133,128 @@
 
   <div id="camposContainer"></div>
 
+  <div class="card" id="clausulasCard" style="display:none;">
+    <h2>Cláusulas opcionales</h2>
+
+    <div class="grid" style="margin-bottom:16px;">
+      <div class="field">
+        <label for="comision_porcentaje">Comisión inmobiliaria (% + IVA, por cada parte)</label>
+        <input type="text" id="comision_porcentaje" value="3" placeholder="Ej: 3">
+      </div>
+      <div class="field" id="gastosEscrituracionWrap">
+        <label for="gastos_escrituracion_reparto">Reparto de gastos de escrituración</label>
+        <select id="gastos_escrituracion_reparto">
+          <option value="1/3-2/3">1/3 vendedora - 2/3 compradora (uso y costumbre, default)</option>
+          <option value="60/40">60% compradora - 40% vendedora</option>
+          <option value="50/50">50% compradora - 50% vendedora</option>
+          <option value="100-comprador">100% a cargo de la parte compradora</option>
+          <option value="100-vendedor">100% a cargo de la parte vendedora</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_refuerzo_sena" style="width:auto">
+      <label for="chk_refuerzo_sena" style="margin:0">Incluir refuerzo de seña (al ser aceptada la reserva)</label>
+    </div>
+    <div class="grid" id="refuerzoSenaCampos" style="display:none">
+      <div class="field"><label for="rs_monto_texto">Monto del refuerzo (en letras)</label><input type="text" id="rs_monto_texto"></div>
+      <div class="field"><label for="rs_monto_numero">Monto del refuerzo (u$s)</label><input type="text" id="rs_monto_numero"></div>
+      <div class="field"><label for="rs_plazo_horas">Plazo para entregarlo (hs hábiles)</label><input type="text" id="rs_plazo_horas" value="72"></div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_inmueble_alquilado" style="width:auto">
+      <label for="chk_inmueble_alquilado" style="margin:0">La propiedad se entrega alquilada (contrato vigente)</label>
+    </div>
+    <div class="grid" id="inmuebleAlquiladoCampos" style="display:none">
+      <div class="field"><label for="ia_fecha_vencimiento">Vencimiento del contrato de alquiler vigente</label><input type="text" id="ia_fecha_vencimiento"></div>
+      <div class="field"><label for="ia_fecha_desocupacion">Fecha tope para entregar desocupado / ceder el contrato</label><input type="text" id="ia_fecha_desocupacion"></div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_vehiculo" style="width:auto">
+      <label for="chk_vehiculo" style="margin:0">Incluir entrega de vehículo como parte de pago</label>
+    </div>
+    <div class="grid" id="vehiculoCampos" style="display:none">
+      <div class="field"><label for="v_marca">Marca</label><input type="text" id="v_marca"></div>
+      <div class="field"><label for="v_modelo">Modelo</label><input type="text" id="v_modelo"></div>
+      <div class="field"><label for="v_anio">Año</label><input type="text" id="v_anio"></div>
+      <div class="field"><label for="v_dominio">Dominio (patente)</label><input type="text" id="v_dominio"></div>
+      <div class="field"><label for="v_valor">Valor de toma (USD)</label><input type="text" id="v_valor"></div>
+    </div>
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_financiacion" style="width:auto">
+      <label for="chk_financiacion" style="margin:0">Incluir financiación del saldo</label>
+    </div>
+    <div class="grid" id="financiacionCampos" style="display:none">
+      <div class="field"><label for="f_monto_financiado">Monto financiado (USD)</label><input type="text" id="f_monto_financiado"></div>
+      <div class="field"><label for="f_cant_cuotas">Cantidad de cuotas</label><input type="text" id="f_cant_cuotas"></div>
+      <div class="field"><label for="f_valor_cuota">Valor de cada cuota (USD)</label><input type="text" id="f_valor_cuota"></div>
+      <div class="field"><label for="f_interes">Interés (si aplica)</label><input type="text" id="f_interes" placeholder="Ej: sin interés, o 2% mensual"></div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_comision_compartida" style="width:auto">
+      <label for="chk_comision_compartida" style="margin:0">Comisión compartida con otra inmobiliaria</label>
+    </div>
+    <div class="grid" id="comisionCompartidaCampos" style="display:none">
+      <div class="field"><label for="cc_inmobiliaria_externa">Nombre de la otra inmobiliaria</label><input type="text" id="cc_inmobiliaria_externa" placeholder="Ej: Squadra Propiedades"></div>
+      <div class="field"><label for="cc_corredor_externo">Corredor/a responsable</label><input type="text" id="cc_corredor_externo" placeholder="Ej: C.I. Melisa Montes"></div>
+      <div class="field"><label for="cc_matricula_externa">Matrícula (COCIR)</label><input type="text" id="cc_matricula_externa" placeholder="Ej: Mat. N° 2412"></div>
+      <div class="field"><label for="cc_porcentaje_externa">% + IVA de comisión para la otra inmobiliaria</label><input type="text" id="cc_porcentaje_externa" value="3"></div>
+      <div class="field">
+        <label for="cc_quien_paga">Esa comisión la abona</label>
+        <select id="cc_quien_paga">
+          <option value="compradora">La parte compradora</option>
+          <option value="vendedora">La parte vendedora</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_sucesorio" style="width:auto">
+      <label for="chk_sucesorio" style="margin:0">La propiedad está alcanzada por un trámite sucesorio en curso</label>
+    </div>
+    <div class="grid" id="sucesorioCampos" style="display:none">
+      <div class="field"><label for="suc_caratula">Expediente / autos caratulados / CUIJ</label><input type="text" id="suc_caratula" placeholder='Ej: "PEREZ, JUAN S/SUCESORIO" – CUIJ N° 21-xxxxxxxx-x'></div>
+      <div class="field"><label for="suc_plazo">Plazo para finalizar la inscripción de la declaratoria de herederos</label><input type="text" id="suc_plazo" placeholder="Ej: antes de la fecha de escritura"></div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_venta_condicionada" style="width:auto">
+      <label for="chk_venta_condicionada" style="margin:0">Venta condicionada a la venta previa de otro inmueble del comprador</label>
+    </div>
+    <div class="grid" id="ventaCondicionadaCampos" style="display:none">
+      <div class="field"><label for="vc_direccion_otro_inmueble">Dirección del otro inmueble (del comprador)</label><input type="text" id="vc_direccion_otro_inmueble"></div>
+      <div class="field"><label for="vc_plazo">Plazo límite para concretar esa venta previa</label><input type="text" id="vc_plazo"></div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_comodato" style="width:auto">
+      <label for="chk_comodato" style="margin:0">Posesión diferida: la parte vendedora permanece en comodato tras la escritura</label>
+    </div>
+    <div class="grid" id="comodatoCampos" style="display:none">
+      <div class="field"><label for="cm_fecha_limite">Fecha tope de entrega de posesión</label><input type="text" id="cm_fecha_limite"></div>
+      <div class="field">
+        <label for="cm_tipo">El comodato es</label>
+        <select id="cm_tipo">
+          <option value="gratuito">Gratuito</option>
+          <option value="oneroso">Oneroso</option>
+        </select>
+      </div>
+      <div class="field" id="cm_montoWrap" style="display:none"><label for="cm_monto">Monto del comodato oneroso (USD)</label><input type="text" id="cm_monto"></div>
+    </div>
+
+    <div class="field" style="margin:16px 0 10px;display:flex;align-items:center;gap:8px;flex-direction:row">
+      <input type="checkbox" id="chk_items_incluidos" style="width:auto">
+      <label for="chk_items_incluidos" style="margin:0">Incluir ítems de la venta (artefactos, muebles, pileta, etc.)</label>
+    </div>
+    <div class="grid" id="itemsIncluidosCampos" style="display:none">
+      <div class="field" style="grid-column:1/-1"><label for="items_incluidos">Detalle de los ítems incluidos</label><input type="text" id="items_incluidos" placeholder="Ej: cocina, calefón, aire acondicionado split, placares"></div>
+    </div>
+  </div>
+
   <div class="card" id="actionsCard" style="display:none;">
     <div class="actions">
       <button class="btn" id="btnGenerar">Generar y descargar reserva (.docx)</button>
@@ -153,6 +275,145 @@
   var tipoSelect = document.getElementById('tipo');
   var camposContainer = document.getElementById('camposContainer');
   var actionsCard = document.getElementById('actionsCard');
+  var clausulasCard = document.getElementById('clausulasCard');
+  var chkVehiculo = document.getElementById('chk_vehiculo');
+  var vehiculoCampos = document.getElementById('vehiculoCampos');
+  var chkFinanciacion = document.getElementById('chk_financiacion');
+  var financiacionCampos = document.getElementById('financiacionCampos');
+  var chkRefuerzoSena = document.getElementById('chk_refuerzo_sena');
+  var refuerzoSenaCampos = document.getElementById('refuerzoSenaCampos');
+  var chkInmuebleAlquilado = document.getElementById('chk_inmueble_alquilado');
+  var inmuebleAlquiladoCampos = document.getElementById('inmuebleAlquiladoCampos');
+  var gastosEscrituracionWrap = document.getElementById('gastosEscrituracionWrap');
+  var chkComisionCompartida = document.getElementById('chk_comision_compartida');
+  var comisionCompartidaCampos = document.getElementById('comisionCompartidaCampos');
+  var chkSucesorio = document.getElementById('chk_sucesorio');
+  var sucesorioCampos = document.getElementById('sucesorioCampos');
+  var chkVentaCondicionada = document.getElementById('chk_venta_condicionada');
+  var ventaCondicionadaCampos = document.getElementById('ventaCondicionadaCampos');
+  var chkComodato = document.getElementById('chk_comodato');
+  var comodatoCampos = document.getElementById('comodatoCampos');
+  var cmTipo = document.getElementById('cm_tipo');
+  var cmMontoWrap = document.getElementById('cm_montoWrap');
+  var chkItemsIncluidos = document.getElementById('chk_items_incluidos');
+  var itemsIncluidosCampos = document.getElementById('itemsIncluidosCampos');
+
+  chkVehiculo.addEventListener('change', function(){
+    vehiculoCampos.style.display = chkVehiculo.checked ? '' : 'none';
+  });
+  chkFinanciacion.addEventListener('change', function(){
+    financiacionCampos.style.display = chkFinanciacion.checked ? '' : 'none';
+  });
+  chkRefuerzoSena.addEventListener('change', function(){
+    refuerzoSenaCampos.style.display = chkRefuerzoSena.checked ? '' : 'none';
+  });
+  chkInmuebleAlquilado.addEventListener('change', function(){
+    inmuebleAlquiladoCampos.style.display = chkInmuebleAlquilado.checked ? '' : 'none';
+  });
+  chkComisionCompartida.addEventListener('change', function(){
+    comisionCompartidaCampos.style.display = chkComisionCompartida.checked ? '' : 'none';
+  });
+  chkSucesorio.addEventListener('change', function(){
+    sucesorioCampos.style.display = chkSucesorio.checked ? '' : 'none';
+  });
+  chkVentaCondicionada.addEventListener('change', function(){
+    ventaCondicionadaCampos.style.display = chkVentaCondicionada.checked ? '' : 'none';
+  });
+  chkComodato.addEventListener('change', function(){
+    comodatoCampos.style.display = chkComodato.checked ? '' : 'none';
+  });
+  cmTipo.addEventListener('change', function(){
+    cmMontoWrap.style.display = (cmTipo.value === 'oneroso') ? '' : 'none';
+  });
+  chkItemsIncluidos.addEventListener('change', function(){
+    itemsIncluidosCampos.style.display = chkItemsIncluidos.checked ? '' : 'none';
+  });
+
+  function val(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+
+  function parrafoVehiculo(){
+    if(!chkVehiculo.checked) return '';
+    return 'La entrega del siguiente vehículo: ' + (val('v_marca')||'[marca]') + ' ' + (val('v_modelo')||'[modelo]') +
+      ', modelo ' + (val('v_anio')||'[año]') + ', dominio ' + (val('v_dominio')||'[dominio]') +
+      ', cuya valuación actual asciende a la suma de dólares estadounidenses ' + (val('v_valor')||'[valor]') +
+      ', monto que se imputa al precio total de la operación, entregándose el mismo a la parte vendedora al momento de la firma del boleto de compraventa y/o escritura traslativa de dominio, según corresponda. Los gastos que genere la transferencia del automotor serán soportados en su totalidad por la parte compradora.';
+  }
+  function parrafoFinanciacion(){
+    if(!chkFinanciacion.checked) return '';
+    return 'El saldo, es decir, la suma de dólares estadounidenses ' + (val('f_monto_financiado')||'[monto]') +
+      ', será abonado por la parte compradora a la parte vendedora en ' + (val('f_cant_cuotas')||'[cantidad]') +
+      ' cuotas de dólares estadounidenses ' + (val('f_valor_cuota')||'[valor]') + ' cada una, ' +
+      (val('f_interes') ? 'con las siguientes condiciones de interés: ' + val('f_interes') + '.' : 'sin interés.');
+  }
+  function parrafoRefuerzoSena(){
+    if(!chkRefuerzoSena.checked) return '';
+    return 'En el supuesto de que la presente oferta sea expresamente aceptada por la parte vendedora, la parte compradora se obliga a entregar, en concepto de refuerzo de seña, la suma de dólares billetes estadounidenses ' +
+      (val('rs_monto_texto')||'[monto en letras]') + ' (u$s ' + (val('rs_monto_numero')||'[monto]') +
+      '). Dicho pago deberá hacerse efectivo dentro del plazo perentorio de ' + (val('rs_plazo_horas')||'72') +
+      ' horas hábiles contadas a partir de la notificación de la aceptación. Este monto, sumado a lo ya entregado, conformará una seña penitencial.';
+  }
+  function parrafoInmuebleAlquilado(){
+    if(!chkInmuebleAlquilado.checked) return '';
+    var base = 'El comprador manifiesta conocer que la propiedad se encuentra alquilada' +
+      (val('ia_fecha_vencimiento') ? ', con contrato vigente hasta el día ' + val('ia_fecha_vencimiento') : ', con contrato vigente') + '.';
+    if(val('ia_fecha_desocupacion')){
+      base += ' Dicho contrato deberá ser cedido a la parte compradora, o en su defecto la propiedad deberá entregarse desocupada, antes del día ' + val('ia_fecha_desocupacion') + ', siendo ello condición esencial para la presente operación.';
+    } else {
+      base += ' Dicho contrato se cederá a la parte compradora en el mismo acto de la escritura traslativa de dominio y/o boleto de compraventa.';
+    }
+    return base;
+  }
+  function parrafoGastosEscrituracion(){
+    var reparto = document.getElementById('gastos_escrituracion_reparto');
+    var v = reparto ? reparto.value : '1/3-2/3';
+    var reparticion;
+    if(v === '60/40') reparticion = 'correspondiendo 60% a la parte compradora y 40% a la parte vendedora';
+    else if(v === '50/50') reparticion = 'correspondiendo 50% a la parte compradora y 50% a la parte vendedora';
+    else if(v === '100-comprador') reparticion = 'siendo soportados en su totalidad por la parte compradora';
+    else if(v === '100-vendedor') reparticion = 'siendo soportados en su totalidad por la parte vendedora';
+    else reparticion = 'correspondiendo 1/3 a la parte vendedora y 2/3 a la parte compradora';
+    return 'Los gastos de escrituración serán soportados por la parte compradora y vendedora según los usos y costumbres notariales, ' + reparticion + '. ITI e ingresos brutos en caso de corresponder estarán a cargo de la parte vendedora. El Escribano actuante en la misma será designado por el comprador, quien deberá informar sobre los impuestos y gastos que genere la presente operación.';
+  }
+  function parrafoComisionCompartida(){
+    if(!chkComisionCompartida.checked) return '';
+    var quienPaga = document.getElementById('cc_quien_paga');
+    var parte = (quienPaga && quienPaga.value === 'vendedora') ? 'la parte vendedora' : 'la parte compradora';
+    return 'La presente operación es intervenida en forma conjunta por Solum Negocios Inmobiliarios y por ' +
+      (val('cc_inmobiliaria_externa')||'[inmobiliaria externa]') + ', ' + (val('cc_corredor_externo')||'[corredor/a]') +
+      ' ' + (val('cc_matricula_externa')||'[matrícula]') + '. ' + parte.charAt(0).toUpperCase() + parte.slice(1) +
+      ' se obliga a abonar el ' + (val('cc_porcentaje_externa')||'3') + '% más IVA de comisión del precio total de la compraventa, en la misma moneda en que esta se efectúa, a ' +
+      (val('cc_inmobiliaria_externa')||'[inmobiliaria externa]') + ', ' + (val('cc_corredor_externo')||'[corredor/a]') +
+      ' ' + (val('cc_matricula_externa')||'[matrícula]') + ', al momento de la firma del boleto de compraventa y/o escritura traslativa de dominio, lo que ocurra primero.';
+  }
+  function parrafoSucesorio(){
+    if(!chkSucesorio.checked) return '';
+    return 'El comprador manifiesta expresamente conocer que la propiedad objeto de la presente operación se encuentra actualmente alcanzada por un proceso sucesorio en trámite, cuyos gastos, costas y honorarios serán asumidos en su totalidad por la parte vendedora hasta su conclusión definitiva. La parte vendedora se obliga a finalizar el trámite de inscripción de la declaratoria de herederos en el Registro General, dentro de los autos caratulados ' +
+      (val('suc_caratula')||'[expediente / CUIJ]') + ', debiendo dicho trámite encontrarse finalizado e inscripto ' +
+      (val('suc_plazo') ? 'antes del día ' + val('suc_plazo') : 'antes de la fecha estipulada para la escritura traslativa de dominio') +
+      '. El comprador declara haber sido debidamente informado y asesorado sobre el estado procesal de la sucesión mencionada, otorgando su total y plena conformidad para realizar la presente operación bajo las condiciones aquí establecidas.';
+  }
+  function parrafoVentaCondicionada(){
+    if(!chkVentaCondicionada.checked) return '';
+    return 'La validez y eficacia de la presente oferta de compra queda supeditada a la previa y efectiva enajenación del inmueble sito en ' +
+      (val('vc_direccion_otro_inmueble')||'[dirección del otro inmueble]') + ', de titularidad de la parte compradora. En caso de que dicha operación no se perfeccione' +
+      (val('vc_plazo') ? ' antes del día ' + val('vc_plazo') : '') +
+      ' por causas no imputables a la parte compradora, la presente quedará automáticamente sin efecto, sin que ello genere derecho a indemnización, penalidad ni reclamo alguno entre las partes, debiendo reintegrarse el importe entregado en este acto sin quita ni agregado de ningún tipo.';
+  }
+  function parrafoComodato(){
+    if(!chkComodato.checked) return '';
+    var oneroso = cmTipo && cmTipo.value === 'oneroso';
+    var modalidad = oneroso
+      ? ('en forma onerosa, mediante el pago de la suma de dólares estadounidenses ' + (val('cm_monto')||'[monto]'))
+      : 'en forma gratuita';
+    return 'La parte vendedora continuará ocupando el inmueble en calidad de comodataria, ' + modalidad +
+      ', desde la fecha de la escritura traslativa de dominio y hasta el día ' + (val('cm_fecha_limite')||'[fecha límite]') +
+      ', oportunidad en la cual deberá restituir la posesión del inmueble a la parte compradora, libre de ocupantes y de cosas que impidan o perturben su disponibilidad, en las mismas condiciones en que fue entregado, siendo ello condición esencial para la presente operación.';
+  }
+  function parrafoItemsIncluidos(){
+    if(!chkItemsIncluidos.checked) return '';
+    return 'Las partes dejan expresamente aclarado que se incluyen en el precio de la presente operación los siguientes bienes muebles e instalaciones existentes en el inmueble: ' +
+      (val('items_incluidos')||'[detalle de los ítems incluidos]') + ', los cuales se entregarán en funcionamiento al momento de hacerse efectiva la posesión.';
+  }
   var statusMsg = document.getElementById('statusMsg');
   var btnGenerar = document.getElementById('btnGenerar');
 
@@ -187,6 +448,7 @@
   function renderCampos(tipo){
     camposContainer.innerHTML = '';
     actionsCard.style.display = 'none';
+    clausulasCard.style.display = 'none';
     statusMsg.textContent = '';
     statusMsg.className = 'status';
     if(!tipo || !CAMPOS || !CAMPOS[tipo]){
@@ -223,6 +485,8 @@
       camposContainer.appendChild(card);
     });
     actionsCard.style.display = '';
+    clausulasCard.style.display = '';
+    gastosEscrituracionWrap.style.display = (tipo === 'locacion') ? 'none' : '';
   }
 
   btnGenerar.addEventListener('click', function(){
@@ -248,6 +512,17 @@
       if(firstMissing){ firstMissing.focus(); firstMissing.style.borderColor = 'var(--red)'; }
       return;
     }
+    data.parrafo_vehiculo = parrafoVehiculo();
+    data.parrafo_financiacion = parrafoFinanciacion();
+    data.parrafo_refuerzo_sena = parrafoRefuerzoSena();
+    data.parrafo_inmueble_alquilado = parrafoInmuebleAlquilado();
+    data.parrafo_gastos_escrituracion = parrafoGastosEscrituracion();
+    data.parrafo_comision_compartida = parrafoComisionCompartida();
+    data.parrafo_sucesorio = parrafoSucesorio();
+    data.parrafo_venta_condicionada = parrafoVentaCondicionada();
+    data.parrafo_comodato = parrafoComodato();
+    data.parrafo_items_incluidos = parrafoItemsIncluidos();
+    data.comision_porcentaje = val('comision_porcentaje') || '3';
 
     btnGenerar.disabled = true;
     setStatus('Generando documento...', '');

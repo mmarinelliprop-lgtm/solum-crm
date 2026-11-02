@@ -421,7 +421,9 @@ async function cargarTodo(){
   // Objetivos mensuales personalizados que Martina edita por vendedor/mes en index.html
   // (tabla "seguimiento", filas "obj_<metrica>"). Sin esto, acá siempre se usaba el objetivo
   // base genérico aunque Martina lo haya cambiado para este vendedor en particular.
-  if(segRows.length>1) segRows.slice(1).forEach(r=>{
+  // Cada edición en index.html agrega una fila nueva (nunca pisa la anterior); se ordena por
+  // timestamp real para que el último cambio gane, sin depender del orden de la planilla.
+  if(segRows.length>1) segRows.slice(1).sort((a,b)=>(parseFloat(a[0])||0)-(parseFloat(b[0])||0)).forEach(r=>{
     const vendedor=r[1], mes=parseInt(r[2]), key=String(r[3]), val=parseFloat(r[4])||0;
     if(vendedor!==sesionActiva || isNaN(mes)) return;
     if(key.startsWith('obj_')){
@@ -494,6 +496,30 @@ async function cargarTodo(){
       return { id:r[0], propiedad:r[1], agente, estado: r[11], mes, anio, mesReserva, anioReserva,
         precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0, comision_vendedor: parseFloat(r[6])||0, fechaEsc, fechaReserva };
     }).filter(o=>o.agente===sesionActiva);
+  }
+
+  // Búsquedas vigentes del mes actual: cuenta las que siguen "en_proceso" en este momento,
+  // no pisa lo cargado a mano si no hay ninguna (no hay fecha de alta para ubicarlas en meses
+  // pasados, así que solo se puede calcular para el mes en curso).
+  const mesHoy = new Date().getMonth()+1;
+  const busquedasVigentes = busquedas.filter(b=>b.estado==='en_proceso').length;
+  if(busquedasVigentes>0 || segMensualPropio[mesHoy]?.b===undefined){
+    if(!segMensualPropio[mesHoy]) segMensualPropio[mesHoy] = {};
+    segMensualPropio[mesHoy].b = busquedasVigentes;
+  }
+
+  // Captaciones publicadas: se cuentan por la fecha de publicación real, igual que en index.html.
+  // No pisa lo cargado a mano si no hay ninguna que matchee ese mes/año.
+  for(let m=1;m<=12;m++){
+    const cpCalc = captaciones.filter(c=>{
+      if(!c.publicacion || !c.fechaPublicacion) return false;
+      const fPub = parseFechaDDMM(c.fechaPublicacion);
+      return fPub && fPub.getMonth()+1===m;
+    }).length;
+    if(cpCalc>0){
+      if(!segMensualPropio[m]) segMensualPropio[m] = {};
+      segMensualPropio[m].cp = cpCalc;
+    }
   }
 }
 

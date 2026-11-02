@@ -1677,7 +1677,9 @@ async function cargarDatosDB() {
           notas: r[15]||'',
           rendicion: r[16] || 'pendiente_asesor'
         };
-      });
+      // Franco no es parte del equipo: sus operaciones solo las ve él (asesores.html) o en su
+      // ficha de seguimiento propia (que usa datos manuales, no esta planilla). No aparecen acá.
+      }).filter(o=>o.agente!=='Franco');
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
     }
     // Exchange
@@ -1716,7 +1718,11 @@ async function cargarDatosDB() {
     // Cargar seguimiento manual guardado (datos reales + objetivos)
     const segRows = await dbLeer('seguimiento');
     if(segRows.length > 1) {
-      segRows.slice(1).forEach(r => {
+      // Cada edición agrega una fila nueva (nunca pisa la anterior), así que el orden en que
+      // vienen de la planilla no garantiza que sea el orden cronológico real. Se ordena por el
+      // timestamp (primera columna) para que el último cambio real sea siempre el que gana,
+      // sin importar el orden en que la planilla las devuelva.
+      segRows.slice(1).sort((a,b)=>(parseFloat(a[0])||0)-(parseFloat(b[0])||0)).forEach(r => {
         const vendedor=r[1], mes=parseInt(r[2]), key=String(r[3]), val=parseFloat(r[4])||0;
         if(!segData[vendedor]) segData[vendedor]={};
         
@@ -2577,18 +2583,28 @@ function navSegInput(e, el){
 function actualizarOp(id, campo, valor){
   const op = operaciones.find(o=>o.id===id);
   if(!op) return;
-  if(campo==='precio'){
-    op.precio=parseFloat(valor)||0;
-    op.comision=Math.round(op.precio*0.03);
-    const pctMartina = op.agente==='Martina'?0.80:(op.agente==='Kito'||op.agente==='Esteban')?0.10:0.20;
-    op.ganancia_martina = Math.round(op.comision*pctMartina*100)/100;
-    op.ganancia_solum = Math.round(op.comision*0.30*100)/100;
-  } else if(campo==='pctComision'){
-    const pct = parseFloat(valor)/100 || 0.03;
-    op.comision = Math.round(op.precio*pct);
-    const pctMartina = op.agente==='Martina'?0.80:(op.agente==='Kito'||op.agente==='Esteban')?0.10:0.20;
-    op.ganancia_martina = Math.round(op.comision*pctMartina*100)/100;
-    op.ganancia_solum = Math.round(op.comision*0.30*100)/100;
+  if(campo==='precio' || campo==='pctComision'){
+    if(campo==='precio'){
+      // Mantiene el % de comisión vigente en la operación y solo recalcula el monto.
+      const pctVigente = op.precio ? (op.comision/op.precio) : 0.03;
+      op.precio = parseFloat(valor)||0;
+      op.comision = Math.round(op.precio*pctVigente);
+    } else {
+      const pct = parseFloat(valor)/100 || 0.03;
+      op.comision = Math.round(op.precio*pct);
+    }
+    // Recalcula el reparto real (comisión del asesor, ganancia de Martina y de SOLUM) con la
+    // escalera de % vigente para ese agente/año, igual que en el resto del sistema.
+    if(op.agente==='Martina'){
+      op.comision_vendedor = 0;
+      op.ganancia_martina = Math.round(op.comision*0.80*100)/100;
+      op.ganancia_solum = Math.round(op.comision*0.20*100)/100;
+    } else {
+      const pctAgente = pctAsesorVigente(op);
+      op.comision_vendedor = Math.round(op.comision*pctAgente*100)/100;
+      op.ganancia_solum = Math.round(op.comision*0.30*100)/100;
+      op.ganancia_martina = Math.round((op.comision-op.comision_vendedor-op.ganancia_solum)*100)/100;
+    }
   } else if(campo==='comision'){
     op.comision = parseFloat(valor)||0;
   } else if(campo==='ganancia_martina'){
@@ -3572,7 +3588,6 @@ function renderOperaciones(){
           <option value="Joaquin" ${normAgente(o.agente)==='Joaquin'?'selected':''}>Joaquín</option>
           <option value="Luli" ${normAgente(o.agente)==='Luli'?'selected':''}>Luli</option>
           <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
-          <option value="Franco" ${normAgente(o.agente)==='Franco'?'selected':''}>Franco</option>
         </select>
       </td>
       <td>

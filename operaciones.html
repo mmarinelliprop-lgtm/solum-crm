@@ -454,7 +454,8 @@ async function cargarOperaciones(){
         notas: r[15]||'',
         rendicion: r[16] || 'pendiente_asesor'
       };
-    });
+    // Franco no es parte del equipo: esta planilla es de rendición del equipo, no la ve.
+    }).filter(o=>o.agente!=='Franco');
     showToast('✅ '+operaciones.length+' operaciones cargadas');
   }
   poblarFiltroAgentes();
@@ -792,12 +793,28 @@ function actualizarCampo(id, campo, valor){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
   const valorAnterior = op[campo];
-  if(campo==='precio'){
-    op.precio = parseFloat(valor)||0;
-    op.comision = Math.round(op.precio*0.03);
-  } else if(campo==='pctComision'){
-    const pct = parseFloat(valor)/100 || 0.03;
-    op.comision = Math.round(op.precio*pct);
+  if(campo==='precio' || campo==='pctComision'){
+    if(campo==='precio'){
+      // Mantiene el % de comisión vigente en la operación y solo recalcula el monto.
+      const pctVigente = op.precio ? (op.comision/op.precio) : 0.03;
+      op.precio = parseFloat(valor)||0;
+      op.comision = Math.round(op.precio*pctVigente);
+    } else {
+      const pct = parseFloat(valor)/100 || 0.03;
+      op.comision = Math.round(op.precio*pct);
+    }
+    // Recalcula el reparto real (comisión del asesor, ganancia de Martina y de SOLUM) con la
+    // escalera de % vigente para ese agente/año, igual que en el resto del sistema.
+    if(op.agente==='Martina'){
+      op.comision_vendedor = 0;
+      op.ganancia_martina = Math.round(op.comision*0.80);
+      op.ganancia_solum = op.comision - op.ganancia_martina;
+    } else {
+      const pctAgente = pctAsesorVigente(op);
+      op.comision_vendedor = Math.round(op.comision*pctAgente);
+      op.ganancia_solum = Math.round(op.comision*0.30);
+      op.ganancia_martina = op.comision - op.comision_vendedor - op.ganancia_solum;
+    }
   } else if(campo==='fechaEsc' || campo==='fechaReserva'){
     // Siempre se guarda como texto dd/mm/aaaa, nunca como Date/ISO
     op[campo] = fmtFechaCorta(valor) || valor;
