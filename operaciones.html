@@ -397,7 +397,12 @@ async function recalcularComisiones(){
   let corregidas = 0;
   for(const op of cobradas){
     let comVendedor, ganMartina, ganSolum;
-    if(op.agente==='Martina'){
+    if(op.agente==='Franco'){
+      // Franco no es parte del equipo: se queda con el 100% de su comisión.
+      comVendedor = op.comision;
+      ganMartina = 0;
+      ganSolum = 0;
+    } else if(op.agente==='Martina'){
       comVendedor = 0;
       ganMartina = Math.round(op.comision*0.80);
       ganSolum = op.comision - ganMartina;
@@ -454,7 +459,8 @@ async function cargarOperaciones(){
         notas: r[15]||'',
         rendicion: r[16] || 'pendiente_asesor'
       };
-    // Franco no es parte del equipo: esta planilla es de rendición del equipo, no la ve.
+    // Franco no es parte del equipo: esta planilla es de rendición del equipo, Josefina no lo ve acá
+    // (sí lo ve Martina en index.html y el propio Franco en asesores.html).
     }).filter(o=>o.agente!=='Franco');
     showToast('✅ '+operaciones.length+' operaciones cargadas');
   }
@@ -739,7 +745,9 @@ async function generarPlanillaDesdeModal(){
 function renderRendicion(){
   const cont = document.getElementById('rendicion-container');
   if(!cont) return;
-  const cobradas = operaciones.filter(o=>o.estado==='Cobrada');
+  // Franco no es parte del equipo: su comisión es 100% suya, no hay nada que rendirle a
+  // Pox/Martu por sus operaciones, así que no aparece en este tablero de rendición.
+  const cobradas = operaciones.filter(o=>o.estado==='Cobrada' && o.agente!=='Franco');
 
   const pendAsesor = cobradas.filter(o=>(o.rendicion||'pendiente_asesor')==='pendiente_asesor');
   const pendPox = cobradas.filter(o=>o.rendicion==='pendiente_pox');
@@ -839,7 +847,7 @@ function poblarFiltroAgentes(){
   const actual = sel.value;
   // Roster completo del equipo (aunque todavía no tengan operaciones cargadas) + cualquier
   // otro valor de agente presente en los datos que no esté en el roster.
-  const roster = ['Martina','Vicky','Manu','Marce','Kito','Ceci','Joaquin','Luli'];
+  const roster = ['Martina','Vicky','Manu','Marce','Kito','Ceci','Joaquin','Luli','Franco'];
   const enDatos = [...new Set(operaciones.map(o=>o.agente).filter(Boolean))];
   const agentes = [...new Set([...roster, ...enDatos])].sort();
   sel.innerHTML = '<option value="all">Todos</option>' + agentes.map(a=>`<option value="${a}">${a}</option>`).join('');

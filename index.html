@@ -812,6 +812,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
             <input type="checkbox" value="Luli" checked onchange="renderOperaciones()" style="cursor:pointer"> Luli
           </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Franco" checked onchange="renderOperaciones()" style="cursor:pointer"> Franco (no cuenta en totales)
+          </label>
         </div>
       </div>
     </div>
@@ -1677,9 +1680,7 @@ async function cargarDatosDB() {
           notas: r[15]||'',
           rendicion: r[16] || 'pendiente_asesor'
         };
-      // Franco no es parte del equipo: sus operaciones solo las ve él (asesores.html) o en su
-      // ficha de seguimiento propia (que usa datos manuales, no esta planilla). No aparecen acá.
-      }).filter(o=>o.agente!=='Franco');
+      });
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
     }
     // Exchange
@@ -2140,6 +2141,9 @@ function parseFechaDDMM(f){
 }
 function fmtPesos(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function calcGanancia(op){
+  // Franco no es parte del equipo: se queda con el 100% de su comisión, nunca genera ganancia
+  // para Martina ni para SOLUM (ver la misma regla en asesores.html al cargar sus reservas).
+  if(op.agente==='Franco') return {propia:0, equipo:0, total:0, solum:0};
   // Si la operación ya trae ganancia_martina calculada, usarla
   if(op.ganancia_martina !== undefined && op.ganancia_martina > 0){
     return {
@@ -3555,6 +3559,10 @@ function renderOperaciones(){
   if(estadosChecks.length>0) ops = ops.filter(o=>estadosChecks.includes(o.estado));
   if(punta!=='all') ops = ops.filter(o=>o.punta===punta);
 
+  // Franco no es parte del equipo: se ve en la tabla (para que quede registro) pero no suma ni
+  // resta en ningún total/ganancia de esta pantalla.
+  const opsRender = ops;
+  ops = ops.filter(o=>o.agente!=='Franco');
 
   const totMiGan = ops.reduce((s,o)=>s+calcGanancia(o).total,0);
   const totMiGanCob = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
@@ -3568,7 +3576,7 @@ function renderOperaciones(){
     return s + o.comision*pctAsesorVigente(o);
   },0);
 
-  document.getElementById('ops-tabla').innerHTML = ops.map(o=>{
+  document.getElementById('ops-tabla').innerHTML = opsRender.map(o=>{
     const g = calcGanancia(o);
     const solumOp = o.agente==='Martina' ? o.comision*0.20 : o.comision*(1-pctAsesorVigente(o))-g.equipo;
     const estadoCls = o.estado==='Cobrada'?'cobrada':o.estado==='Caída'?'caida':o.estado==='Pendiente'?'pendiente':'cobrar';
@@ -3588,6 +3596,7 @@ function renderOperaciones(){
           <option value="Joaquin" ${normAgente(o.agente)==='Joaquin'?'selected':''}>Joaquín</option>
           <option value="Luli" ${normAgente(o.agente)==='Luli'?'selected':''}>Luli</option>
           <option value="Cris" ${normAgente(o.agente)==='Cris'?'selected':''}>Cris</option>
+          <option value="Franco" ${normAgente(o.agente)==='Franco'?'selected':''}>Franco</option>
         </select>
       </td>
       <td>
