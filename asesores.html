@@ -56,8 +56,30 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 .card{background:var(--card);backdrop-filter:var(--glass-blur);-webkit-backdrop-filter:var(--glass-blur);border:1px solid var(--edge);box-shadow:var(--glass-shadow);border-radius:var(--radius2);padding:20px;margin-bottom:16px;}
 .card-title{font-size:13px;font-weight:700;color:var(--gold2);margin-bottom:12px;}
 .filter-select,.inp{background:var(--pop);color:var(--text);border:1px solid var(--border);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;width:100%;}
+.zona-autocomplete-wrap{position:relative;}
+.zona-sugerencias{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--pop);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,0.35);}
+.zona-sugerencias.show{display:block;}
+.zona-sugerencias .zona-opt{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text);}
+.zona-sugerencias .zona-opt:hover,.zona-sugerencias .zona-opt.activa{background:rgba(255,255,255,0.08);}
+.zona-sugerencias .zona-vacio{padding:8px 12px;font-size:12px;color:var(--text3);}
+/* Chips de zona (varios barrios por búsqueda) y checkboxes de tipo (varios tipos por búsqueda) */
+.zona-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.zona-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:14px;background:rgba(255,255,255,.08);font-size:12px;color:var(--text);max-width:100%;}
+.zona-chip span{white-space:normal;word-break:break-word;}
+.zona-chip-x{cursor:pointer;opacity:.6;font-size:11px;line-height:1;}
+.zona-chip-x:hover{opacity:1;}
+.tipo-checks{display:flex;flex-wrap:wrap;gap:8px;}
+.tipo-check{display:flex;align-items:center;gap:5px;font-size:12px;padding:5px 9px;border-radius:8px;background:rgba(255,255,255,.05);cursor:pointer;color:var(--text);}
+.tipo-check input{margin:0;cursor:pointer;}
 .filter-select:focus,.inp:focus{border-color:var(--gold3);outline:none;}
 .filter-select option,.inp option{background:var(--pop);color:var(--text);}
+.modal-overlay{position:fixed;inset:0;background:rgba(5,12,20,.55);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px;}
+.modal{background:var(--card);border:1px solid var(--edge);border-radius:var(--radius2);box-shadow:var(--glass-shadow);padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto;}
+.modal-title{font-size:15px;font-weight:700;color:var(--gold2);margin-bottom:14px;}
+.modal-field{margin-bottom:12px;}
+.modal-label{display:block;font-size:11px;color:var(--text3);margin-bottom:5px;}
+.modal-input{background:var(--pop);color:var(--text);border:1px solid var(--border);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;width:100%;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
 ::placeholder{color:var(--text3);opacity:1;}
 .kpi-tile{background:var(--pop);border:1px solid var(--border);border-radius:12px;padding:10px 12px;text-align:center;}
 .kpi-tile .kt-l{font-size:9px;letter-spacing:.05em;text-transform:uppercase;color:var(--text3);font-weight:700;}
@@ -194,8 +216,11 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
         <input class="inp" id="nc-cliente" placeholder="Nombre del propietario">
         <input class="inp" id="nc-direccion" placeholder="Dirección">
-        <input class="inp" id="nc-tipo" placeholder="Tipo (Casa/Depto/Local)">
-        <input class="inp" id="nc-zona" placeholder="Zona/barrio">
+        <select class="inp" id="nc-tipo"></select>
+        <div class="zona-autocomplete-wrap">
+          <input class="inp" id="nc-zona" type="text" autocomplete="off" placeholder="Escribí el barrio o localidad...">
+          <div class="zona-sugerencias" id="nc-zona-sugerencias"></div>
+        </div>
         <input class="inp" id="nc-precio" type="number" placeholder="Precio USD">
         <input class="inp" id="nc-dorm" type="number" placeholder="Dormitorios">
       </div>
@@ -209,10 +234,21 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
       <div class="card-title">+ Nueva búsqueda</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">
         <input class="inp" id="nb-cliente" placeholder="Nombre del cliente">
-        <input class="inp" id="nb-tipo" placeholder="Tipo (Casa/Depto/Local)">
-        <input class="inp" id="nb-zona" placeholder="Zona/barrio que busca">
         <input class="inp" id="nb-precio" type="number" placeholder="Presupuesto USD">
         <input class="inp" id="nb-dorm" type="number" placeholder="Dormitorios">
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px">Tipo de propiedad (elegí uno o varios)</div>
+        <div class="tipo-checks" id="nb-tipo-checks"></div>
+      </div>
+      <div style="margin-top:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.6px">Zona/barrio que busca (agregá una o varias)</div>
+        <div class="zona-autocomplete-wrap" style="display:flex;gap:6px;align-items:center;position:relative">
+          <input class="inp" id="nb-zona" type="text" autocomplete="off" placeholder="Escribí el barrio o localidad y Enter..." style="flex:1">
+          <button type="button" class="btn btn-outline" style="padding:9px 13px" onclick="zonaChipsAgregar('nb-zona','nb-zona-chips')">+</button>
+          <div class="zona-sugerencias" id="nb-zona-sugerencias"></div>
+        </div>
+        <div class="zona-chips" id="nb-zona-chips"></div>
       </div>
       <input class="inp" id="nb-detalle" placeholder="Otros detalles de lo que busca" style="margin-top:10px">
       <button class="btn btn-gold" style="margin-top:10px" onclick="crearBusquedaAsesor()">Agregar búsqueda</button>
@@ -244,6 +280,30 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Modal: Fecha de publicación (al marcar la etapa de publicación de una captación) -->
+<div class="modal-overlay hidden" id="modalFechaPublicacion">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Fecha de publicación</div>
+    <div class="modal-field"><label class="modal-label">Fecha</label><input class="modal-input" id="fpub-fecha" type="date"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fpubCancelar()">Cancelar</button>
+      <button class="btn btn-gold" onclick="fpubConfirmar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal genérico de un solo campo de texto (motivos de descarte/baja) -->
+<div class="modal-overlay hidden" id="modalTextoSimple">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" id="mts-title">Dato</div>
+    <div class="modal-field"><label class="modal-label" id="mts-label">Valor</label><input class="modal-input" id="mts-valor" placeholder=""></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="mtsCancelar()">Cancelar</button>
+      <button class="btn btn-gold" onclick="mtsConfirmar()">Guardar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════
@@ -295,6 +355,216 @@ async function dbLeer(tipo){
   }catch(e){ return []; }
 }
 function fechaHoyDDMM(){ const h=new Date(); return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear(); }
+// Convierte una fecha de <input type="date"> (ISO aaaa-mm-dd) al formato interno dd/mm/aaaa, y viceversa.
+function isoToDDMM(v){ const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; }
+function ddmmToISO(v){ const m=String(v||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : ''; }
+function openModal(id){document.getElementById(id).classList.remove('hidden');}
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+
+// Misma lista canónica de barrios/zonas y tipos de propiedad que usa index.html, para que la carga
+// quede estandarizada sin importar desde qué app se cargue el dato.
+const ZONAS_SOLUM = [
+  // Barrios de Rosario (agrupados tradicionalmente en 6 distritos municipales)
+  'Centro','Pichincha','Abasto','Alberdi','Nuevo Alberdi','Echesortu','Lourdes','Fisherton','Parque Field',
+  'Barrio Martin','Barrio Rucci','Tablada','La Tablada','Las Delicias','Parque Casas','Saladillo','Industrial',
+  'Belgrano','Empalme Graneros','Triángulo','Azcuénaga','República de la Sexta','Parque','Arroyito','Refinería',
+  'Puerto Norte','Barrio Vila','Villa Hortensia','Ludueña','Godoy','Molino Blanco','Las Flores','Larrea',
+  'Antártida Argentina','Bella Vista','Nueva Floresta','Villa Manuelita','Acindar',
+  // Localidades del Gran Rosario / zona de influencia
+  'Rosario','Funes','Roldán','Pérez','Granadero Baigorria','Villa Gobernador Gálvez','Cañada de Gómez',
+  'Capitán Bermúdez','Fray Luis Beltrán','San Lorenzo','Puerto General San Martín','Ibarlucea','Zavalla',
+  'Álvarez','Soldini','Acebal','Arroyo Seco'
+];
+const TIPOS_PROPIEDAD = ['Casa','Departamento','PH','Local comercial','Terreno/Lote','Galpón','Oficina'];
+
+function normalizarTexto(s){
+  return String(s||'').trim().replace(/\s+/g,' ').replace(/\b\p{L}/gu, c=>c.toUpperCase());
+}
+// Quita tildes/diacríticos y normaliza la ñ a n, para poder comparar/buscar ignorando acentos.
+function normalizarBusquedaZona(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/ñ/g,'n')
+    .trim();
+}
+// Arma/activa el autocompletado de zona sobre un <input> de texto + un <div> de sugerencias debajo.
+// Filtra ZONAS_SOLUM por substring (en cualquier parte), ignorando tildes y la ñ. Si lo que se escribe
+// no coincide con ninguna opción, se deja el texto libre tal cual (no bloquea la carga).
+function setupAutocompleteZona(inputId, dropId){
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(dropId);
+  if(!input || !drop || input.dataset.zonaAutocompleteListo) return;
+  input.dataset.zonaAutocompleteListo = '1';
+  function render(){
+    const q = normalizarBusquedaZona(input.value);
+    const opciones = q ? ZONAS_SOLUM.filter(z=>normalizarBusquedaZona(z).includes(q)) : ZONAS_SOLUM.slice();
+    if(!opciones.length){
+      drop.innerHTML = '<div class="zona-vacio">Sin coincidencias, se guardará el texto escrito</div>';
+    } else {
+      drop.innerHTML = opciones.map(z=>`<div class="zona-opt" data-zona="${z.replace(/"/g,'&quot;')}">${z}</div>`).join('');
+    }
+    drop.classList.add('show');
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('blur', ()=>{ setTimeout(()=>drop.classList.remove('show'), 150); });
+  drop.addEventListener('mousedown', e=>{
+    const opt = e.target.closest('.zona-opt');
+    if(!opt) return;
+    e.preventDefault();
+    input.value = opt.dataset.zona;
+    drop.classList.remove('show');
+  });
+}
+// Precarga el input de autocompletado de zona con el valor actual (al editar) o vacío (al crear).
+function llenarSelectZona(inputId, dropIdOIgnorado, valorActual){
+  const dropId = inputId + '-sugerencias';
+  setupAutocompleteZona(inputId, dropId);
+  const input = document.getElementById(inputId);
+  if(input) input.value = (valorActual||'').trim();
+}
+// Lee el valor final del campo de zona, normalizado (capitalización prolija si no vino de la lista).
+function leerSelectZona(inputId){
+  const input = document.getElementById(inputId);
+  const val = (input ? input.value : '').trim();
+  const oficial = ZONAS_SOLUM.find(z=>normalizarBusquedaZona(z)===normalizarBusquedaZona(val));
+  return oficial || normalizarTexto(val);
+}
+function llenarSelectTipo(selectId, valorActual){
+  const val = (valorActual||'').trim();
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = TIPOS_PROPIEDAD.map(t=>`<option value="${t}">${t}</option>`).join('') + `<option value="Otro">Otro</option>`;
+  const enLista = TIPOS_PROPIEDAD.some(t=>t.toLowerCase()===val.toLowerCase());
+  sel.value = enLista ? TIPOS_PROPIEDAD.find(t=>t.toLowerCase()===val.toLowerCase()) : (val ? 'Otro' : TIPOS_PROPIEDAD[0]);
+}
+
+// ── Selección de VARIOS tipos/zonas para una búsqueda (mismo patrón que index.html): un cliente
+// puede estar buscando más de un tipo de propiedad y/o más de un barrio a la vez. Se guarda como
+// string separado por coma (un solo valor sigue siendo válido tal cual, sin coma).
+const TIPOS_PROPIEDAD_BUSQUEDA = TIPOS_PROPIEDAD.concat(['Otro']);
+function parseListaCombinada(s){
+  return String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+}
+// Aviso de zona/tipo no estandarizado: se muestra una alerta en la tarjeta para que el asesor la
+// corrija a mano. No se corrige nada automáticamente.
+function esZonaEstandar(valor){
+  const v = String(valor||'').trim();
+  if(!v) return true;
+  return parseListaCombinada(v).every(p=>ZONAS_SOLUM.some(z=>z.toLowerCase()===p.toLowerCase()));
+}
+function esTipoEstandar(valor){
+  const v = String(valor||'').trim();
+  if(!v) return true;
+  return parseListaCombinada(v).every(p=>TIPOS_PROPIEDAD_BUSQUEDA.some(t=>t.toLowerCase()===p.toLowerCase()));
+}
+function badgeNormalizacion(tipo, zona){
+  const faltaTipo = !esTipoEstandar(tipo), faltaZona = !esZonaEstandar(zona);
+  if(!faltaTipo && !faltaZona) return '';
+  const texto = faltaTipo && faltaZona ? 'Tipo y zona sin estandarizar' : faltaTipo ? 'Tipo sin estandarizar' : 'Zona sin estandarizar';
+  return `<span class="chip" style="background:rgba(255,211,110,0.15);color:var(--amber);margin-top:4px;display:inline-block;cursor:default" title="Corregí este campo a mano eligiendo una opción de la lista">⚠ ${texto}</span>`;
+}
+function tipoChecksInit(containerId, valorActual){
+  const cont = document.getElementById(containerId);
+  if(!cont) return;
+  const seleccionados = parseListaCombinada(valorActual).map(s=>s.toLowerCase());
+  cont.innerHTML = TIPOS_PROPIEDAD_BUSQUEDA.map(t=>
+    `<label class="tipo-check"><input type="checkbox" value="${t.replace(/"/g,'&quot;')}">${t}</label>`
+  ).join('');
+  cont.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.checked = seleccionados.includes(cb.value.toLowerCase());
+  });
+}
+function tipoChecksLeer(containerId){
+  const cont = document.getElementById(containerId);
+  if(!cont) return '';
+  return Array.from(cont.querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.value).join(', ');
+}
+function zonaChipsGet(chipsId){
+  const el = document.getElementById(chipsId);
+  if(!el) return [];
+  try { return JSON.parse(el.dataset.zonas||'[]'); } catch(e){ return []; }
+}
+function zonaChipsSet(chipsId, zonas){
+  const el = document.getElementById(chipsId);
+  if(!el) return;
+  el.dataset.zonas = JSON.stringify(zonas);
+  el.innerHTML = zonas.map((z,i)=>
+    `<span class="zona-chip"><span>${String(z).replace(/</g,'&lt;')}</span><span class="zona-chip-x" onclick="zonaChipsQuitar('${chipsId}',${i})">✕</span></span>`
+  ).join('');
+}
+function zonaChipsQuitar(chipsId, idx){
+  const zonas = zonaChipsGet(chipsId);
+  zonas.splice(idx,1);
+  zonaChipsSet(chipsId, zonas);
+}
+function zonaChipsAgregar(inputId, chipsId){
+  const input = document.getElementById(inputId);
+  const valor = leerSelectZona(inputId);
+  if(!valor){ return; }
+  const zonas = zonaChipsGet(chipsId);
+  if(!zonas.some(z=>normalizarBusquedaZona(z)===normalizarBusquedaZona(valor))) zonas.push(valor);
+  zonaChipsSet(chipsId, zonas);
+  if(input){ input.value = ''; }
+  const drop = document.getElementById(inputId+'-sugerencias');
+  if(drop) drop.classList.remove('show');
+}
+function setupZonaChips(inputId, chipsId){
+  setupAutocompleteZona(inputId, inputId+'-sugerencias');
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(inputId+'-sugerencias');
+  if(input && !input.dataset.zonaChipsListo){
+    input.dataset.zonaChipsListo = '1';
+    input.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); zonaChipsAgregar(inputId, chipsId); }
+    });
+  }
+  if(drop && !drop.dataset.zonaChipsListo){
+    drop.dataset.zonaChipsListo = '1';
+    drop.addEventListener('mousedown', e=>{
+      if(!e.target.closest('.zona-opt')) return;
+      setTimeout(()=>zonaChipsAgregar(inputId, chipsId), 0);
+    });
+  }
+}
+// Modal genérico de un solo campo de texto (motivos de descarte/baja, etc.)
+let mtsCallback = null;
+function abrirTextoSimple(titulo, label, valorActual, callback, opcional){
+  document.getElementById('mts-title').textContent = titulo;
+  document.getElementById('mts-label').textContent = label + (opcional ? ' (opcional)' : '');
+  document.getElementById('mts-valor').value = valorActual||'';
+  mtsCallback = callback;
+  openModal('modalTextoSimple');
+  setTimeout(()=>document.getElementById('mts-valor')?.focus(), 50);
+}
+function mtsConfirmar(){
+  const val = document.getElementById('mts-valor').value.trim();
+  const cb = mtsCallback;
+  closeModal('modalTextoSimple');
+  mtsCallback = null;
+  if(cb) cb(val);
+}
+function mtsCancelar(){
+  closeModal('modalTextoSimple');
+  mtsCallback = null;
+}
+// Modal de fecha de publicación (al marcar la etapa "publicación" de una captación)
+let fpubCapId = null;
+function fpubCancelar(){
+  closeModal('modalFechaPublicacion');
+  fpubCapId = null;
+}
+function fpubConfirmar(){
+  const cap = captaciones.find(x=>x.id===fpubCapId);
+  closeModal('modalFechaPublicacion');
+  if(!cap){ fpubCapId=null; return; }
+  const iso = document.getElementById('fpub-fecha').value;
+  cap.publicacion = true;
+  cap.fechaPublicacion = isoToDDMM(iso) || fechaHoyDDMM();
+  dbGuardar('captaciones', filaCaptacion(cap));
+  renderCaptaciones();
+  fpubCapId = null;
+}
 
 function intentarLogin(){
   const nombre = document.getElementById('login-nombre').value;
@@ -327,6 +597,8 @@ async function entrarApp(){
   renderSemana();
   renderCaptaciones();
   renderBusquedas();
+  initFormNuevaCaptacion();
+  initFormNuevaBusqueda();
 }
 
 function switchTab(tab){
@@ -343,6 +615,8 @@ let segAcciones = {}; // {mes: {semIdx: {accionId:{texto,cumplida}}}}
 let clientes = [];
 let captaciones = [];
 let busquedas = [];
+let todasCaptaciones = []; // todo el equipo (activas), solo para matchear contra búsquedas
+let todasBusquedas = []; // todo el equipo (en proceso), solo para matchear contra captaciones
 let operacionesPropias = []; // solo las del asesor logueado, leídas de la misma tabla "operaciones" que usa Martina
 let _siguienteIdOp = 1; // próximo ID correlativo libre, calculado sobre toda la tabla al cargar
 let segObjetivosPropios = {}; // {mes: {metrica: valor}} — overrides que Martina carga por vendedor/mes en index.html
@@ -455,24 +729,34 @@ async function cargarTodo(){
   }
   if(captRows.length>1){
     const porId={};
+    const todasPorId={};
     captRows.slice(1).forEach(r=>{
       const [id,clienteId,agente,direccion,tipo,zona,precioUSD,dormitorios,fechaInicio,fechaPublicacion,prelisting,acm,documentacion,fotos,publicacion,estado,fechaCierre,motivoCierre]=r;
-      if(!id || agente!==sesionActiva) return;
-      porId[id]={id,clienteId,agente,direccion,tipo,zona,precioUSD:parseFloat(precioUSD)||0,fechaInicio,fechaPublicacion,
+      if(!id) return;
+      const c = {id,clienteId,agente,direccion,tipo,zona,precioUSD:parseFloat(precioUSD)||0,fechaInicio,fechaPublicacion,
         prelisting:prelisting===true||prelisting==='true', acm:acm===true||acm==='true', documentacion:documentacion===true||documentacion==='true',
         fotos:fotos===true||fotos==='true', publicacion:publicacion===true||publicacion==='true', estado:estado||'activa', fechaCierre, motivoCierre};
+      todasPorId[id] = c;
+      if(agente===sesionActiva) porId[id] = c;
     });
     captaciones = Object.values(porId);
+    // Todas las captaciones de todo el equipo (activas), solo para matchear contra búsquedas —
+    // no se editan desde acá, solo sirven para mostrar "esto le puede interesar a tu cliente".
+    todasCaptaciones = Object.values(todasPorId);
   }
   if(busqRows.length>1){
     const porId={};
+    const todasPorId={};
     busqRows.slice(1).forEach(r=>{
       const [id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestrasJSON,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte,tipo,zona,precioUSD,dormitorios]=r;
-      if(!id || agente!==sesionActiva) return;
+      if(!id) return;
       let muestras=[]; try{ muestras=JSON.parse(muestrasJSON||'[]'); }catch(e){}
-      porId[id]={id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestras,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte,
+      const b = {id,clienteId,agente,tipoPunta,propiedadRelacionada,criterios,muestras,estado,fechaReserva,fechaEscritura,fechaDescarte,motivoDescarte,
         tipo:tipo||'', zona:zona||'', precioUSD:parseFloat(precioUSD)||0, dormitorios:parseInt(dormitorios)||0};
+      todasPorId[id] = b;
+      if(agente===sesionActiva) porId[id] = b;
     });
+    todasBusquedas = Object.values(todasPorId);
     busquedas = Object.values(porId);
   }
   if(opRows.length>1){
@@ -630,10 +914,16 @@ function renderFichaPersonal(){
   const leftObj = Math.min(100, Math.round(objetivoBase/scaleMax*100));
   const leftViaje = Math.min(100, Math.round(premioViaje/scaleMax*100));
 
-  let cpAnio = 0; for(let m=1;m<=mesActual;m++) cpAnio += (segMensualPropio[m]?.cp||0);
+  let cpAnio = 0, objCpAnio = 0, objVentasAnio = 0;
+  for(let m=1;m<=mesActual;m++){
+    cpAnio += (segMensualPropio[m]?.cp||0);
+    const objMes = objVendedorMes(m);
+    objCpAnio += (objMes.cp||0);
+    objVentasAnio += (objMes.v||0);
+  }
+  objCpAnio = objCpAnio || 1;
+  objVentasAnio = objVentasAnio || 1;
   const ventasAnio = operacionesPropias.filter(o=>o.anio===anio && o.estado==='Cobrada').length;
-  const objCpAnio = Math.round((obj.cp||0) * 12) || 1;
-  const objVentasAnio = Math.round((obj.v||3) * 12) || 1;
 
   el.innerHTML = `
   <div class="kpi-board">
@@ -863,51 +1153,70 @@ function colorEtapaCaptacion(cap){
   return color;
 }
 
+// Llena los selects de tipo/zona del formulario de nueva captación con la lista canónica.
+function initFormNuevaCaptacion(){
+  llenarSelectTipo('nc-tipo','');
+  llenarSelectZona('nc-zona','nc-zona-otro','');
+}
 function crearCaptacionAsesor(){
   const nombreCliente = (document.getElementById('nc-cliente').value||'').trim();
   const direccion = (document.getElementById('nc-direccion').value||'').trim();
   if(!nombreCliente || !direccion){ showToast('Falta nombre o dirección'); return; }
   const c = resolverClientePorNombre(nombreCliente);
   const cap = {id:'cap'+Date.now(), clienteId:c.id, agente:sesionActiva,
-    direccion, tipo:document.getElementById('nc-tipo').value||'', zona:document.getElementById('nc-zona').value||'',
+    direccion, tipo:document.getElementById('nc-tipo').value||'', zona:leerSelectZona('nc-zona','nc-zona-otro'),
     precioUSD: parseFloat(document.getElementById('nc-precio').value)||0, dormitorios: parseInt(document.getElementById('nc-dorm').value)||0,
     fechaInicio:fechaHoyDDMM(), fechaPublicacion:'', prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:false,
     estado:'activa', fechaCierre:'', motivoCierre:''};
   captaciones.push(cap);
   dbGuardar('captaciones', filaCaptacion(cap));
-  ['nc-cliente','nc-direccion','nc-tipo','nc-zona','nc-precio','nc-dorm'].forEach(id=>document.getElementById(id).value='');
+  ['nc-cliente','nc-direccion','nc-precio','nc-dorm'].forEach(id=>document.getElementById(id).value='');
+  initFormNuevaCaptacion();
   renderCaptaciones();
   showToast('Captación agregada');
 }
+// Al marcar/desmarcar una etapa de una captación. Las etapas simples (prelisting, acm, documentación,
+// fotos) son un toggle sin datos. "publicación" sí pide una fecha, por lo que usa un modal corto.
 function toggleEtapaCaptacion(capId, etapa){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  cap[etapa] = !cap[etapa];
   if(etapa==='publicacion'){
-    if(cap.publicacion){
-      const sugerida = fechaHoyDDMM();
-      const resp = prompt('Fecha de publicación (dd/mm/aaaa):', sugerida);
-      if(resp===null){ cap.publicacion = false; return; } // canceló: no publicar
-      cap.fechaPublicacion = resp.trim() || sugerida;
+    if(!cap.publicacion){
+      fpubCapId = capId;
+      document.getElementById('fpub-fecha').value = ddmmToISO(fechaHoyDDMM());
+      openModal('modalFechaPublicacion');
     } else {
+      cap.publicacion = false;
       cap.fechaPublicacion = '';
+      dbGuardar('captaciones', filaCaptacion(cap));
+      renderCaptaciones();
     }
+    return;
   }
+  cap[etapa] = !cap[etapa];
   dbGuardar('captaciones', filaCaptacion(cap));
   renderCaptaciones();
 }
 function descartarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  const motivo = prompt('Motivo del descarte:') || '';
-  cap.estado='descartada'; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre=motivo;
-  dbGuardar('captaciones', filaCaptacion(cap));
-  renderCaptaciones();
+  abrirTextoSimple('Descartar captación', 'Motivo del descarte', '', (motivo)=>{
+    cap.estado='descartada'; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre=motivo;
+    dbGuardar('captaciones', filaCaptacion(cap));
+    renderCaptaciones();
+  }, true);
 }
 function cerrarCaptacion(capId, resultado){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  let motivo = resultado==='baja' ? (prompt('Motivo de la baja (opcional):')||'') : '';
-  cap.estado=resultado; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre=motivo;
-  dbGuardar('captaciones', filaCaptacion(cap));
-  renderCaptaciones();
+  if(resultado==='baja'){
+    abrirTextoSimple('Dar de baja captación', 'Motivo de la baja', '', (motivo)=>{
+      cap.estado=resultado; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre=motivo;
+      dbGuardar('captaciones', filaCaptacion(cap));
+      renderCaptaciones();
+    }, true);
+  } else {
+    cap.estado=resultado; cap.fechaCierre=fechaHoyDDMM(); cap.motivoCierre='';
+    dbGuardar('captaciones', filaCaptacion(cap));
+    renderCaptaciones();
+  }
 }
 
 // Edición "tocar el texto": cualquier dato de texto de una tarjeta (captación o búsqueda)
@@ -988,6 +1297,45 @@ function reactivarCaptacion(capId){
   showToast('Captación reactivada');
 }
 
+// Matching automático búsqueda ↔ captación (mismo criterio que index.html): zona, tipo, precio
+// (con margen) y dormitorios, contra todo el equipo, no solo lo propio.
+// zonaA/tipoA (lado búsqueda) pueden traer varios valores separados por coma; zonaB/tipoB (lado
+// captación) siguen siendo un solo valor. Matchea si CUALQUIERA de los de A coincide con B.
+function matchCriterios(zonaA, tipoA, precioA, dormA, zonaB, tipoB, precioB, dormB){
+  if(tipoA && tipoB){
+    const tiposA = parseListaCombinada(tipoA).map(t=>t.toLowerCase());
+    const tb = tipoB.trim().toLowerCase();
+    if(tiposA.length && !tiposA.includes(tb)) return false;
+  }
+  if(zonaA && zonaB){
+    const zonasA = parseListaCombinada(zonaA).map(z=>z.toLowerCase());
+    const zb = zonaB.trim().toLowerCase();
+    if(zonasA.length && !zonasA.some(za=>za.includes(zb) || zb.includes(za))) return false;
+  }
+  if(dormA && dormB && dormB < dormA) return false;
+  if(precioA && precioB && precioB > precioA*1.15) return false;
+  return true;
+}
+function captacionesQueMatchean(b){
+  if(!['Búsqueda','Ambas'].includes(b.tipoPunta) || b.estado!=='en_proceso') return [];
+  return todasCaptaciones.filter(c=>c.estado==='activa' && matchCriterios(b.zona,b.tipo,b.precioUSD,b.dormitorios, c.zona,c.tipo,c.precioUSD,c.dormitorios));
+}
+function busquedasQueMatchean(c){
+  if(c.estado!=='activa') return [];
+  return todasBusquedas.filter(b=>['Búsqueda','Ambas'].includes(b.tipoPunta) && b.estado==='en_proceso' && matchCriterios(b.zona,b.tipo,b.precioUSD,b.dormitorios, c.zona,c.tipo,c.precioUSD,c.dormitorios));
+}
+function matchesHTML(lista, tipo){
+  if(!lista.length) return '';
+  const items = lista.map(x=>tipo==='capt'
+    ? `<div style="font-size:10.5px;padding:4px 0;border-top:1px solid rgba(255,255,255,0.05)">🏠 ${x.direccion} — USD ${(x.precioUSD||0).toLocaleString('es-AR')} · ${x.agente||''}</div>`
+    : `<div style="font-size:10.5px;padding:4px 0;border-top:1px solid rgba(255,255,255,0.05)">🔎 ${x.propiedadRelacionada||x.criterios||'Búsqueda'} — ${x.agente||''}</div>`
+  ).join('');
+  return `<div style="margin-top:9px;padding-top:7px;border-top:1px dashed rgba(255,255,255,0.1)">
+    <div style="font-size:10px;font-weight:700;color:var(--gold2)">🎯 ${lista.length} coincidencia${lista.length>1?'s':''}</div>
+    ${items}
+  </div>`;
+}
+
 function captCardHTML(cap){
   const completas = FC_ETAPAS.filter(([k])=>cap[k]).length;
   const pct = Math.round(completas/FC_ETAPAS.length*100);
@@ -1004,7 +1352,7 @@ function captCardHTML(cap){
       ${campoHTML('captacion',cap.id,'tipo',{vacio:'tipo s/d'})} · ${campoHTML('captacion',cap.id,'zona',{vacio:'zona s/d'})} · USD ${campoHTML('captacion',cap.id,'precioUSD',{tipo:'number',formatear:v=>(parseFloat(v)||0).toLocaleString('es-AR')})}${campoHTML('captacion',cap.id,'dormitorios',{tipo:'number',formatear:v=>v?' · '+v+' dorm.':'',vacio:''})}
     </div>
     <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
-      ${FC_ETAPAS.map(([k,l])=>`<span class="chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
+      ${FC_ETAPAS.map(([k,l])=>`<span class="chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>${k==='publicacion'&&cap.publicacion&&cap.fechaPublicacion?`<span style="font-size:10px;color:var(--text3);align-self:center">${normFechaOp(cap.fechaPublicacion)}</span>`:''}`).join('')}
     </div>
     ${cap.publicacion ? `
     <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
@@ -1013,6 +1361,8 @@ function captCardHTML(cap){
       <span class="chip" style="color:var(--amber)" onclick="cerrarCaptacion('${cap.id}','baja')">Baja</span>
     </div>` : `
     <div style="margin-top:10px"><span class="chip" style="color:var(--red)" onclick="descartarCaptacion('${cap.id}')">Descartar</span></div>`}
+    ${badgeNormalizacion(cap.tipo, cap.zona)}
+    ${matchesHTML(busquedasQueMatchean(cap), 'busq')}
   </div>`;
 }
 // Más nuevas primero, por fecha de ingreso (dd/mm/aaaa).
@@ -1058,17 +1408,25 @@ function crearBusquedaAsesor(){
   const nombreCliente = (document.getElementById('nb-cliente').value||'').trim();
   const detalle = (document.getElementById('nb-detalle').value||'').trim();
   if(!nombreCliente){ showToast('Falta el nombre del cliente'); return; }
+  zonaChipsAgregar('nb-zona','nb-zona-chips'); // por si quedó una zona tipeada sin confirmar
   const c = resolverClientePorNombre(nombreCliente);
   const b = {id:'b'+Date.now(), clienteId:c.id, agente:sesionActiva, tipoPunta:'Búsqueda',
     propiedadRelacionada:'', criterios: detalle,
-    tipo: document.getElementById('nb-tipo').value||'', zona: document.getElementById('nb-zona').value||'',
+    tipo: tipoChecksLeer('nb-tipo-checks'), zona: zonaChipsGet('nb-zona-chips').join(', '),
     precioUSD: parseFloat(document.getElementById('nb-precio').value)||0, dormitorios: parseInt(document.getElementById('nb-dorm').value)||0,
     muestras:[], estado:'en_proceso', fechaReserva:'', fechaEscritura:'', fechaDescarte:'', motivoDescarte:''};
   busquedas.push(b);
   dbGuardar('busquedas', filaBusqueda(b));
-  ['nb-cliente','nb-tipo','nb-zona','nb-precio','nb-dorm','nb-detalle'].forEach(id=>document.getElementById(id).value='');
+  ['nb-cliente','nb-precio','nb-dorm','nb-detalle'].forEach(id=>document.getElementById(id).value='');
+  initFormNuevaBusqueda();
   renderBusquedas();
   showToast('Búsqueda agregada');
+}
+// Llena los checkboxes de tipo y el selector de zonas (chips) del formulario de nueva búsqueda.
+function initFormNuevaBusqueda(){
+  tipoChecksInit('nb-tipo-checks','');
+  setupZonaChips('nb-zona','nb-zona-chips');
+  zonaChipsSet('nb-zona-chips', []);
 }
 function marcarReserva(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
@@ -1078,10 +1436,11 @@ function marcarReserva(busId){
 }
 function descartarBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const motivo = prompt('Motivo del descarte:') || '';
-  b.estado='descartada'; b.fechaDescarte=fechaHoyDDMM(); b.motivoDescarte=motivo;
-  dbGuardar('busquedas', filaBusqueda(b));
-  renderBusquedas();
+  abrirTextoSimple('Descartar búsqueda', 'Motivo del descarte', '', (motivo)=>{
+    b.estado='descartada'; b.fechaDescarte=fechaHoyDDMM(); b.motivoDescarte=motivo;
+    dbGuardar('busquedas', filaBusqueda(b));
+    renderBusquedas();
+  }, true);
 }
 function nombreClientePorId(clienteId){
   const c = clientes.find(x=>x.id===clienteId);
@@ -1177,6 +1536,8 @@ function renderBusquedas(){
         <span class="chip" style="color:var(--green)" onclick="abrirMuestraForm('${b.id}')">+ Muestra</span>
         <span class="chip" onclick="revertirBusqueda('${b.id}')">Volver a "en proceso"</span>`}
       </div>
+      ${badgeNormalizacion(b.tipo, b.zona)}
+      ${matchesHTML(captacionesQueMatchean(b), 'capt')}
     </div>`;
   }).join('') || '<div style="color:var(--text3);font-size:12px">Sin búsquedas cargadas todavía.</div>') + '</div>';
 }

@@ -260,7 +260,22 @@ tr:hover td{background:rgba(var(--w),0.02);color:var(--text);}
 .modal-field{margin-bottom:14px;}
 .modal-label{font-size:11px;color:var(--text3);margin-bottom:5px;display:block;text-transform:uppercase;letter-spacing:.6px;}
 .modal-input{width:100%;background:var(--bg2);border:1px solid rgba(var(--w),0.08);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;}
+.zona-autocomplete-wrap{position:relative;}
+.zona-sugerencias{display:none;position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--bg2);border:1px solid rgba(var(--w),0.12);border-radius:8px;max-height:220px;overflow-y:auto;z-index:50;box-shadow:0 8px 20px rgba(0,0,0,0.35);}
+.zona-sugerencias.show{display:block;}
+.zona-sugerencias .zona-opt{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text);}
+.zona-sugerencias .zona-opt:hover,.zona-sugerencias .zona-opt.activa{background:rgba(var(--w),0.08);}
+.zona-sugerencias .zona-vacio{padding:8px 12px;font-size:12px;color:var(--text3);}
 .modal-input:focus{border-color:var(--gold3);}
+/* Chips de zona (varios barrios por búsqueda) y checkboxes de tipo (varios tipos por búsqueda) */
+.zona-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.zona-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:14px;background:rgba(var(--w),.08);font-size:12px;color:var(--text);max-width:100%;}
+.zona-chip span{white-space:normal;word-break:break-word;}
+.zona-chip-x{cursor:pointer;opacity:.6;font-size:11px;line-height:1;}
+.zona-chip-x:hover{opacity:1;}
+.tipo-checks{display:flex;flex-wrap:wrap;gap:8px;}
+.tipo-check{display:flex;align-items:center;gap:5px;font-size:12px;padding:5px 9px;border-radius:8px;background:rgba(var(--w),.05);cursor:pointer;color:var(--text);}
+.tipo-check input{margin:0;cursor:pointer;}
 .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
 
 /* ── PLANILLA PREVIEW ── */
@@ -1468,6 +1483,92 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
   </div>
 </div>
 
+<!-- Modal: Nueva/Editar Captación (reemplaza prompts encadenados) -->
+<div class="modal-overlay hidden" id="modalCaptacion">
+  <div class="modal">
+    <div class="modal-title" id="capm-title">Nueva captación</div>
+    <div class="modal-field"><label class="modal-label">Dirección</label><input class="modal-input" id="capm-direccion" placeholder="Ej: Mendoza 846"></div>
+    <div class="modal-field"><label class="modal-label">Tipo de propiedad</label>
+      <select class="modal-input" id="capm-tipo">
+        <option>Casa</option><option>Departamento</option><option>PH</option>
+        <option>Local comercial</option><option>Terreno/Lote</option><option>Galpón</option>
+        <option>Oficina</option><option>Otro</option>
+      </select>
+    </div>
+    <div class="modal-field zona-autocomplete-wrap"><label class="modal-label">Zona/barrio</label>
+      <input class="modal-input" id="capm-zona" type="text" autocomplete="off" placeholder="Escribí el barrio o localidad...">
+      <div class="zona-sugerencias" id="capm-zona-sugerencias"></div>
+    </div>
+    <div class="modal-field"><label class="modal-label">Precio (USD)</label><input class="modal-input" id="capm-precio" type="number" min="0" placeholder="100000"></div>
+    <div class="modal-field"><label class="modal-label">Dormitorios</label><input class="modal-input" id="capm-dormitorios" type="number" min="0" placeholder="0"></div>
+    <div class="modal-field"><label class="modal-label">Agente</label><input class="modal-input" id="capm-agente" placeholder="Ej: Martina"></div>
+    <div class="modal-field"><label class="modal-label">Fecha en la que se agregó al sistema</label><input class="modal-input" id="capm-fecha-inicio" type="date"></div>
+    <div class="modal-field"><label class="modal-label">Fecha de publicación (vacío si no está publicada)</label><input class="modal-input" id="capm-fecha-publicacion" type="date"></div>
+    <div id="capm-cierre-wrap" style="display:none">
+      <div class="modal-field"><label class="modal-label">Fecha de cierre</label><input class="modal-input" id="capm-fecha-cierre" type="date"></div>
+      <div class="modal-field"><label class="modal-label">Motivo de cierre</label><input class="modal-input" id="capm-motivo-cierre" placeholder="Ej: Vendida"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalCaptacion')">Cancelar</button>
+      <button class="btn btn-gold" onclick="guardarCaptacionModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Nueva Búsqueda/Consulta de cliente -->
+<div class="modal-overlay hidden" id="modalBusqueda">
+  <div class="modal">
+    <div class="modal-title">Nueva consulta / búsqueda</div>
+    <div class="modal-field"><label class="modal-label">Tipo de punta</label>
+      <select class="modal-input" id="busm-puntatipo" onchange="busmActualizarLabelDetalle()">
+        <option>Búsqueda</option><option>Propiedad</option><option>Ambas</option>
+      </select>
+    </div>
+    <div class="modal-field"><label class="modal-label" id="busm-detalle-label">Qué busca (criterios)</label><input class="modal-input" id="busm-detalle" placeholder=""></div>
+    <div class="modal-field"><label class="modal-label">Tipo de propiedad (opcional, elegí uno o varios)</label>
+      <div class="tipo-checks" id="busm-tipo-checks"></div>
+    </div>
+    <div class="modal-field"><label class="modal-label">Zona/barrio que busca (opcional, agregá una o varias)</label>
+      <div class="zona-autocomplete-wrap" style="display:flex;gap:6px;align-items:center;position:relative">
+        <input class="modal-input" id="busm-zona" type="text" autocomplete="off" placeholder="Escribí el barrio o localidad y Enter..." style="flex:1">
+        <button type="button" class="btn btn-outline" style="padding:9px 13px" onclick="zonaChipsAgregar('busm-zona','busm-zona-chips')">+</button>
+        <div class="zona-sugerencias" id="busm-zona-sugerencias"></div>
+      </div>
+      <div class="zona-chips" id="busm-zona-chips"></div>
+    </div>
+    <div class="modal-field"><label class="modal-label">Presupuesto (USD, opcional)</label><input class="modal-input" id="busm-precio" type="number" min="0" placeholder="100000"></div>
+    <div class="modal-field"><label class="modal-label">Dormitorios (opcional)</label><input class="modal-input" id="busm-dormitorios" type="number" min="0" placeholder="0"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalBusqueda')">Cancelar</button>
+      <button class="btn btn-gold" onclick="guardarBusquedaModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Fecha de publicación (al marcar la etapa de publicación de una captación) -->
+<div class="modal-overlay hidden" id="modalFechaPublicacion">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Fecha de publicación</div>
+    <div class="modal-field"><label class="modal-label">Fecha</label><input class="modal-input" id="fpub-fecha" type="date"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="fpubCancelar()">Cancelar</button>
+      <button class="btn btn-gold" onclick="fpubConfirmar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal genérico de un solo campo de texto (motivos, propiedad mostrada, nombre de cliente, etc.) -->
+<div class="modal-overlay hidden" id="modalTextoSimple">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" id="mts-title">Dato</div>
+    <div class="modal-field"><label class="modal-label" id="mts-label">Valor</label><input class="modal-input" id="mts-valor" placeholder=""></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="mtsCancelar()">Cancelar</button>
+      <button class="btn btn-gold" onclick="mtsConfirmar()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: Buscar / crear cliente -->
 <div class="modal-overlay hidden" id="modalBuscarCliente">
   <div class="modal" style="max-width:460px">
@@ -1591,6 +1692,170 @@ function filaOperacion(op){
     op.notas||'', op.rendicion||'pendiente_asesor'];
 }
 function fechaHoyDDMM(){ const h=new Date(); return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear(); }
+// Convierte una fecha de <input type="date"> (ISO aaaa-mm-dd) al formato interno dd/mm/aaaa, y viceversa.
+function isoToDDMM(v){ const m=String(v||'').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3]+'/'+m[2]+'/'+m[1] : ''; }
+function ddmmToISO(v){ const m=String(v||'').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); return m ? m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0') : ''; }
+
+// Lista canónica de barrios/zonas donde opera SOLUM (Rosario y alrededores), para estandarizar la
+// carga de captaciones y búsquedas. Editable: si falta un barrio, agregalo acá para que quede fijo
+// en el selector en vez de depender de texto libre.
+const ZONAS_SOLUM = [
+  // Barrios de Rosario (agrupados tradicionalmente en 6 distritos municipales)
+  'Centro','Pichincha','Abasto','Alberdi','Nuevo Alberdi','Echesortu','Lourdes','Fisherton','Parque Field',
+  'Barrio Martin','Barrio Rucci','Tablada','La Tablada','Las Delicias','Parque Casas','Saladillo','Industrial',
+  'Belgrano','Empalme Graneros','Triángulo','Azcuénaga','República de la Sexta','Parque','Arroyito','Refinería',
+  'Puerto Norte','Barrio Vila','Villa Hortensia','Ludueña','Godoy','Molino Blanco','Las Flores','Larrea',
+  'Antártida Argentina','Bella Vista','Nueva Floresta','Villa Manuelita','Acindar',
+  // Localidades del Gran Rosario / zona de influencia
+  'Rosario','Funes','Roldán','Pérez','Granadero Baigorria','Villa Gobernador Gálvez','Cañada de Gómez',
+  'Capitán Bermúdez','Fray Luis Beltrán','San Lorenzo','Puerto General San Martín','Ibarlucea','Zavalla',
+  'Álvarez','Soldini','Acebal','Arroyo Seco'
+];
+const TIPOS_PROPIEDAD = ['Casa','Departamento','PH','Local comercial','Terreno/Lote','Galpón','Oficina'];
+
+function normalizarTexto(s){
+  return String(s||'').trim().replace(/\s+/g,' ').replace(/\b\p{L}/gu, c=>c.toUpperCase());
+}
+// Quita tildes/diacríticos y normaliza la ñ a n, para poder comparar/buscar ignorando acentos.
+function normalizarBusquedaZona(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/ñ/g,'n')
+    .trim();
+}
+// Arma/activa el autocompletado de zona sobre un <input> de texto + un <div> de sugerencias debajo.
+// Filtra ZONAS_SOLUM por substring (en cualquier parte), ignorando tildes y la ñ. Si lo que se escribe
+// no coincide con ninguna opción, se deja el texto libre tal cual (no bloquea la carga).
+function setupAutocompleteZona(inputId, dropId){
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(dropId);
+  if(!input || !drop || input.dataset.zonaAutocompleteListo) return;
+  input.dataset.zonaAutocompleteListo = '1';
+  function render(){
+    const q = normalizarBusquedaZona(input.value);
+    const opciones = q ? ZONAS_SOLUM.filter(z=>normalizarBusquedaZona(z).includes(q)) : ZONAS_SOLUM.slice();
+    if(!opciones.length){
+      drop.innerHTML = '<div class="zona-vacio">Sin coincidencias, se guardará el texto escrito</div>';
+    } else {
+      drop.innerHTML = opciones.map(z=>`<div class="zona-opt" data-zona="${z.replace(/"/g,'&quot;')}">${z}</div>`).join('');
+    }
+    drop.classList.add('show');
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('blur', ()=>{ setTimeout(()=>drop.classList.remove('show'), 150); });
+  drop.addEventListener('mousedown', e=>{
+    const opt = e.target.closest('.zona-opt');
+    if(!opt) return;
+    e.preventDefault();
+    input.value = opt.dataset.zona;
+    drop.classList.remove('show');
+  });
+}
+// Precarga el input de autocompletado de zona con el valor actual (al editar) o vacío (al crear).
+function llenarSelectZona(inputId, dropIdOIgnorado, valorActual){
+  const dropId = inputId + '-sugerencias';
+  setupAutocompleteZona(inputId, dropId);
+  const input = document.getElementById(inputId);
+  if(input) input.value = (valorActual||'').trim();
+}
+// Lee el valor final del campo de zona, normalizado (capitalización prolija si no vino de la lista).
+function leerSelectZona(inputId){
+  const input = document.getElementById(inputId);
+  const val = (input ? input.value : '').trim();
+  const oficial = ZONAS_SOLUM.find(z=>normalizarBusquedaZona(z)===normalizarBusquedaZona(val));
+  return oficial || normalizarTexto(val);
+}
+function llenarSelectTipo(selectId, valorActual){
+  const val = (valorActual||'').trim();
+  const sel = document.getElementById(selectId);
+  const enLista = TIPOS_PROPIEDAD.some(t=>t.toLowerCase()===val.toLowerCase());
+  const match = enLista ? TIPOS_PROPIEDAD.find(t=>t.toLowerCase()===val.toLowerCase()) : (val ? 'Otro' : TIPOS_PROPIEDAD[0]);
+  sel.value = match;
+}
+
+// ── Selección de VARIOS tipos/zonas para una búsqueda (un cliente puede buscar más de un tipo de
+// propiedad y/o más de un barrio a la vez). Se guarda como string separado por coma en busqueda.tipo
+// y busqueda.zona (un solo valor sigue siendo válido tal cual, sin coma: compatible con lo ya cargado).
+const TIPOS_PROPIEDAD_BUSQUEDA = TIPOS_PROPIEDAD.concat(['Otro']);
+// Separa un string guardado ("Departamento, PH") en la lista de valores, sin vacíos.
+function parseListaCombinada(s){
+  return String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
+}
+// Dibuja los checkboxes de tipo de propiedad y tilda los que ya estén en valorActual (coma-separado).
+function tipoChecksInit(containerId, valorActual){
+  const cont = document.getElementById(containerId);
+  if(!cont) return;
+  const seleccionados = parseListaCombinada(valorActual).map(s=>s.toLowerCase());
+  cont.innerHTML = TIPOS_PROPIEDAD_BUSQUEDA.map(t=>
+    `<label class="tipo-check"><input type="checkbox" value="${t.replace(/"/g,'&quot;')}">${t}</label>`
+  ).join('');
+  cont.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.checked = seleccionados.includes(cb.value.toLowerCase());
+  });
+}
+// Lee los tipos tildados como el string separado por coma, en el mismo orden que se muestran.
+function tipoChecksLeer(containerId){
+  const cont = document.getElementById(containerId);
+  if(!cont) return '';
+  return Array.from(cont.querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.value).join(', ');
+}
+// Estado de los chips de zona: se guarda en el propio elemento (dataset) para no depender de una
+// variable global, así puede haber varios selectores de zona-con-chips abiertos a la vez.
+function zonaChipsGet(chipsId){
+  const el = document.getElementById(chipsId);
+  if(!el) return [];
+  try { return JSON.parse(el.dataset.zonas||'[]'); } catch(e){ return []; }
+}
+function zonaChipsSet(chipsId, zonas){
+  const el = document.getElementById(chipsId);
+  if(!el) return;
+  el.dataset.zonas = JSON.stringify(zonas);
+  el.innerHTML = zonas.map((z,i)=>
+    `<span class="zona-chip"><span>${String(z).replace(/</g,'&lt;')}</span><span class="zona-chip-x" onclick="zonaChipsQuitar('${chipsId}',${i})">✕</span></span>`
+  ).join('');
+}
+function zonaChipsQuitar(chipsId, idx){
+  const zonas = zonaChipsGet(chipsId);
+  zonas.splice(idx,1);
+  zonaChipsSet(chipsId, zonas);
+}
+// Agrega al listado de chips lo que haya en el input de autocompletado (normalizado/capitalizado
+// igual que leerSelectZona para una sola zona), sin duplicar, y deja el input vacío para la siguiente.
+function zonaChipsAgregar(inputId, chipsId){
+  const input = document.getElementById(inputId);
+  const valor = leerSelectZona(inputId);
+  if(!valor){ return; }
+  const zonas = zonaChipsGet(chipsId);
+  if(!zonas.some(z=>normalizarBusquedaZona(z)===normalizarBusquedaZona(valor))) zonas.push(valor);
+  zonaChipsSet(chipsId, zonas);
+  if(input){ input.value = ''; }
+  const drop = document.getElementById(inputId+'-sugerencias');
+  if(drop) drop.classList.remove('show');
+}
+// Arma el input de autocompletado de zona en modo "agregar varias": Enter o clickear una sugerencia
+// agregan un chip y dejan el input listo para la siguiente zona.
+function setupZonaChips(inputId, chipsId){
+  setupAutocompleteZona(inputId, inputId+'-sugerencias');
+  const input = document.getElementById(inputId);
+  const drop = document.getElementById(inputId+'-sugerencias');
+  if(input && !input.dataset.zonaChipsListo){
+    input.dataset.zonaChipsListo = '1';
+    input.addEventListener('keydown', e=>{
+      if(e.key==='Enter'){ e.preventDefault(); zonaChipsAgregar(inputId, chipsId); }
+    });
+  }
+  if(drop && !drop.dataset.zonaChipsListo){
+    drop.dataset.zonaChipsListo = '1';
+    drop.addEventListener('mousedown', e=>{
+      if(!e.target.closest('.zona-opt')) return;
+      // setupAutocompleteZona ya dejó el valor elegido en el input (mismo evento, listener previo);
+      // con setTimeout tomamos ese valor ya puesto, sin importar el orden de los listeners.
+      setTimeout(()=>zonaChipsAgregar(inputId, chipsId), 0);
+    });
+  }
+}
 function notasDesdeCliente(d){
   const p=[];
   if(d.cliente) p.push('Cliente: '+d.cliente);
@@ -4715,6 +4980,10 @@ function renderSeguimiento(){
   const totCap = allM.reduce((s,m)=>s+(getMd(m).cp||0),0);
   const totVen = allM.reduce((s,m)=>s+(getMd(m).v||0),0);
   const totFac = allM.reduce((s,m)=>s+(getMd(m).f||0),0);
+  // Objetivo acumulado del año (suma del objetivo de cada mes, no el de un solo mes multiplicado),
+  // para comparar manzanas con manzanas contra lo realizado acumulado de arriba.
+  const objCapAcum = allM.reduce((s,m)=>s+getObj(m,'cp'),0);
+  const objVenAcum = allM.reduce((s,m)=>s+getObj(m,'v'),0);
   const opsCobradasVendedor = operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Cobrada');
   const totGananciaVendedor = opsCobradasVendedor.reduce((s,o)=>s+gananciaVendedor(o),0);
   const comisionPromedio = opsCobradasVendedor.length ? opsCobradasVendedor.reduce((s,o)=>s+(o.comision||0),0)/opsCobradasVendedor.length : 0;
@@ -4792,8 +5061,8 @@ function renderSeguimiento(){
           <div>
             <div class="kpi-tier-label">Acumulado anual · ${anioSeg}</div>
             <div class="kpi-mini-grid" style="grid-template-columns:repeat(2,1fr);margin-top:0">
-              ${miniTileHTML('Captaciones año', totCap, obj.cp||1, 'var(--gold2)')}
-              ${miniTileHTML('Ventas año', totVen, obj.v||1, 'var(--green)')}
+              ${miniTileHTML('Captaciones año', totCap, objCapAcum||1, 'var(--gold2)')}
+              ${miniTileHTML('Ventas año', totVen, objVenAcum||1, 'var(--green)')}
               <div class="kpi-mini-tile"><div class="mt-l">Ganancia del vendedor</div><div class="mt-v" style="color:var(--gold2)">${fmtUSD(totGananciaVendedor)}</div></div>
               <div class="kpi-mini-tile"><div class="mt-l">Ticket prom. comisión</div><div class="mt-v">${fmtUSD(Math.round(comisionPromedio))}</div></div>
             </div>
@@ -5277,6 +5546,27 @@ function filaBusqueda(b){
 function guardarCliente(c){ dbGuardar('clientes', filaCliente(c)); }
 function guardarCaptacion(c){ dbGuardar('captaciones', filaCaptacion(c)); }
 function guardarBusqueda(b){ dbGuardar('busquedas', filaBusqueda(b)); }
+// ═══════════════════════════════════════════════
+// AVISO de zona/tipo no estandarizado: se muestra una alerta en la tarjeta para que cada
+// asesor la corrija a mano (ver badgeNormalizacion(), usado en captCardsHTML/busqCardsHTML).
+// No se corrige nada automáticamente.
+// ═══════════════════════════════════════════════
+function esZonaEstandar(valor){
+  const v = String(valor||'').trim();
+  if(!v) return true;
+  return v.split(',').map(p=>p.trim()).filter(Boolean).every(p=>ZONAS_SOLUM.some(z=>z.toLowerCase()===p.toLowerCase()));
+}
+function esTipoEstandar(valor){
+  const v = String(valor||'').trim();
+  if(!v) return true;
+  return v.split(',').map(p=>p.trim()).filter(Boolean).every(p=>TIPOS_PROPIEDAD_BUSQUEDA.some(t=>t.toLowerCase()===p.toLowerCase()));
+}
+function badgeNormalizacion(tipo, zona){
+  const faltaTipo = !esTipoEstandar(tipo), faltaZona = !esZonaEstandar(zona);
+  if(!faltaTipo && !faltaZona) return '';
+  const texto = faltaTipo && faltaZona ? 'Tipo y zona sin estandarizar' : faltaTipo ? 'Tipo sin estandarizar' : 'Zona sin estandarizar';
+  return `<span class="fc-status" style="background:var(--amberbg);color:var(--amber);margin-top:4px;display:inline-block" title="Corregí este campo a mano eligiendo una opción de la lista">⚠ ${texto}</span>`;
+}
 
 function openBuscarCliente(){
   document.getElementById('bc-buscar').value = '';
@@ -5364,7 +5654,7 @@ function captCardsHTML(capts){
         ${desvio ? `<span class="fc-status" style="background:var(--amberbg);color:var(--amber)">⚠ desvío</span>` : `<div style="font-weight:800;color:var(--gold2)">${pct}%</div>`}
       </div>
       <div style="display:flex;gap:4px;margin-top:10px;flex-wrap:wrap">
-        ${etapas.map(([k,l])=>`<span class="fc-chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>`).join('')}
+        ${etapas.map(([k,l])=>`<span class="fc-chip ${cap[k]?'on':''}" onclick="toggleEtapaCaptacion('${cap.id}','${k}')">${l}</span>${k==='publicacion'&&cap.publicacion&&cap.fechaPublicacion?`<span style="font-size:10px;color:var(--text3);align-self:center">${normFecha(cap.fechaPublicacion)}</span>`:''}`).join('')}
       </div>
       <div style="height:5px;background:rgba(var(--w),.1);border-radius:3px;margin-top:9px;overflow:hidden"><div style="height:5px;width:${pct}%;background:var(--green)"></div></div>
       ${cap.publicacion ? `
@@ -5379,6 +5669,8 @@ function captCardsHTML(capts){
       <div style="display:flex;gap:8px;margin-top:8px">
         <span class="fc-chip" onclick="editarCaptacion('${cap.id}')">✎ Editar</span>
       </div>
+      ${badgeNormalizacion(cap.tipo, cap.zona)}
+      ${matchesHTML(busquedasQueMatchean(cap), 'busq')}
     </div>`;
   }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin captaciones activas</div>';
 
@@ -5408,6 +5700,46 @@ function captCardsHTML(capts){
   return `<div class="capt-grid">${tarjetas}</div>${planillaHTML ? `<div style="font-size:11px;font-weight:700;color:var(--text3);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.04em">Historial (publicadas/descartadas)</div>${planillaHTML}` : ''}`;
 }
 
+// Matching automático búsqueda ↔ captación: compara zona, tipo, precio (con margen) y dormitorios.
+// Solo contra captaciones activas (de cualquier agente) / búsquedas en proceso (de cualquier agente).
+// zonaA/tipoA (lado búsqueda) pueden traer varios valores separados por coma ("Departamento, PH");
+// zonaB/tipoB (lado captación) siguen siendo un solo valor. Matchea si CUALQUIERA de los de A
+// coincide con el único valor de B. Un solo valor en A (sin coma) se comporta igual que antes.
+function matchCriterios(zonaA, tipoA, precioA, dormA, zonaB, tipoB, precioB, dormB){
+  if(tipoA && tipoB){
+    const tiposA = parseListaCombinada(tipoA).map(t=>t.toLowerCase());
+    const tb = tipoB.trim().toLowerCase();
+    if(tiposA.length && !tiposA.includes(tb)) return false;
+  }
+  if(zonaA && zonaB){
+    const zonasA = parseListaCombinada(zonaA).map(z=>z.toLowerCase());
+    const zb = zonaB.trim().toLowerCase();
+    if(zonasA.length && !zonasA.some(za=>za.includes(zb) || zb.includes(za))) return false;
+  }
+  if(dormA && dormB && dormB < dormA) return false; // la propiedad tiene menos dormitorios de los pedidos
+  if(precioA && precioB && precioB > precioA*1.15) return false; // más de 15% arriba del presupuesto
+  return true;
+}
+function captacionesQueMatchean(b){
+  if(!['Búsqueda','Ambas'].includes(b.tipoPunta) || b.estado!=='en_proceso') return [];
+  return captaciones.filter(c=>c.estado==='activa' && matchCriterios(b.zona,b.tipo,b.precioUSD,b.dormitorios, c.zona,c.tipo,c.precioUSD,c.dormitorios));
+}
+function busquedasQueMatchean(c){
+  if(c.estado!=='activa') return [];
+  return busquedas.filter(b=>['Búsqueda','Ambas'].includes(b.tipoPunta) && b.estado==='en_proceso' && matchCriterios(b.zona,b.tipo,b.precioUSD,b.dormitorios, c.zona,c.tipo,c.precioUSD,c.dormitorios));
+}
+function matchesHTML(lista, tipo){
+  if(!lista.length) return '';
+  const items = lista.map(x=>tipo==='capt'
+    ? `<div style="font-size:10.5px;padding:4px 0;border-top:1px solid rgba(var(--w),.05)">🏠 ${x.direccion} — USD ${fmtN2(x.precioUSD)} · ${x.agente||''}</div>`
+    : `<div style="font-size:10.5px;padding:4px 0;border-top:1px solid rgba(var(--w),.05)">🔎 ${x.propiedadRelacionada||x.criterios||'Búsqueda'} — ${x.agente||''}</div>`
+  ).join('');
+  return `<div style="margin-top:9px;padding-top:7px;border-top:1px dashed rgba(var(--w),.1)">
+    <div style="font-size:10px;font-weight:700;color:var(--gold2)">🎯 ${lista.length} coincidencia${lista.length>1?'s':''}</div>
+    ${items}
+  </div>`;
+}
+
 function busqCardsHTML(busqs){
   return busqs.map(b=>{
     const tagClass = b.tipoPunta==='Propiedad'?'prop':b.tipoPunta==='Ambas'?'ambas':'busq';
@@ -5431,6 +5763,8 @@ function busqCardsHTML(busqs){
         <span class="fc-chip" style="color:var(--red)" onclick="descartarBusqueda('${b.id}')">Descartar</span>
       </div>` : b.estado==='reservada' ? `
       <div style="display:flex;gap:8px;margin-top:10px"><span class="fc-chip" style="color:var(--green)" onclick="marcarEscrituraBusqueda('${b.id}')">Marcar escritura</span></div>` : ''}
+      ${badgeNormalizacion(b.tipo, b.zona)}
+      ${matchesHTML(captacionesQueMatchean(b), 'capt')}
     </div>`;
   }).join('') || '<div style="font-size:12px;color:var(--text3)">Sin búsquedas/consultas cargadas</div>';
 }
@@ -5456,92 +5790,154 @@ function renderFichaCliente(clienteId){
 }
 function fmtN2(n){ return Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0}); }
 
+// Estado del modal de captación: null = creando, id = editando esa captación.
+let capmEditId = null;
 function nuevaCaptacion(clienteId){
-  const direccion = prompt('Dirección de la propiedad:'); if(!direccion) return;
-  const tipo = prompt('Tipo (Casa/Depto/Local/Terreno):', 'Depto') || '';
-  const zona = prompt('Zona/barrio:') || '';
-  const precioUSD = parseFloat(prompt('Precio USD:', '0')) || 0;
-  const cap = {id:'cap'+Date.now(), clienteId, agente:segVendedorActivo||'Martina', direccion, tipo, zona, precioUSD,
-    dormitorios:0, fechaInicio:fechaHoyDDMM(), fechaPublicacion:'', prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:false,
-    estado:'activa', fechaCierre:'', motivoCierre:''};
-  captaciones.push(cap);
-  guardarCaptacion(cap);
-  refrescarCaptBusq(clienteId);
+  capmEditId = null;
+  document.getElementById('capm-title').textContent = 'Nueva captación';
+  document.getElementById('capm-direccion').value = '';
+  llenarSelectTipo('capm-tipo', 'Departamento');
+  llenarSelectZona('capm-zona','capm-zona-otro','');
+  document.getElementById('capm-precio').value = '';
+  document.getElementById('capm-dormitorios').value = '';
+  document.getElementById('capm-agente').value = segVendedorActivo||'Martina';
+  document.getElementById('capm-fecha-inicio').value = ddmmToISO(fechaHoyDDMM());
+  document.getElementById('capm-fecha-publicacion').value = '';
+  document.getElementById('capm-cierre-wrap').style.display = 'none';
+  capmEditId = 'nueva:'+clienteId;
+  openModal('modalCaptacion');
 }
 
 // Edición completa de una captación (solo desde la app principal). Permite corregir cualquier
 // dato cargado mal, incluyendo agente, precio, fechas y motivo de cierre.
 function editarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  const direccion = prompt('Dirección:', cap.direccion||''); if(direccion===null) return;
-  const tipo = prompt('Tipo (Casa/Depto/Local/Terreno):', cap.tipo||''); if(tipo===null) return;
-  const zona = prompt('Zona/barrio:', cap.zona||''); if(zona===null) return;
-  const precioInput = prompt('Precio USD:', String(cap.precioUSD||0)); if(precioInput===null) return;
-  const dormitoriosInput = prompt('Dormitorios:', String(cap.dormitorios||0)); if(dormitoriosInput===null) return;
-  const agente = prompt('Agente:', cap.agente||''); if(agente===null) return;
-  const fechaInicio = prompt('Fecha en la que se agregó al sistema (dd/mm/aaaa):', cap.fechaInicio||''); if(fechaInicio===null) return;
-  const fechaPublicacion = prompt('Fecha de publicación (dd/mm/aaaa, vacío si no está publicada):', cap.fechaPublicacion||'');
-  if(fechaPublicacion===null) return;
-  if(cap.estado!=='activa'){
-    const fechaCierre = prompt('Fecha de cierre (dd/mm/aaaa):', cap.fechaCierre||''); if(fechaCierre===null) return;
-    const motivoCierre = prompt('Motivo de cierre:', cap.motivoCierre||''); if(motivoCierre===null) return;
-    cap.fechaCierre = fechaCierre.trim();
-    cap.motivoCierre = motivoCierre.trim();
+  capmEditId = capId;
+  document.getElementById('capm-title').textContent = 'Editar captación';
+  document.getElementById('capm-direccion').value = cap.direccion||'';
+  llenarSelectTipo('capm-tipo', cap.tipo||'');
+  llenarSelectZona('capm-zona','capm-zona-otro', cap.zona||'');
+  document.getElementById('capm-precio').value = cap.precioUSD||'';
+  document.getElementById('capm-dormitorios').value = cap.dormitorios||'';
+  document.getElementById('capm-agente').value = cap.agente||'';
+  document.getElementById('capm-fecha-inicio').value = ddmmToISO(cap.fechaInicio||'');
+  document.getElementById('capm-fecha-publicacion').value = ddmmToISO(cap.fechaPublicacion||'');
+  const mostrarCierre = cap.estado!=='activa';
+  document.getElementById('capm-cierre-wrap').style.display = mostrarCierre ? '' : 'none';
+  if(mostrarCierre){
+    document.getElementById('capm-fecha-cierre').value = ddmmToISO(cap.fechaCierre||'');
+    document.getElementById('capm-motivo-cierre').value = cap.motivoCierre||'';
   }
-  cap.direccion = direccion.trim();
-  cap.tipo = tipo.trim();
-  cap.zona = zona.trim();
-  cap.precioUSD = parseFloat(precioInput)||0;
-  cap.dormitorios = parseInt(dormitoriosInput)||0;
-  cap.agente = agente.trim();
-  cap.fechaInicio = fechaInicio.trim();
-  cap.fechaPublicacion = fechaPublicacion.trim();
-  guardarCaptacion(cap);
-  refrescarCaptBusq(cap.clienteId);
+  openModal('modalCaptacion');
 }
-// Busca un cliente por nombre (case-insensitive) o lo crea si no existe. Usado al cargar
-// captaciones/búsquedas directamente desde la ficha del vendedor, sin pasar por el modal de cliente.
-function resolverClientePorNombre(){
-  const nombre = (prompt('Nombre del cliente/propietario:') || '').trim();
-  if(!nombre) return null;
-  let c = clientes.find(x=>(x.nombre||'').toLowerCase()===nombre.toLowerCase());
-  if(!c){
-    c = {id:'c'+Date.now(), nombre, cuit:'', mail:'', telefono:'', agente:segVendedorActivo||'Martina', fechaAlta:fechaHoyDDMM(), notas:''};
-    clientes.push(c);
-    guardarCliente(c);
+// Guarda los datos del modal de captación, tanto para alta nueva como para edición.
+function guardarCaptacionModal(){
+  const direccion = document.getElementById('capm-direccion').value.trim();
+  if(!direccion){ showToast('⚠️ Completá la dirección','amber'); return; }
+  const tipo = document.getElementById('capm-tipo').value;
+  const zona = leerSelectZona('capm-zona','capm-zona-otro');
+  const precioUSD = parseFloat(document.getElementById('capm-precio').value)||0;
+  const dormitorios = parseInt(document.getElementById('capm-dormitorios').value)||0;
+  const agente = document.getElementById('capm-agente').value.trim();
+  const fechaInicio = isoToDDMM(document.getElementById('capm-fecha-inicio').value) || fechaHoyDDMM();
+  const fechaPublicacion = isoToDDMM(document.getElementById('capm-fecha-publicacion').value);
+
+  if(capmEditId && capmEditId.startsWith('nueva:')){
+    const clienteId = capmEditId.slice('nueva:'.length);
+    const cap = {id:'cap'+Date.now(), clienteId, agente: agente||segVendedorActivo||'Martina', direccion, tipo, zona, precioUSD,
+      dormitorios, fechaInicio, fechaPublicacion, prelisting:false, acm:false, documentacion:false, fotos:false, publicacion:!!fechaPublicacion,
+      estado:'activa', fechaCierre:'', motivoCierre:''};
+    captaciones.push(cap);
+    guardarCaptacion(cap);
+    closeModal('modalCaptacion');
+    refrescarCaptBusq(clienteId);
+  } else {
+    const cap = captaciones.find(x=>x.id===capmEditId); if(!cap) return;
+    if(cap.estado!=='activa'){
+      cap.fechaCierre = isoToDDMM(document.getElementById('capm-fecha-cierre').value);
+      cap.motivoCierre = document.getElementById('capm-motivo-cierre').value.trim();
+    }
+    cap.direccion = direccion;
+    cap.tipo = tipo;
+    cap.zona = zona;
+    cap.precioUSD = precioUSD;
+    cap.dormitorios = dormitorios;
+    cap.agente = agente;
+    cap.fechaInicio = fechaInicio;
+    cap.fechaPublicacion = fechaPublicacion;
+    cap.publicacion = !!fechaPublicacion;
+    guardarCaptacion(cap);
+    closeModal('modalCaptacion');
+    refrescarCaptBusq(cap.clienteId);
   }
-  return c;
+  capmEditId = null;
+}
+// Busca un cliente por nombre (case-insensitive) o lo crea si no existe, pidiendo el nombre por
+// modal. Usado al cargar captaciones/búsquedas directamente desde la ficha del vendedor, sin pasar
+// por el modal de cliente. callback recibe el cliente (o null si se canceló).
+function resolverClientePorNombre(callback){
+  abrirTextoSimple('Cliente / propietario', 'Nombre', '', (nombre)=>{
+    nombre = (nombre||'').trim();
+    if(!nombre){ callback(null); return; }
+    let c = clientes.find(x=>(x.nombre||'').toLowerCase()===nombre.toLowerCase());
+    if(!c){
+      c = {id:'c'+Date.now(), nombre, cuit:'', mail:'', telefono:'', agente:segVendedorActivo||'Martina', fechaAlta:fechaHoyDDMM(), notas:''};
+      clientes.push(c);
+      guardarCliente(c);
+    }
+    callback(c);
+  });
 }
 function nuevaCaptacionDesdeVendedor(){
-  const c = resolverClientePorNombre();
-  if(c) nuevaCaptacion(c.id);
+  resolverClientePorNombre(c=>{ if(c) nuevaCaptacion(c.id); });
 }
 function nuevaBusquedaDesdeVendedor(){
-  const c = resolverClientePorNombre();
-  if(c) nuevaBusqueda(c.id);
+  resolverClientePorNombre(c=>{ if(c) nuevaBusqueda(c.id); });
 }
+// Al marcar/desmarcar una etapa de una captación. Las etapas simples (prelisting, acm, documentación,
+// fotos) son un toggle sin datos. "publicación" sí pide una fecha, por lo que usa un modal corto.
+let fpubCapId = null;
 function toggleEtapaCaptacion(capId, etapa){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  cap[etapa] = !cap[etapa];
   if(etapa==='publicacion'){
-    if(cap.publicacion){
-      const sugerida = fechaHoyDDMM();
-      const resp = prompt('Fecha de publicación (dd/mm/aaaa):', sugerida);
-      if(resp===null){ cap.publicacion = false; return; } // canceló: no publicar
-      cap.fechaPublicacion = resp.trim() || sugerida;
+    if(!cap.publicacion){
+      fpubCapId = capId;
+      document.getElementById('fpub-fecha').value = ddmmToISO(fechaHoyDDMM());
+      openModal('modalFechaPublicacion');
     } else {
+      cap.publicacion = false;
       cap.fechaPublicacion = '';
+      guardarCaptacion(cap);
+      refrescarCaptBusq(cap.clienteId);
     }
+    return;
   }
+  cap[etapa] = !cap[etapa];
   guardarCaptacion(cap);
   refrescarCaptBusq(cap.clienteId);
+}
+function fpubCancelar(){
+  closeModal('modalFechaPublicacion');
+  fpubCapId = null;
+}
+function fpubConfirmar(){
+  const cap = captaciones.find(x=>x.id===fpubCapId);
+  closeModal('modalFechaPublicacion');
+  if(!cap){ fpubCapId=null; return; }
+  const iso = document.getElementById('fpub-fecha').value;
+  cap.publicacion = true;
+  cap.fechaPublicacion = isoToDDMM(iso) || fechaHoyDDMM();
+  guardarCaptacion(cap);
+  refrescarCaptBusq(cap.clienteId);
+  fpubCapId = null;
 }
 function descartarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  const motivo = prompt('Motivo del descarte:') || '';
-  cap.estado = 'descartada'; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = motivo;
-  guardarCaptacion(cap);
-  refrescarCaptBusq(cap.clienteId);
+  abrirTextoSimple('Descartar captación', 'Motivo del descarte', '', (motivo)=>{
+    cap.estado = 'descartada'; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = motivo;
+    guardarCaptacion(cap);
+    refrescarCaptBusq(cap.clienteId);
+  }, true);
 }
 function reactivarCaptacion(capId){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
@@ -5552,34 +5948,62 @@ function reactivarCaptacion(capId){
 // Cierra una captación ya publicada: vendida_propia / vendida_otro / baja
 function cerrarCaptacion(capId, resultado){
   const cap = captaciones.find(x=>x.id===capId); if(!cap) return;
-  let motivo = '';
-  if(resultado==='baja') motivo = prompt('Motivo de la baja (opcional):') || '';
-  cap.estado = resultado; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = motivo;
-  guardarCaptacion(cap);
-  refrescarCaptBusq(cap.clienteId);
+  if(resultado==='baja'){
+    abrirTextoSimple('Dar de baja captación', 'Motivo de la baja', '', (motivo)=>{
+      cap.estado = resultado; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = motivo;
+      guardarCaptacion(cap);
+      refrescarCaptBusq(cap.clienteId);
+    }, true);
+  } else {
+    cap.estado = resultado; cap.fechaCierre = fechaHoyDDMM(); cap.motivoCierre = '';
+    guardarCaptacion(cap);
+    refrescarCaptBusq(cap.clienteId);
+  }
 }
 
+let busmClienteId = null;
+function busmActualizarLabelDetalle(){
+  const tipoPunta = document.getElementById('busm-puntatipo').value;
+  document.getElementById('busm-detalle-label').textContent = tipoPunta==='Propiedad' ? 'Propiedad por la que consulta' : 'Qué busca (criterios)';
+}
 function nuevaBusqueda(clienteId){
-  const tipoPunta = prompt('Tipo: Propiedad, Búsqueda o Ambas', 'Búsqueda') || 'Búsqueda';
-  const detalle = prompt(tipoPunta==='Propiedad' ? 'Propiedad por la que consulta:' : 'Qué busca (criterios):') || '';
-  const tipo = prompt('Tipo de propiedad que busca (Casa/Depto/Local), opcional:') || '';
-  const zona = prompt('Zona/barrio que busca, opcional:') || '';
-  const precioUSD = parseFloat(prompt('Presupuesto USD, opcional:', '0')) || 0;
-  const dormitorios = parseInt(prompt('Dormitorios, opcional:', '0')) || 0;
+  busmClienteId = clienteId;
+  document.getElementById('busm-puntatipo').value = 'Búsqueda';
+  busmActualizarLabelDetalle();
+  document.getElementById('busm-detalle').value = '';
+  tipoChecksInit('busm-tipo-checks', '');
+  setupZonaChips('busm-zona','busm-zona-chips');
+  zonaChipsSet('busm-zona-chips', []);
+  document.getElementById('busm-precio').value = '';
+  document.getElementById('busm-dormitorios').value = '';
+  openModal('modalBusqueda');
+}
+function guardarBusquedaModal(){
+  const clienteId = busmClienteId; if(!clienteId) return;
+  zonaChipsAgregar('busm-zona','busm-zona-chips'); // por si quedó una zona tipeada sin confirmar
+  const tipoPunta = document.getElementById('busm-puntatipo').value || 'Búsqueda';
+  const detalle = document.getElementById('busm-detalle').value.trim();
+  const tipo = tipoChecksLeer('busm-tipo-checks');
+  const zona = zonaChipsGet('busm-zona-chips').join(', ');
+  const precioUSD = parseFloat(document.getElementById('busm-precio').value)||0;
+  const dormitorios = parseInt(document.getElementById('busm-dormitorios').value)||0;
   const b = {id:'b'+Date.now(), clienteId, agente:segVendedorActivo||'Martina', tipoPunta,
     propiedadRelacionada: tipoPunta!=='Búsqueda' ? detalle : '', criterios: tipoPunta==='Búsqueda' ? detalle : '',
     tipo, zona, precioUSD, dormitorios,
     muestras:[], estado:'en_proceso', fechaReserva:'', fechaEscritura:'', fechaDescarte:'', motivoDescarte:''};
   busquedas.push(b);
   guardarBusqueda(b);
+  closeModal('modalBusqueda');
   refrescarCaptBusq(clienteId);
+  busmClienteId = null;
 }
 function agregarMuestraBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const propiedad = prompt('Propiedad mostrada:') || '';
-  b.muestras = (b.muestras||[]).concat([{fecha:fechaHoyDDMM(), propiedad}]);
-  guardarBusqueda(b);
-  refrescarCaptBusq(b.clienteId);
+  abrirTextoSimple('Nueva muestra', 'Propiedad mostrada', '', (propiedad)=>{
+    b.muestras = (b.muestras||[]).concat([{fecha:fechaHoyDDMM(), propiedad}]);
+    guardarBusqueda(b);
+    refrescarCaptBusq(b.clienteId);
+  });
 }
 function marcarReservaBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
@@ -5595,10 +6019,32 @@ function marcarEscrituraBusqueda(busId){
 }
 function descartarBusqueda(busId){
   const b = busquedas.find(x=>x.id===busId); if(!b) return;
-  const motivo = prompt('Motivo del descarte:') || '';
-  b.estado = 'descartada'; b.fechaDescarte = fechaHoyDDMM(); b.motivoDescarte = motivo;
-  guardarBusqueda(b);
-  refrescarCaptBusq(b.clienteId);
+  abrirTextoSimple('Descartar búsqueda', 'Motivo del descarte', '', (motivo)=>{
+    b.estado = 'descartada'; b.fechaDescarte = fechaHoyDDMM(); b.motivoDescarte = motivo;
+    guardarBusqueda(b);
+    refrescarCaptBusq(b.clienteId);
+  }, true);
+}
+// Modal genérico de un solo campo de texto (motivos, propiedad mostrada, nombre de cliente, etc.)
+let mtsCallback = null;
+function abrirTextoSimple(titulo, label, valorActual, callback, opcional){
+  document.getElementById('mts-title').textContent = titulo;
+  document.getElementById('mts-label').textContent = label + (opcional ? ' (opcional)' : '');
+  document.getElementById('mts-valor').value = valorActual||'';
+  mtsCallback = callback;
+  openModal('modalTextoSimple');
+  setTimeout(()=>document.getElementById('mts-valor')?.focus(), 50);
+}
+function mtsConfirmar(){
+  const val = document.getElementById('mts-valor').value.trim();
+  const cb = mtsCallback;
+  closeModal('modalTextoSimple');
+  mtsCallback = null;
+  if(cb) cb(val);
+}
+function mtsCancelar(){
+  closeModal('modalTextoSimple');
+  mtsCallback = null;
 }
 
 function diasHabilesEnMes(lunes, viernes, mes, anio) {
