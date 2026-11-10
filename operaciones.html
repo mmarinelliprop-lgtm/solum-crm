@@ -816,7 +816,7 @@ function guardarFila(op){
 function eliminarOperacion(id){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
-  if(!confirm(`¿Eliminar la operación "${op.propiedad}" (${op.agente})? Desaparece de toda la app.`)) return;
+  if(!confirm('¿Está seguro que quiere borrar esta operación?')) return;
   op.eliminada = true;
   guardarFila(op);
   registrarAccion(op, 'Eliminación', 'Operación eliminada');
@@ -925,7 +925,7 @@ function renderTabla(){
           <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
         </select>
       </td>
-      <td><button class="btn btn-sm" style="background:var(--card2);color:var(--red);border:1px solid rgba(255,77,151,0.3)" onclick="eliminarOperacion('${o.id}')">Eliminar</button></td>
+      <td><button onclick="eliminarOperacion('${o.id}')" title="Eliminar operación" style="background:var(--card2);color:var(--red);border:1px solid rgba(255,77,151,0.3);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button></td>
     </tr>`;
   }).join('') : '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
 }

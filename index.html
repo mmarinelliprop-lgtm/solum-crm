@@ -2921,7 +2921,7 @@ function actualizarOp(id, campo, valor){
 function eliminarOperacion(id){
   const op = operaciones.find(o=>o.id===id);
   if(!op) return;
-  if(!confirm(`¿Eliminar la operación "${op.propiedad}" (${op.agente})? Desaparece de toda la app.`)) return;
+  if(!confirm('¿Está seguro que quiere borrar esta operación?')) return;
   op.eliminada = true;
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
@@ -3929,9 +3929,9 @@ function renderOperaciones(){
           <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
         </select>
       </td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">
+      <td style="display:flex;gap:4px;align-items:center;white-space:nowrap">
         <button class="btn btn-gold btn-sm" onclick="generarPlanilla(${o.id})">Planilla</button>
-        <button class="btn btn-sm" style="background:var(--card2);color:var(--red);border:1px solid rgba(255,77,151,0.3)" onclick="eliminarOperacion(${o.id})">Eliminar</button>
+        <button onclick="eliminarOperacion(${o.id})" title="Eliminar operación" style="background:var(--card2);color:var(--red);border:1px solid rgba(255,77,151,0.3);border-radius:6px;width:24px;height:24px;flex:0 0 24px;cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text3)">Sin operaciones para este filtro</td></tr>';
