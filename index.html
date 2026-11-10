@@ -779,8 +779,18 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
 
   <div class="filters" id="ops-filters">
     <div>
-      <span class="filter-label">Mes</span>
+      <span class="filter-label">Mes (cobro)</span>
       <select class="filter-select" id="op-mes" onchange="renderOperaciones()">
+        <option value="all" selected>Año completo</option>
+        <option value="1">Ene</option><option value="2">Feb</option><option value="3">Mar</option>
+        <option value="4">Abr</option><option value="5">May</option><option value="6">Jun</option>
+        <option value="7">Jul</option><option value="8">Ago</option><option value="9">Sep</option>
+        <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dic</option>
+      </select>
+    </div>
+    <div>
+      <span class="filter-label">Mes (reserva)</span>
+      <select class="filter-select" id="op-mes-reserva" onchange="renderOperaciones()">
         <option value="all" selected>Año completo</option>
         <option value="1">Ene</option><option value="2">Feb</option><option value="3">Mar</option>
         <option value="4">Abr</option><option value="5">May</option><option value="6">Jun</option>
@@ -1689,7 +1699,7 @@ function filaOperacion(op){
   return [op.id, op.propiedad, op.agente==='propia'?'Martina':op.agente, op.punta,
     op.precio, op.comision, op.comision_vendedor||0, op.ganancia_martina||0, op.ganancia_solum||0,
     op.fechaEsc||'', op.fechaReserva||'', op.estado, op.mes, op.anio, op.planillaGenerada||false,
-    op.notas||'', op.rendicion||'pendiente_asesor'];
+    op.notas||'', op.rendicion||'pendiente_asesor', op.eliminada||false];
 }
 function fechaHoyDDMM(){ const h=new Date(); return String(h.getDate()).padStart(2,'0')+'/'+String(h.getMonth()+1).padStart(2,'0')+'/'+h.getFullYear(); }
 // Convierte una fecha de <input type="date"> (ISO aaaa-mm-dd) al formato interno dd/mm/aaaa, y viceversa.
@@ -1943,8 +1953,14 @@ async function cargarDatosDB() {
           anio: fParaMesAnio ? fParaMesAnio.getFullYear() : anioGuardado,
           planillaGenerada: r[14]==='true'||r[14]===true,
           notas: r[15]||'',
-          rendicion: r[16] || 'pendiente_asesor'
+          rendicion: r[16] || 'pendiente_asesor',
+          eliminada: r[17]==='true'||r[17]===true
         };
+      // Eliminada lógicamente: no se pierde la fila de la planilla (queda marcada por si hace
+      // falta auditarla), pero desaparece de toda la app.
+      }).filter(o=>!o.eliminada).map(o=>{
+        const {mes:mesReserva, anio:anioReserva} = mesAnioReservaOp(o);
+        return {...o, mesReserva, anioReserva};
       });
       showToast('✅ ' + operaciones.length + ' operaciones cargadas desde Sheets');
     }
@@ -2893,11 +2909,29 @@ function actualizarOp(id, campo, valor){
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
-    op.notas||'',op.rendicion||'pendiente_asesor']);
+    op.notas||'',op.rendicion||'pendiente_asesor',op.eliminada||false]);
   detectarIncongruencias();
   renderDashboard();
   renderOperaciones();
   showToast('✅ Operación actualizada');
+}
+
+// Eliminado lógico: la operación desaparece de toda la app (tablas, totales, dashboard), pero
+// la fila queda en la planilla marcada como eliminada por si hace falta auditarla después.
+function eliminarOperacion(id){
+  const op = operaciones.find(o=>o.id===id);
+  if(!op) return;
+  if(!confirm(`¿Eliminar la operación "${op.propiedad}" (${op.agente})? Desaparece de toda la app.`)) return;
+  op.eliminada = true;
+  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+    op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
+    op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
+    op.notas||'',op.rendicion||'pendiente_asesor',true]);
+  operaciones = operaciones.filter(o=>o.id!==id);
+  detectarIncongruencias();
+  renderDashboard();
+  renderOperaciones();
+  showToast('✅ Operación eliminada');
 }
 
 function mapNombreAgente(v) {
@@ -3817,8 +3851,10 @@ function renderOperaciones(){
   const anioVal = document.getElementById('op-anio').value;
   const anio = anioVal==='all' ? null : parseInt(anioVal);
 
+  const mesReservaVal = document.getElementById('op-mes-reserva').value;
   let ops = anio===null ? operaciones.slice() : operaciones.filter(o=>o.anio===anio);
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
+  if(mesReservaVal!=='all') ops = ops.filter(o=>o.mesReserva===parseInt(mesReservaVal));
   if(agentesChecks.length>0 && agentesChecks.length<agenteCheckboxes.length) ops = ops.filter(o=>agentesChecks.includes(normAgente(o.agente)));
   else if(agentesChecks.length===0) ops = [];
   if(estadosChecks.length>0) ops = ops.filter(o=>estadosChecks.includes(o.estado));
@@ -3895,6 +3931,7 @@ function renderOperaciones(){
       </td>
       <td style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-gold btn-sm" onclick="generarPlanilla(${o.id})">Planilla</button>
+        <button class="btn btn-sm" style="background:var(--card2);color:var(--red);border:1px solid rgba(255,77,151,0.3)" onclick="eliminarOperacion(${o.id})">Eliminar</button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="13" style="text-align:center;padding:30px;color:var(--text3)">Sin operaciones para este filtro</td></tr>';

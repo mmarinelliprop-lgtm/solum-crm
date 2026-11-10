@@ -97,8 +97,17 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
   <div id="alert-container"></div>
 
   <div class="filters">
-    <div><span class="filter-label">Mes</span>
+    <div><span class="filter-label">Mes (cobro)</span>
       <select class="filter-select" id="op-mes" onchange="renderTabla()">
+        <option value="all">Año completo</option>
+        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+        <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+        <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+      </select>
+    </div>
+    <div><span class="filter-label">Mes (reserva)</span>
+      <select class="filter-select" id="op-mes-reserva" onchange="renderTabla()">
         <option value="all">Año completo</option>
         <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
         <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
@@ -134,7 +143,7 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
         <tr>
           <th>Propiedad</th><th>Agente</th><th>Punta</th><th>Precio venta</th><th>% Com.</th>
           <th>Comisión</th><th>👤 Mi ganancia</th><th>🏢 SOLUM</th><th>🤝 Vendedor</th>
-          <th>Fecha reserva</th><th>Fecha cobro</th><th>Estado</th>
+          <th>Fecha reserva</th><th>Fecha cobro</th><th>Estado</th><th></th>
         </tr>
       </thead>
       <tbody id="tabla-body"></tbody>
@@ -457,11 +466,16 @@ async function cargarOperaciones(){
         anio: fParaMesAnio ? fParaMesAnio.getFullYear() : anioGuardado,
         planillaGenerada: r[14]==='true'||r[14]===true,
         notas: r[15]||'',
-        rendicion: r[16] || 'pendiente_asesor'
+        rendicion: r[16] || 'pendiente_asesor',
+        eliminada: r[17]==='true'||r[17]===true
       };
     // Franco no es parte del equipo: esta planilla es de rendición del equipo, Josefina no lo ve acá
     // (sí lo ve Martina en index.html y el propio Franco en asesores.html).
-    }).filter(o=>o.agente!=='Franco');
+    // Eliminada lógicamente: no se pierde la fila de la planilla, pero desaparece de la app.
+    }).filter(o=>o.agente!=='Franco' && !o.eliminada).map(o=>{
+      const fR = parseFecha(o.fechaReserva);
+      return {...o, mesReserva: fR ? fR.getMonth()+1 : o.mes, anioReserva: fR ? fR.getFullYear() : o.anio};
+    });
     showToast('✅ '+operaciones.length+' operaciones cargadas');
   }
   poblarFiltroAgentes();
@@ -794,7 +808,21 @@ function guardarFila(op){
   dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
-    op.notas||'',op.rendicion||'pendiente_asesor']);
+    op.notas||'',op.rendicion||'pendiente_asesor',op.eliminada||false]);
+}
+
+// Eliminado lógico: desaparece de toda la app (tabla, rendición, alertas), pero la fila queda
+// marcada en la planilla por si hace falta auditarla después.
+function eliminarOperacion(id){
+  const op = operaciones.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  if(!confirm(`¿Eliminar la operación "${op.propiedad}" (${op.agente})? Desaparece de toda la app.`)) return;
+  op.eliminada = true;
+  guardarFila(op);
+  registrarAccion(op, 'Eliminación', 'Operación eliminada');
+  operaciones = operaciones.filter(o=>String(o.id)!==String(id));
+  showToast('✅ Operación eliminada');
+  renderAlertas(); renderTabla(); renderRendicion();
 }
 
 function actualizarCampo(id, campo, valor){
@@ -860,9 +888,11 @@ function renderTabla(){
   const anioVal = document.getElementById('op-anio').value;
   const agenteVal = document.getElementById('op-agente').value;
 
+  const mesReservaVal = document.getElementById('op-mes-reserva').value;
   let ops = operaciones;
   if(anioVal!=='all') ops = ops.filter(o=>o.anio===parseInt(anioVal));
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
+  if(mesReservaVal!=='all') ops = ops.filter(o=>o.mesReserva===parseInt(mesReservaVal));
   if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
   if(agenteVal!=='all') ops = ops.filter(o=>o.agente===agenteVal);
 
@@ -895,8 +925,9 @@ function renderTabla(){
           <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
         </select>
       </td>
+      <td><button class="btn btn-sm" style="background:var(--card2);color:var(--red);border:1px solid rgba(255,77,151,0.3)" onclick="eliminarOperacion('${o.id}')">Eliminar</button></td>
     </tr>`;
-  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
+  }).join('') : '<tr><td colspan="13" style="text-align:center;color:var(--text3);padding:24px">Sin operaciones para este filtro</td></tr>';
 }
 
 // ═══════════════════════════════════════════════
