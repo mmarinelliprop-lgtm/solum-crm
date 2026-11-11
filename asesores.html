@@ -274,7 +274,16 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
       </div>
     </div>
 
-    <div class="card-title" style="padding-left:2px;margin-top:20px">Mis operaciones</div>
+    <div class="card-title" style="padding-left:2px;margin-top:20px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span>Mis operaciones</span>
+      <select class="inp" id="misops-mes-sel" style="width:auto" onchange="renderMisOperaciones()">
+        <option value="all">Año completo</option>
+        <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+        <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+        <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+        <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+      </select>
+    </div>
     <div id="mis-ops-wrap"></div>
   </div>
 </div>
@@ -624,8 +633,8 @@ let segMensualPropio = {}; // {mes: {metrica: valor real}} — igual que segData
 
 // Igual que en index.html: objetivo anual base y umbral de viaje por vendedor (resto: 30000/34000),
 // y la estacionalidad trimestral para proyecciones.
-const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000, 'Franco':50000 };
-const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000, 'Franco':56000 };
+const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000, 'Franco':50000, 'Luli':10000, 'Joaquin':10000 };
+const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000, 'Franco':56000, 'Luli':14000, 'Joaquin':14000 };
 const SEG_SIN_OPERACIONES = ['Franco'];
 const SEG_POR_COBRAR_MANUAL = { 'Franco': 2550 };
 const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32];
@@ -909,10 +918,17 @@ function renderFichaPersonal(){
   const facPorCobrar = facPorCobrarPropio();
   const objetivoBase = objetivoBasePropio();
   const premioViaje = viajeUmbralPropio();
-  const scaleMax = Math.max(facturacion, objetivoBase, premioViaje) || 1;
+  // Sistema del 50% (todos salvo Martina y Kito): dos hitos más, pase a 60% ($40.000) y a 70%
+  // ($50.000). Una vez cumplidos objetivo/viaje la barra sigue hacia el próximo hito en vez de
+  // quedar "llena".
+  const enEscalera50 = sesionActiva!=='Martina' && sesionActiva!=='Kito';
+  const NIVEL60_UMBRAL = 40000, NIVEL70_UMBRAL = 50000;
+  const scaleMax = Math.max(facturacion, objetivoBase, premioViaje, enEscalera50?NIVEL70_UMBRAL:0) || 1;
   const pctFactScale = Math.min(100, Math.round(facturacion/scaleMax*100));
   const leftObj = Math.min(100, Math.round(objetivoBase/scaleMax*100));
   const leftViaje = Math.min(100, Math.round(premioViaje/scaleMax*100));
+  const left60 = Math.min(100, Math.round(NIVEL60_UMBRAL/scaleMax*100));
+  const left70 = Math.min(100, Math.round(NIVEL70_UMBRAL/scaleMax*100));
 
   let cpAnio = 0, objCpAnio = 0, objVentasAnio = 0;
   for(let m=1;m<=mesActual;m++){
@@ -936,6 +952,11 @@ function renderFichaPersonal(){
         <div class="fact-marker-lbl${facturacion>=objetivoBase?' done':''}" style="left:${leftObj}%">🎯 ${fmtN2(objetivoBase)}</div>
         <div class="fact-marker${facturacion>=premioViaje?' done':''}" style="left:${leftViaje}%"></div>
         <div class="fact-marker-lbl${facturacion>=premioViaje?' done':''}" style="left:${leftViaje}%;${leftViaje>85?'transform:translateX(-100%)':''}">✈️ ${fmtN2(premioViaje)}</div>
+        ${enEscalera50 ? `
+        <div class="fact-marker${facturacion>=NIVEL60_UMBRAL?' done':''}" style="left:${left60}%"></div>
+        <div class="fact-marker-lbl${facturacion>=NIVEL60_UMBRAL?' done':''}" style="left:${left60}%;${left60>85?'transform:translateX(-100%)':''}">📈 60%: ${fmtN2(NIVEL60_UMBRAL)}</div>
+        <div class="fact-marker${facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%"></div>
+        <div class="fact-marker-lbl${facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%;${left70>85?'transform:translateX(-100%)':''}">📈 70%: ${fmtN2(NIVEL70_UMBRAL)}</div>` : ''}
       </div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:10.5px;color:var(--text2)">
         <span>Por cobrar: <b>${fmtN2(facPorCobrar)}</b></span>
@@ -1775,25 +1796,47 @@ No generes ningún otro tipo de ACCION. No menciones nombres de otros asesores n
 
 function renderMisOperaciones(){
   const el = document.getElementById('mis-ops-wrap'); if(!el) return;
-  const ops = operacionesPropias.slice().sort((a,b)=>{
+  const anio = new Date().getFullYear();
+  const mesSel = document.getElementById('misops-mes-sel')?.value || 'all';
+  const todas = operacionesPropias.slice().sort((a,b)=>{
     const fa = parseFechaDDMM(a.fechaReserva||a.fechaEsc)||new Date(0), fb = parseFechaDDMM(b.fechaReserva||b.fechaEsc)||new Date(0);
     return fb-fa;
   });
-  if(!ops.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
+  // El mes elegido filtra la tabla por fecha de cobro (mismo criterio que el resto de la app).
+  // "Total a cobrar" (pendientes/por cobrar) siempre es global, no depende del mes elegido —
+  // lo pendiente sigue pendiente sin importar qué mes se esté mirando.
+  const ops = mesSel==='all' ? todas : todas.filter(o=>o.mes===parseInt(mesSel) && o.anio===anio);
+  if(!todas.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
   const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--blue)'};
-  el.innerHTML = `<table class="mis-ops-table"><thead><tr>
-    <th>Propiedad</th><th>Precio</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha de reserva</th><th>Fecha de cobro</th>
+  const totalACobrar = todas.filter(o=>o.estado==='Pendiente'||o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision_vendedor||0),0);
+  const totalCobrado = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision_vendedor||0),0);
+  const labelCobrado = mesSel==='all' ? 'Total cobrado (año completo)' : 'Total cobrado en '+MESES_NOMBRES[parseInt(mesSel)];
+  el.innerHTML = `
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 14px">
+    <div style="flex:1;min-width:200px;padding:12px 16px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--text3)">Total a cobrar (pendientes + por cobrar)</span>
+      <span style="font-size:18px;font-weight:800;color:var(--amber)">${fmtN2(totalACobrar)}</span>
+    </div>
+    <div style="flex:1;min-width:200px;padding:12px 16px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:12px;color:var(--text3)">${labelCobrado}</span>
+      <span style="font-size:18px;font-weight:800;color:var(--green)">${fmtN2(totalCobrado)}</span>
+    </div>
+  </div>
+  ${!ops.length ? '<div style="color:var(--text3);font-size:12px;margin-top:10px">Sin operaciones en ese mes.</div>' : `
+  <table class="mis-ops-table"><thead><tr>
+    <th>Propiedad</th><th>Precio</th><th>% Comisión</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha de reserva</th><th>Fecha de cobro</th>
   </tr></thead><tbody>
     ${ops.map(o=>`<tr>
       <td>${o.propiedad||''}</td>
       <td>${fmtN2(o.precio||0)}</td>
+      <td>${o.precio ? (o.comision/o.precio*100).toFixed(1).replace(/\.0$/,'') : '—'}%</td>
       <td>${fmtN2(o.comision)}</td>
       <td>${fmtN2(o.comision_vendedor)}</td>
       <td style="color:${estadoColor[o.estado]||'var(--text3)'};font-weight:700">${o.estado}</td>
       <td>${o.fechaReserva||'—'}</td>
       <td>${o.fechaEsc||'—'}</td>
     </tr>`).join('')}
-  </tbody></table>`;
+  </tbody></table>`}`;
 }
 
 // Decoración bokeh (mismas burbujas difuminadas que el fondo de SOLUMITOS)

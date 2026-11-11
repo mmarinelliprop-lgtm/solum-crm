@@ -2449,9 +2449,9 @@ function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];
 // El % de comisión es fijo durante todo el año: lo determina lo que el agente facturó el año pasado.
 // Vendedores del equipo (sin Martina, sin Kito): 50% hasta $40.000 → 60% hasta $50.000 → 70% en adelante
 // Kito: % fijo (60%), objetivo propio distinto
-const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000, 'Franco':50000 }; // resto: 30000
+const OBJETIVOS_VENDEDOR_BASE = { 'Martina':75000, 'Kito':40000, 'Franco':50000, 'Luli':10000, 'Joaquin':10000 }; // resto: 30000 — Luli/Joaquin entraron en el último cuatrimestre, objetivo proporcional
 const OBJETIVO_EQUIPO_ANUAL = 180000; // suma facturación bruta de todo el equipo, sin Martina
-const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000, 'Franco':56000 }; // resto (sistema del 50%): 34000
+const VIAJE_UMBRAL_ESPECIAL = { 'Kito':45000, 'Martina':85000, 'Franco':56000, 'Luli':14000, 'Joaquin':14000 }; // resto (sistema del 50%): 34000
 
 function objetivoBaseVendedor(agente){
   const n = normAgente(agente);
@@ -5059,10 +5059,18 @@ function renderSeguimiento(){
   // ── Tablero KPI unificado: financiero global · mes en curso / acumulado anual · embudos ──
   const kpiEl = document.getElementById('seg-kpi-unificado');
   if(kpiEl){
-    const scaleMax = Math.max(est.facturacion, objetivoBase, premioViaje) || 1;
+    // Vendedores del "sistema del 50%" (todos salvo Martina y Kito, que tienen % fijo) tienen además
+    // dos hitos de escalera: pase a 60% ($40.000) y a 70% ($50.000) de facturación acumulada. Una vez
+    // cumplidos objetivo/viaje, la barra sigue mostrando progreso hacia el próximo hito en vez de
+    // quedar "llena" — el escalado siempre llega hasta el hito más alto que todavía aplica.
+    const enEscalera50 = vendedor!=='Martina' && vendedor!=='Kito';
+    const NIVEL60_UMBRAL = 40000, NIVEL70_UMBRAL = 50000;
+    const scaleMax = Math.max(est.facturacion, objetivoBase, premioViaje, enEscalera50?NIVEL70_UMBRAL:0) || 1;
     const pctFactScale = Math.min(100, Math.round(est.facturacion/scaleMax*100));
     const leftObj = Math.min(100, Math.round(objetivoBase/scaleMax*100));
     const leftViaje = Math.min(100, Math.round(premioViaje/scaleMax*100));
+    const left60 = Math.min(100, Math.round(NIVEL60_UMBRAL/scaleMax*100));
+    const left70 = Math.min(100, Math.round(NIVEL70_UMBRAL/scaleMax*100));
     const objMesVendedor = Math.round((obj.f||30000) * pesoMensual(mesActual));
     const pctMesVendedor = objMesVendedor>0 ? Math.round(dMes.f/objMesVendedor*100) : 0;
 
@@ -5077,6 +5085,11 @@ function renderSeguimiento(){
             <div class="fact-marker-lbl${est.facturacion>=objetivoBase?' done':''}" style="left:${leftObj}%">🎯 ${fmtUSD(objetivoBase)}</div>
             <div class="fact-marker${est.viajeGanado?' done':''}" style="left:${leftViaje}%"></div>
             <div class="fact-marker-lbl${est.viajeGanado?' done':''}" style="left:${leftViaje}%;${leftViaje>85?'transform:translateX(-100%)':''}">✈️ ${fmtUSD(premioViaje)}</div>
+            ${enEscalera50 ? `
+            <div class="fact-marker${est.facturacion>=NIVEL60_UMBRAL?' done':''}" style="left:${left60}%"></div>
+            <div class="fact-marker-lbl${est.facturacion>=NIVEL60_UMBRAL?' done':''}" style="left:${left60}%;${left60>85?'transform:translateX(-100%)':''}">📈 60%: ${fmtUSD(NIVEL60_UMBRAL)}</div>
+            <div class="fact-marker${est.facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%"></div>
+            <div class="fact-marker-lbl${est.facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%;${left70>85?'transform:translateX(-100%)':''}">📈 70%: ${fmtUSD(NIVEL70_UMBRAL)}</div>` : ''}
           </div>
           <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:11px;color:var(--text2)">
             <span>Por cobrar: <b>${fmtUSD(facPorCobrar)}</b></span>
