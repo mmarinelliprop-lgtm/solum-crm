@@ -249,10 +249,21 @@ async function dbLeer(tipo){
     return (d.ok && d.datos) ? d.datos : [];
   }catch(e){ return []; }
 }
-async function dbActualizar(tipo,id,fila){
+// Devuelve true/false según si realmente se guardó en Sheets — antes no revisaba la respuesta
+// del servidor, así que un fallo quedaba silencioso (la app decía "actualizado" sin haber
+// escrito nada). Reintenta una vez antes de avisar.
+async function dbActualizar(tipo,id,fila,_esReintento){
   try{
-    await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'actualizar',id,fila})});
-  }catch(e){ console.error(e); }
+    const r = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'actualizar',id,fila})});
+    const d = await r.json().catch(()=>null);
+    if(r.ok && (!d || d.ok!==false)) return true;
+    throw new Error((d && d.error) || ('HTTP '+r.status));
+  }catch(e){
+    console.error(e);
+    if(!_esReintento) return dbActualizar(tipo,id,fila,true);
+    showToast('⚠️ No se pudo guardar el cambio en la planilla. Probá de nuevo o revisá la conexión.');
+    return false;
+  }
 }
 async function dbGuardar(tipo,fila){
   try{
@@ -697,7 +708,6 @@ async function generarPlanillaDesdeModal(){
   const fechaCobroVal = document.getElementById('mp-fecha-cobro').value.trim();
   const fechaCobro = parseFecha(fechaCobroVal);
   if(!fechaCobro){ showToast('⚠️ Fecha de cobro inválida (dd/mm/aaaa)'); return; }
-  const pctAgenteMap = {'Martina':0.80,'Kito':0.60};
   const datos = {
     fecha: fechaCobroVal,
     agente: op.agente,
@@ -710,7 +720,9 @@ async function generarPlanillaDesdeModal(){
     precio: op.precio,
     pct_comision: op.precio ? op.comision/op.precio : 0.03,
     iva: '',
-    pct_agente: pctAgenteMap[op.agente] || 0.50,
+    // % real vigente (escalera), no un mapa fijo con 50% por defecto — eso dejaba a cualquiera
+    // que ya subió de nivel (ej. Manu al 60%) con la planilla mal calculada.
+    pct_agente: pctAsesorVigente(op),
     telefono: document.getElementById('mp-telefono').value.trim(),
     mail: document.getElementById('mp-mail').value.trim(),
     origen: document.getElementById('mp-origen').value.trim()
@@ -805,7 +817,7 @@ function marcarRendida(id, siguienteEstado){
 }
 
 function guardarFila(op){
-  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+  return dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
     op.notas||'',op.rendicion||'pendiente_asesor',op.eliminada||false]);
@@ -813,22 +825,39 @@ function guardarFila(op){
 
 // Eliminado lógico: desaparece de toda la app (tabla, rendición, alertas), pero la fila queda
 // marcada en la planilla por si hace falta auditarla después.
-function eliminarOperacion(id){
+async function eliminarOperacion(id){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
   if(!confirm('¿Está seguro que quiere borrar esta operación?')) return;
   op.eliminada = true;
-  guardarFila(op);
+  const ok = await guardarFila(op);
+  if(!ok){ op.eliminada = false; return; } // si falló el guardado, no la sacamos de la vista
   registrarAccion(op, 'Eliminación', 'Operación eliminada');
   operaciones = operaciones.filter(o=>String(o.id)!==String(id));
   showToast('✅ Operación eliminada');
   renderAlertas(); renderTabla(); renderRendicion();
 }
 
-function actualizarCampo(id, campo, valor){
+async function actualizarCampo(id, campo, valor){
   const op = operaciones.find(o=>String(o.id)===String(id));
   if(!op) return;
   const valorAnterior = op[campo];
+  // Recalcula el reparto real (comisión del asesor, ganancia de Martina y de SOLUM) con la
+  // escalera de % vigente para ese agente/año, igual que en el resto del sistema.
+  function recalcularReparto(){
+    if(op.agente==='Martina'){
+      op.comision_vendedor = 0;
+      op.ganancia_martina = Math.round(op.comision*0.80);
+      op.ganancia_solum = op.comision - op.ganancia_martina;
+    } else if(op.agente==='Franco'){
+      op.comision_vendedor = op.comision; op.ganancia_martina = 0; op.ganancia_solum = 0;
+    } else {
+      const pctAgente = pctAsesorVigente(op);
+      op.comision_vendedor = Math.round(op.comision*pctAgente);
+      op.ganancia_solum = Math.round(op.comision*0.30);
+      op.ganancia_martina = op.comision - op.comision_vendedor - op.ganancia_solum;
+    }
+  }
   if(campo==='precio' || campo==='pctComision'){
     if(campo==='precio'){
       // Mantiene el % de comisión vigente en la operación y solo recalcula el monto.
@@ -839,18 +868,11 @@ function actualizarCampo(id, campo, valor){
       const pct = parseFloat(valor)/100 || 0.03;
       op.comision = Math.round(op.precio*pct);
     }
-    // Recalcula el reparto real (comisión del asesor, ganancia de Martina y de SOLUM) con la
-    // escalera de % vigente para ese agente/año, igual que en el resto del sistema.
-    if(op.agente==='Martina'){
-      op.comision_vendedor = 0;
-      op.ganancia_martina = Math.round(op.comision*0.80);
-      op.ganancia_solum = op.comision - op.ganancia_martina;
-    } else {
-      const pctAgente = pctAsesorVigente(op);
-      op.comision_vendedor = Math.round(op.comision*pctAgente);
-      op.ganancia_solum = Math.round(op.comision*0.30);
-      op.ganancia_martina = op.comision - op.comision_vendedor - op.ganancia_solum;
-    }
+    recalcularReparto();
+  } else if(campo==='agente'){
+    // Si se corrige el agente (se cargó mal), recalcular el reparto con el % del agente correcto.
+    op.agente = valor;
+    recalcularReparto();
   } else if(campo==='fechaEsc' || campo==='fechaReserva'){
     // Siempre se guarda como texto dd/mm/aaaa, nunca como Date/ISO
     op[campo] = fmtFechaCorta(valor) || valor;
@@ -862,9 +884,13 @@ function actualizarCampo(id, campo, valor){
     op[campo] = valor;
     if(campo==='estado' && valor==='Cobrada' && !op.rendicion) op.rendicion = 'pendiente_asesor';
   }
-  guardarFila(op);
-  registrarAccion(op, 'Edición', `Campo "${campo}" cambiado de "${valorAnterior}" a "${valor}"`);
-  showToast('✅ Actualizado');
+  const ok = await guardarFila(op);
+  if(ok){
+    registrarAccion(op, 'Edición', `Campo "${campo}" cambiado de "${valorAnterior}" a "${valor}"`);
+    showToast('✅ Actualizado');
+  } else {
+    op[campo] = valorAnterior; // revertir en memoria ya que no se guardó de verdad
+  }
   renderAlertas();
   renderTabla();
   renderRendicion();
@@ -903,7 +929,11 @@ function renderTabla(){
     return `
     <tr>
       <td><input class="cell" value="${o.propiedad||''}" onchange="actualizarCampo('${o.id}','propiedad',this.value)"></td>
-      <td>${o.agente}</td>
+      <td>
+        <select class="cell" onchange="actualizarCampo('${o.id}','agente',this.value)">
+          ${['Martina','Vicky','Manu','Marce','Kito','Ceci','Joaquin','Luli','Franco'].map(a=>`<option value="${a}" ${o.agente===a?'selected':''}>${a}</option>`).join('')}
+        </select>
+      </td>
       <td>
         <select class="cell" onchange="actualizarCampo('${o.id}','punta',this.value)">
           <option value="Comprador" ${o.punta==='Comprador'?'selected':''}>Comprador</option>

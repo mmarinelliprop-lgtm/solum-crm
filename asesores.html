@@ -197,6 +197,13 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
   </div>
 
   <div class="content" id="content-semana">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <select class="inp" id="ficha-anio-sel" style="width:auto" onchange="renderFichaPersonal();renderKpisYMotivacion();renderMisOperaciones()">
+        <option value="2025">2025</option>
+        <option value="2026" selected>2026</option>
+        <option value="2027">2027</option>
+      </select>
+    </div>
     <div id="ficha-personal-wrap"></div>
     <div id="pep-banner"></div>
     <div class="card-title" style="padding-left:2px">Cómo vas este mes</div>
@@ -641,19 +648,30 @@ const PESOS_TRIMESTRE = [0.20, 0.225, 0.255, 0.32];
 function pesoMensualAs(mes){ return PESOS_TRIMESTRE[Math.floor((mes-1)/3)]/3; }
 function objetivoBasePropio(){ return OBJETIVOS_VENDEDOR_BASE[sesionActiva] ?? 30000; }
 function viajeUmbralPropio(){ return VIAJE_UMBRAL_ESPECIAL[sesionActiva] ?? 34000; }
-function facturacionAnioPropia(){
+// Facturación BRUTA (comisión total de la inmobiliaria, no mi comisión personal): es la base real
+// del sistema de objetivo/viaje/escalera de % (30k/34k/40k/50k son montos de facturación bruta, no
+// de comisión propia — por eso esta función usa o.comision y no o.comision_vendedor). anio opcional:
+// por defecto el año elegido en el selector de la ficha.
+function facturacionAnioPropia(anio){
+  anio = anio || anioFichaSeleccionado();
   if(SEG_SIN_OPERACIONES.includes(sesionActiva)){
     let total = 0;
     for(let m=1; m<=12; m++) total += (segMensualPropio[m]?.f || 0);
     return total;
   }
-  const anio = new Date().getFullYear();
   return operacionesPropias.filter(o=>o.anio===anio && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
 }
+// "Por cobrar" (facturación bruta pendiente, Pendiente + Por cobrar, SIN filtrar por año — es un
+// saldo actual, no una estadística histórica). Antes solo contaba "Por cobrar", dejando afuera las
+// "Pendiente"; ese era el desfasaje real. Es la misma base (bruta) que "Seguimiento financiero" de
+// arriba, por eso se mide contra los mismos hitos — NO es lo mismo que "Mi comisión" / "Total a
+// cobrar" de la pestaña "Mis operaciones", que es tu parte personal, no la facturación de SOLUM.
 function facPorCobrarPropio(){
   if(SEG_SIN_OPERACIONES.includes(sesionActiva)) return SEG_POR_COBRAR_MANUAL[sesionActiva] || 0;
-  const anio = new Date().getFullYear();
-  return operacionesPropias.filter(o=>o.anio===anio && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  return operacionesPropias.filter(o=>o.estado==='Por cobrar'||o.estado==='Pendiente').reduce((s,o)=>s+(o.comision||0),0);
+}
+function anioFichaSeleccionado(){
+  return parseInt(document.getElementById('ficha-anio-sel')?.value) || new Date().getFullYear();
 }
 
 // Mismo mapeo de nombres que usa index.html al leer la tabla "operaciones" de Sheets.
@@ -910,11 +928,11 @@ function miniTileHTML(label, val, objetivo, color){
 // mes en curso y acumulado anual.
 function renderFichaPersonal(){
   const el = document.getElementById('ficha-personal-wrap'); if(!el) return;
-  const anio = new Date().getFullYear();
+  const anio = anioFichaSeleccionado();
   const mesActual = new Date().getMonth()+1;
   const obj = objVendedorMes(mesActual);
 
-  const facturacion = facturacionAnioPropia();
+  const facturacion = facturacionAnioPropia(anio);
   const facPorCobrar = facPorCobrarPropio();
   const objetivoBase = objetivoBasePropio();
   const premioViaje = viajeUmbralPropio();
@@ -944,7 +962,7 @@ function renderFichaPersonal(){
   el.innerHTML = `
   <div class="kpi-board">
     <div class="kpi-tier">
-      <div class="kpi-tier-label">Seguimiento financiero</div>
+      <div class="kpi-tier-label">Seguimiento financiero (facturación bruta, no tu comisión)</div>
       <div style="font-size:26px;font-weight:800">${fmtN2(facturacion)}<small style="font-size:11px;color:var(--text3);font-weight:600"> acumulado ${anio}</small></div>
       <div class="fact-bar-wrap">
         <div class="fact-bar-fill" style="width:${pctFactScale}%"></div>
@@ -959,7 +977,7 @@ function renderFichaPersonal(){
         <div class="fact-marker-lbl${facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%;${left70>85?'transform:translateX(-100%)':''}">📈 70%: ${fmtN2(NIVEL70_UMBRAL)}</div>` : ''}
       </div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:10.5px;color:var(--text2)">
-        <span>Por cobrar: <b>${fmtN2(facPorCobrar)}</b></span>
+        <span title="Facturación bruta pendiente, no tu comisión personal">Por cobrar (bruto): <b>${fmtN2(facPorCobrar)}</b></span>
         <span>Faltan para objetivo: <b>${fmtN2(Math.max(0,objetivoBase-facturacion))}</b></span>
         <span>Faltan para premio: <b>${fmtN2(Math.max(0,premioViaje-facturacion))}</b></span>
       </div>
@@ -1571,6 +1589,22 @@ function renderBusquedas(){
 // que usa Martina en index.html (COMISIONES).
 // ═══════════════════════════════════════════════
 const PCT_ASESOR = {Martina:0.80, Kito:0.60, Vicky:0.50, Manu:0.50, Marce:0.50, Cris:0.50, Ceci:0.50, Jose:0.50, Luli:0.50, Joaquin:0.50, Franco:0.50};
+// % real vigente, con la misma escalera que usan index.html/operaciones.html (arranca en el nivel
+// heredado del cierre del año anterior y sube durante el año en curso según lo acumulado: 50% hasta
+// $40.000 de facturación bruta, 60% hasta $50.000, 70% en adelante). Antes esta pantalla usaba
+// siempre el 50% fijo de PCT_ASESOR, sin importar el nivel real del asesor — ese era el bug real.
+function nivelPorFacturacionAs(fact){
+  if(fact>=50000) return 0.70;
+  if(fact>=40000) return 0.60;
+  return 0.50;
+}
+function pctVigenteAsesor(anio){
+  if(sesionActiva==='Martina') return PCT_ASESOR.Martina;
+  if(sesionActiva==='Kito') return PCT_ASESOR.Kito;
+  const inicio = nivelPorFacturacionAs(facturacionAnioPropia(anio-1));
+  const porAcumulado = nivelPorFacturacionAs(facturacionAnioPropia(anio));
+  return Math.max(inicio, porAcumulado);
+}
 
 function fileToBase64As(file){
   return new Promise((res,rej)=>{
@@ -1675,7 +1709,12 @@ async function procesarAccionReservaAsesor(accion){
   if(!precio || !d.propiedad) return false;
   const pctComision = parseFloat(d.pct_comision) || 0.03;
   const comision = Math.round(precio*pctComision*100)/100;
-  const pct = PCT_ASESOR[sesionActiva] ?? 0.50;
+  const fechaReserva = d.fechaReserva || fechaHoyDDMM();
+  const fechaEsc = d.fechaEsc || fechaReserva;
+  // El % vigente depende del año de la fecha de cobro (mismo criterio que pctAsesorVigente en
+  // index.html/operaciones.html), por eso fechaEsc se calcula antes de usarlo acá.
+  const anioParaPct = (parseFechaDDMM(fechaEsc) || new Date()).getFullYear();
+  const pct = pctVigenteAsesor(anioParaPct);
   const esMartinaProp = sesionActiva==='Martina';
   // Franco no es parte del equipo: se queda con toda su comisión, sin cortar para Martina ni SOLUM.
   const esFranco = sesionActiva==='Franco';
@@ -1687,8 +1726,6 @@ async function procesarAccionReservaAsesor(accion){
     comision_vendedor = esMartinaProp ? 0 : Math.round(comision*pct*100)/100;
     ganancia_martina = esMartinaProp ? Math.round((comision-ganancia_solum)*100)/100 : Math.round((comision-comision_vendedor-ganancia_solum)*100)/100;
   }
-  const fechaReserva = d.fechaReserva || fechaHoyDDMM();
-  const fechaEsc = d.fechaEsc || fechaReserva;
   // mes/año se derivan de la fecha de cobro (fechaEsc), igual criterio que procesarAccion() en index.html.
   const fEsc = parseFechaDDMM(fechaEsc) || new Date();
   const fReserva = parseFechaDDMM(fechaReserva) || fEsc;
@@ -1768,7 +1805,7 @@ No generes ningún otro tipo de ACCION. No menciones nombres de otros asesores n
     chatHistoryAs.push({role:'user', content: content.length ? content : text});
     const resp = await fetch('/.netlify/functions/claude',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1000, system:systemPrompt, messages:chatHistoryAs})
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:1500, system:systemPrompt, messages:chatHistoryAs})
     });
     const data = await resp.json();
     const reply = data.content?.[0]?.text || 'Error al conectar.';
@@ -1808,13 +1845,13 @@ function renderMisOperaciones(){
   const ops = mesSel==='all' ? todas : todas.filter(o=>o.mes===parseInt(mesSel) && o.anio===anio);
   if(!todas.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
   const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--blue)'};
-  const totalACobrar = todas.filter(o=>o.estado==='Pendiente'||o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision_vendedor||0),0);
-  const totalCobrado = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision_vendedor||0),0);
+  const totalACobrar = todas.filter(o=>o.estado==='Pendiente'||o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  const totalCobrado = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
   const labelCobrado = mesSel==='all' ? 'Total cobrado (año completo)' : 'Total cobrado en '+MESES_NOMBRES[parseInt(mesSel)];
   el.innerHTML = `
   <div style="display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 14px">
     <div style="flex:1;min-width:200px;padding:12px 16px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:12px;color:var(--text3)">Total a cobrar (pendientes + por cobrar)</span>
+      <span style="font-size:12px;color:var(--text3)">Facturación bruta a cobrar (pendientes + por cobrar)</span>
       <span style="font-size:18px;font-weight:800;color:var(--amber)">${fmtN2(totalACobrar)}</span>
     </div>
     <div style="flex:1;min-width:200px;padding:12px 16px;background:var(--card2);border:1px solid rgba(255,255,255,0.08);border-radius:10px;display:flex;justify-content:space-between;align-items:center">

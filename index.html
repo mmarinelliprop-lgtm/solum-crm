@@ -646,7 +646,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
       </select>
       <select class="filter-select" id="dash-anio" onchange="renderDashboard()">
-        <option value="2026" selected>2026</option><option value="2025">2025</option>
+        <option value="2027">2027</option><option value="2026" selected>2026</option><option value="2025">2025</option>
         <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
     </div>
@@ -721,7 +721,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
       </select>
       <select class="filter-select" id="gan-anio" onchange="renderGanancia()">
-        <option value="2026" selected>2026</option><option value="2025">2025</option>
+        <option value="2027">2027</option><option value="2026" selected>2026</option><option value="2025">2025</option>
         <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
       <select class="filter-select" id="gan-agente" onchange="renderGanancia()">
@@ -950,7 +950,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
     <div class="section-sub">Personal · Negocio · Reciclaje · Patrimonio</div></div>
     <div style="display:flex;gap:6px;align-items:center">
       <select class="filter-select" id="fin-anio" onchange="renderFinanzas()">
-        <option value="2026">2026</option><option value="2025">2025</option>
+        <option value="2027">2027</option><option value="2026">2026</option><option value="2025">2025</option>
         <option value="2024">2024</option><option value="2023">2023</option><option value="2022">2022</option>
       </select>
     </div>
@@ -1903,14 +1903,26 @@ async function dbLeer(tipo) {
   } catch(e) { return []; }
 }
 
-async function dbActualizar(tipo, id, fila) {
+// Devuelve true/false según si realmente se guardó en Sheets — antes esta función no revisaba
+// la respuesta del servidor, así que un fallo (red caída, Apps Script con error) quedaba
+// completamente silencioso: la app decía "actualizado" aunque no se hubiera escrito nada.
+// Reintenta una vez antes de darse por vencida.
+async function dbActualizar(tipo, id, fila, _esReintento) {
   try {
-    await fetch(DB_URL, {
+    const r = await fetch(DB_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({tipo, accion:'actualizar', id, fila})
     });
-  } catch(e) { console.error('dbActualizar error:', e); }
+    const d = await r.json().catch(()=>null);
+    if(r.ok && (!d || d.ok!==false)) return true;
+    throw new Error((d && d.error) || ('HTTP '+r.status));
+  } catch(e) {
+    console.error('dbActualizar error:', e);
+    if(!_esReintento) return dbActualizar(tipo, id, fila, true);
+    showToast('⚠️ No se pudo guardar el cambio en la planilla. Probá de nuevo o revisá la conexión.');
+    return false;
+  }
 }
 
 async function dbGuardarMemoria(clave, valor) {
@@ -2610,10 +2622,11 @@ const SEG_SIN_OPERACIONES = ['Franco'];
 // "Por cobrar" de los vendedores de SEG_SIN_OPERACIONES — a mano, porque no hay operaciones de
 // donde calcularlo. Ajustar acá cuando cambie.
 const SEG_POR_COBRAR_MANUAL = { 'Franco': 2550 };
+// Saldo pendiente actual (facturación bruta): Pendiente + Por cobrar, sin filtrar por año — antes
+// solo contaba "Por cobrar" y dejaba afuera "Pendiente", ese era el desfasaje real.
 function facPorCobrarDeAgente(vendedor){
   if(SEG_SIN_OPERACIONES.includes(vendedor)) return SEG_POR_COBRAR_MANUAL[vendedor] || 0;
-  const anioSeg = new Date().getFullYear();
-  return operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && o.anio===anioSeg && o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
+  return operaciones.filter(o=>normAgente(o.agente)===normAgente(vendedor) && (o.estado==='Por cobrar'||o.estado==='Pendiente')).reduce((s,o)=>s+(o.comision||0),0);
 }
 
 function getSegMes(vendedor, mes, anio) {
@@ -2865,7 +2878,7 @@ function navSegInput(e, el){
   if(next){ next.focus(); next.select(); }
 }
 
-function actualizarOp(id, campo, valor){
+async function actualizarOp(id, campo, valor){
   const op = operaciones.find(o=>o.id===id);
   if(!op) return;
   if(campo==='precio' || campo==='pctComision'){
@@ -2906,27 +2919,29 @@ function actualizarOp(id, campo, valor){
   } else {
     op[campo]=valor;
   }
-  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+  const ok = await dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
     op.notas||'',op.rendicion||'pendiente_asesor',op.eliminada||false]);
   detectarIncongruencias();
   renderDashboard();
   renderOperaciones();
-  showToast('✅ Operación actualizada');
+  if(ok) showToast('✅ Operación actualizada');
+  // Si falló, dbActualizar ya mostró su propio aviso de error — no se pisa con un falso "✅".
 }
 
 // Eliminado lógico: la operación desaparece de toda la app (tablas, totales, dashboard), pero
 // la fila queda en la planilla marcada como eliminada por si hace falta auditarla después.
-function eliminarOperacion(id){
+async function eliminarOperacion(id){
   const op = operaciones.find(o=>o.id===id);
   if(!op) return;
   if(!confirm('¿Está seguro que quiere borrar esta operación?')) return;
   op.eliminada = true;
-  dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
+  const ok = await dbActualizar('operaciones', op.id, [op.id,op.propiedad,op.agente,op.punta,
     op.precio,op.comision,op.comision_vendedor||0,op.ganancia_martina,op.ganancia_solum,
     op.fechaEsc,op.fechaReserva||'',op.estado,op.mes,op.anio,op.planillaGenerada||false,
     op.notas||'',op.rendicion||'pendiente_asesor',true]);
+  if(!ok){ op.eliminada = false; return; } // si falló el guardado, no la sacamos de la vista
   operaciones = operaciones.filter(o=>o.id!==id);
   detectarIncongruencias();
   renderDashboard();
