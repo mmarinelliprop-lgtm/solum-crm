@@ -267,7 +267,7 @@ body{font-family:'Montserrat','Segoe UI',system-ui,sans-serif;background:var(--b
     <div class="card-title" style="padding-left:2px">Cargar una reserva</div>
     <div class="chat-wrap">
       <div class="chat-messages" id="chatMessagesAs">
-        <div class="msg msg-claude">Hola 👋 Subí una foto de la reserva o escribime los datos (propiedad, precio, punta, fecha, cliente) y te la cargo como "Por cobrar" a tu nombre.</div>
+        <div class="msg msg-claude">Hola 👋 Subí una foto de la reserva o escribime los datos (propiedad, precio, punta, fecha, cliente) y te la cargo como "Conformado" a tu nombre.</div>
       </div>
       <div id="filePreviewAreaAs"></div>
       <div class="chat-input-area">
@@ -359,9 +359,21 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
-async function dbGuardar(tipo, fila){
-  try{ await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'guardar',fila})}); }
-  catch(e){ console.error('dbGuardar error:', e); }
+// Devuelve true/false según si realmente se guardó en Sheets — antes no revisaba la respuesta
+// del servidor, así que una reserva cargada por el chat podía "perderse" en silencio si fallaba
+// el guardado (la app seguía como si nada). Reintenta una vez antes de avisar.
+async function dbGuardar(tipo, fila, _esReintento){
+  try{
+    const r = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'guardar',fila})});
+    const d = await r.json().catch(()=>null);
+    if(r.ok && (!d || d.ok!==false)) return true;
+    throw new Error((d && d.error) || ('HTTP '+r.status));
+  }catch(e){
+    console.error('dbGuardar error:', e);
+    if(!_esReintento) return dbGuardar(tipo, fila, true);
+    showToast('⚠️ No se pudo guardar en la planilla. Probá de nuevo.');
+    return false;
+  }
 }
 async function dbLeer(tipo){
   try{
@@ -977,7 +989,7 @@ function renderFichaPersonal(){
         <div class="fact-marker-lbl${facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%;${left70>85?'transform:translateX(-100%)':''}">📈 70%: ${fmtN2(NIVEL70_UMBRAL)}</div>` : ''}
       </div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:10.5px;color:var(--text2)">
-        <span title="Facturación bruta pendiente, no tu comisión personal">Por cobrar (bruto): <b>${fmtN2(facPorCobrar)}</b></span>
+        <span title="Facturación bruta pendiente, no tu comisión personal">Conformado (bruto): <b>${fmtN2(facPorCobrar)}</b></span>
         <span>Faltan para objetivo: <b>${fmtN2(Math.max(0,objetivoBase-facturacion))}</b></span>
         <span>Faltan para premio: <b>${fmtN2(Math.max(0,premioViaje-facturacion))}</b></span>
       </div>
@@ -1744,11 +1756,14 @@ async function procesarAccionReservaAsesor(accion){
     mes: fEsc.getMonth()+1, anio: fEsc.getFullYear(),
     notas: notasPartes.join(' — ')
   };
+  // Guardar primero en Sheets y solo si funcionó de verdad agregarla a la vista — si no, el chat
+  // no puede decir "reserva cargada" cuando en realidad no quedó guardada en ningún lado.
+  const guardadoOk = await dbGuardar('operaciones', filaOperacionAs(op));
+  if(!guardadoOk){ _siguienteIdOp--; return false; }
   const mesReservaOp = fReserva.getMonth()+1, anioReservaOp = fReserva.getFullYear();
   operacionesPropias.push({id:op.id, propiedad:op.propiedad, agente:op.agente, estado:op.estado,
     mes:op.mes, anio:op.anio, mesReserva:mesReservaOp, anioReserva:anioReservaOp, precio:op.precio, comision:op.comision,
     comision_vendedor:op.comision_vendedor, fechaEsc:op.fechaEsc, fechaReserva:op.fechaReserva});
-  await dbGuardar('operaciones', filaOperacionAs(op));
   return true;
 }
 
@@ -1780,7 +1795,7 @@ Extraé de la imagen/texto estos campos, igual que en el sistema principal:
 3. Punta → "Vendedor" o "Comprador". Si no está claro, preguntá SIEMPRE si tiene una sola punta o las dos (vendedor Y comprador) antes de seguir. Si tiene las DOS puntas, son DOS reservas separadas: vas a tener que generar dos bloques ACCION al final, uno con "punta":"Vendedor" y otro con "punta":"Comprador" (mismo precio e iguales datos de fecha/cliente salvo que se indique lo contrario), y mostrar el resumen de ambas antes de pedir la confirmación única.
 4. Fecha de reserva → "fechaReserva" (dd/mm/aaaa): la fecha escrita al pie de la reserva, el día en que se firma. Es un dato obligatorio — si no figura en la imagen/texto, PREGUNTALA explícitamente, no la completes con la fecha de hoy ni la dejes vacía.
 5. Fecha de cobro estimada → "fechaEsc" (dd/mm/aaaa): fecha del boleto o de la escritura, la que ocurra primero — es la fecha en la que se espera cobrar la comisión. También es obligatoria; si no figura, PREGUNTALA (puede ser una fecha estimada a futuro, no hace falta que ya haya pasado).
-6. Estado → "estado": "Pendiente" si la reserva todavía no fue aceptada/firmada por las dos partes (es una oferta/seña en curso), o "Por cobrar" si ya está firmada y confirmada por ambas partes. Es obligatorio — preguntá cuál de las dos es si no queda claro. Nunca uses otro valor (no existe la opción de cargar como ya cobrada o caída desde acá).
+6. Estado → "estado": "Pendiente" si la reserva todavía no fue aceptada/firmada por las dos partes (es una oferta/seña en curso), o "Por cobrar" (llamalo "Conformado" al hablar con el asesor) si ya está firmada y confirmada por ambas partes. Es obligatorio — preguntá cuál de las dos es si no queda claro. Nunca uses otro valor (no existe la opción de cargar como ya cobrada o caída desde acá).
 7. % de comisión → "pct_comision" SOLO si dice algo distinto al 3% estándar (ej. 0.03 para 3%, 0.04 para 4%).
 8. Datos del cliente si figuran: nombre completo → "cliente", DNI/CUIT → "cuit", teléfono → "telefono", mail → "mail".
 
@@ -1844,7 +1859,8 @@ function renderMisOperaciones(){
   // lo pendiente sigue pendiente sin importar qué mes se esté mirando.
   const ops = mesSel==='all' ? todas : todas.filter(o=>o.mes===parseInt(mesSel) && o.anio===anio);
   if(!todas.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
-  const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--blue)'};
+  const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--red)'};
+  const estadoLabel = {Cobrada:'Cobrada','Por cobrar':'Conformado',Caída:'Caída',Pendiente:'Pendiente'};
   const totalACobrar = todas.filter(o=>o.estado==='Pendiente'||o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
   const totalCobrado = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
   const labelCobrado = mesSel==='all' ? 'Total cobrado (año completo)' : 'Total cobrado en '+MESES_NOMBRES[parseInt(mesSel)];
@@ -1869,7 +1885,7 @@ function renderMisOperaciones(){
       <td>${o.precio ? (o.comision/o.precio*100).toFixed(1).replace(/\.0$/,'') : '—'}%</td>
       <td>${fmtN2(o.comision)}</td>
       <td>${fmtN2(o.comision_vendedor)}</td>
-      <td style="color:${estadoColor[o.estado]||'var(--text3)'};font-weight:700">${o.estado}</td>
+      <td style="color:${estadoColor[o.estado]||'var(--text3)'};font-weight:700">${o.estado==='Pendiente'?`<span style="background:var(--red);color:#fff;padding:2px 8px;border-radius:6px;font-weight:800">Pendiente</span>`:(estadoLabel[o.estado]||o.estado)}</td>
       <td>${o.fechaReserva||'—'}</td>
       <td>${o.fechaEsc||'—'}</td>
     </tr>`).join('')}

@@ -691,8 +691,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <div class="chart-wrap"><canvas id="chartFacturacion"></canvas></div>
         <div class="cleg">
           <span><i style="background:#2DD4C4"></i>Cobrada</span>
-          <span><i style="background:#D9B25C"></i>Por cobrar</span>
-          <span><i style="background:#A596C4"></i>Pendiente</span>
+          <span><i style="background:#D9B25C"></i>Conformado</span>
+          <span><i style="background:#FF4D97"></i>Pendiente</span>
           <span><i style="background:#E39A8B"></i>Caída</span>
         </div>
       </div>
@@ -847,7 +847,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
       <span class="filter-label">Estado</span>
       <button type="button" id="op-estado-btn" onclick="toggleEstadoDropdown()" class="filter-select"
         style="display:flex;align-items:center;gap:6px;min-width:150px;justify-content:space-between">
-        <span id="op-estado-btn-label">Por cobrar</span><span style="font-size:9px;opacity:.7">▼</span>
+        <span id="op-estado-btn-label">Conformado</span><span style="font-size:9px;opacity:.7">▼</span>
       </button>
       <div id="op-estado-dropdown" class="hidden" style="position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid rgba(var(--w),0.1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;min-width:170px;padding:8px">
         <div style="display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(var(--w),0.08)">
@@ -855,11 +855,11 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
           <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosEstados(false)">Deseleccionar</button>
         </div>
         <div id="op-estado-checks" style="display:flex;flex-direction:column;gap:2px">
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--red);font-weight:800;cursor:pointer;padding:4px 6px;border-radius:5px">
             <input type="checkbox" value="Pendiente" onchange="renderOperaciones()" style="cursor:pointer"> Pendiente
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
-            <input type="checkbox" value="Por cobrar" checked onchange="renderOperaciones()" style="cursor:pointer"> Por cobrar
+            <input type="checkbox" value="Por cobrar" checked onchange="renderOperaciones()" style="cursor:pointer"> Conformado
           </label>
           <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
             <input type="checkbox" value="Cobrada" onchange="renderOperaciones()" style="cursor:pointer"> Cobrada
@@ -1294,6 +1294,9 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
         <option value="Franco">Franco</option>
       </select>
       <select class="filter-select" id="seg-mes-sel" onchange="segMesActivo=parseInt(this.value);renderSeguimiento()"></select>
+      <select class="filter-select" id="seg-anio-sel" onchange="renderSeguimiento()">
+        <option value="2027">2027</option><option value="2026" selected>2026</option><option value="2025">2025</option>
+      </select>
       <button class="btn btn-gold btn-sm" onclick="guardarSeguimiento()">💾 Guardar</button>
       <button id="btn-seg-guardar-pendientes" class="btn btn-sm" onclick="guardarCambiosPendientes()" style="display:none;background:var(--amber);color:var(--bg);animation:pulse 1s infinite">💾 Guardar cambios</button>
       <button class="btn btn-outline btn-sm no-print" onclick="window.print()">🖨️ Imprimir / PDF</button>
@@ -1445,7 +1448,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--gold);}
   <div class="modal">
     <div class="modal-title" id="modalEstadoTitle">Cambiar estado</div>
     <div style="display:flex;gap:10px;margin-top:8px;">
-      <button class="btn btn-outline" style="flex:1" onclick="cambiarEstado('Por cobrar')">🟡 Por cobrar</button>
+      <button class="btn btn-outline" style="flex:1;color:var(--red);border-color:var(--red);font-weight:800" onclick="cambiarEstado('Pendiente')">Pendiente</button>
+      <button class="btn btn-outline" style="flex:1" onclick="cambiarEstado('Por cobrar')">🟡 Conformado</button>
       <button class="btn btn-green" style="flex:1" onclick="cambiarEstado('Cobrada')">✅ Cobrada</button>
       <button class="btn btn-red" style="flex:1" onclick="cambiarEstado('Caída')">❌ Caída</button>
     </div>
@@ -1680,14 +1684,24 @@ const DB_URL = '/.netlify/functions/sheets';
 // ═══════════════════════════════════════════════
 // PERSISTENCIA — Google Sheets via Netlify proxy
 // ═══════════════════════════════════════════════
-async function dbGuardar(tipo, fila) {
+// Devuelve true/false según si realmente se guardó en Sheets — antes no revisaba la respuesta
+// del servidor, así que un guardado podía fallar en silencio. Reintenta una vez antes de avisar.
+async function dbGuardar(tipo, fila, _esReintento) {
   try {
-    await fetch(DB_URL, {
+    const r = await fetch(DB_URL, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({tipo, accion:'guardar', fila})
     });
-  } catch(e) { console.error('dbGuardar error:', e); }
+    const d = await r.json().catch(()=>null);
+    if(r.ok && (!d || d.ok!==false)) return true;
+    throw new Error((d && d.error) || ('HTTP '+r.status));
+  } catch(e) {
+    console.error('dbGuardar error:', e);
+    if(!_esReintento) return dbGuardar(tipo, fila, true);
+    showToast('⚠️ No se pudo guardar en la planilla. Probá de nuevo o revisá la conexión.');
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -3341,9 +3355,14 @@ function renderDashboard(){
   });
 
 
+  // Lo reservado en noviembre/diciembre suele cobrarse recién en enero del año siguiente, y ese
+  // cobro sigue contando para el objetivo de ESTE año (no se empieza de cero el 1/1). Por eso,
+  // cuando se mira el año completo, "Por cobrar" y "Pendiente" también suman enero del año que
+  // viene — si se filtra por un mes puntual, no aplica (no tiene sentido mezclarlo ahí).
+  const opsEneroSiguiente = mes==='all' ? operaciones.filter(o=>esDash(o) && o.anio===anio+1 && o.mes===1) : [];
   // Reservas pendientes del seguimiento (solo Por cobrar, excluir caídas y cobradas)
-  const reservasPendientes = ops.filter(o=>o.estado==='Por cobrar').length;
-  const montoPorCobrar = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
+  const reservasPendientes = ops.filter(o=>o.estado==='Por cobrar').length + opsEneroSiguiente.filter(o=>o.estado==='Por cobrar').length;
+  const montoPorCobrar = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0) + opsEneroSiguiente.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
   const cantCaidas = ops.filter(o=>o.estado==='Caída').length;
   const montoCaidas = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
 
@@ -3355,7 +3374,8 @@ function renderDashboard(){
   const fmtN = n => Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:0});
   const cobradasN = ops.filter(o=>o.estado==='Cobrada').length;
   const opsPend = ops.filter(o=>o.estado==='Pendiente');
-  const montoPend = opsPend.reduce((s,o)=>s+(o.comision||0),0);
+  const opsPendEneroSiguiente = opsEneroSiguiente.filter(o=>o.estado==='Pendiente');
+  const montoPend = opsPend.reduce((s,o)=>s+(o.comision||0),0) + opsPendEneroSiguiente.reduce((s,o)=>s+(o.comision||0),0);
   const objetivo = (OBJETIVO_EQUIPO_ANUAL + (dashInclMartina ? OBJETIVOS_VENDEDOR_BASE.Martina : 0)) || 1;
   const pc = v => Math.min(100, v/objetivo*100);
   const pctCobrado = Math.round(cobradas/objetivo*100);
@@ -3370,14 +3390,32 @@ function renderDashboard(){
   document.getElementById('dg-caidas').textContent = `Caídas: ${cantCaidas} · $ ${fmtN(montoCaidas)}`;
   document.getElementById('dg-legend').innerHTML = `
     <div class="lg"><i class="s-cobr"></i>Cobrado (${cobradasN} ops): <b>$ ${fmtN(cobradas)} USD</b></div>
-    <div class="lg"><i class="s-porc"></i>Por cobrar (${reservasPendientes}): <b>$ ${fmtN(montoPorCobrar)} USD</b></div>
-    <div class="lg" title="Reservas hechas pero todavía no aceptadas por ambas partes"><i class="s-pend"></i>Pendiente (${opsPend.length}): <b>$ ${fmtN(montoPend)} USD</b></div>`;
+    <div class="lg"><i class="s-porc"></i>Conformado (${reservasPendientes}): <b>$ ${fmtN(montoPorCobrar)} USD</b></div>
+    <div class="lg" title="Reservas hechas pero todavía no aceptadas por ambas partes"><i class="s-pend"></i>Pendiente (${opsPend.length+opsPendEneroSiguiente.length}): <b>$ ${fmtN(montoPend)} USD</b></div>`;
   document.getElementById('dg-periodo').textContent = (mes==='all' ? 'Año' : MESES_NOMBRES[parseInt(mes)]) + ' ' + anio;
   document.getElementById('dg-ring').style.background = `conic-gradient(var(--green) 0 ${Math.min(100,pctCobrado)}%,rgba(var(--w),.12) ${Math.min(100,pctCobrado)}% 100%)`;
   const faltan = Math.max(0, objetivo - cobradas);
+  // Objetivo del mes en curso (equipo): mismo criterio que la ficha individual — en nov/dic/ene
+  // (cierre del año) es lo que le falta al equipo para el objetivo anual, dividido en 3; en el
+  // resto de los meses es la porción estacional normal del objetivo anual. Si está filtrando por
+  // "Año completo" en vez de un mes puntual, se usa el mes real de hoy.
+  const mesParaHud = mesNum || (new Date().getMonth()+1);
+  const esMesDeCierreHud = mesParaHud===11 || mesParaHud===12 || mesParaHud===1;
+  let objMesHud;
+  if(esMesDeCierreHud){
+    const anioCierreHud = mesParaHud===1 ? anio-1 : anio;
+    const factEquipoCobradaCierreHud = operaciones.filter(o=>esDash(o) && o.anio===anioCierreHud && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
+    objMesHud = Math.round(Math.max(0, objetivo - factEquipoCobradaCierreHud) / 3);
+  } else {
+    objMesHud = Math.round(objetivo * pesoMensual(mesParaHud));
+  }
+  const factMesHud = operaciones.filter(o=>esDash(o) && o.anio===anio && o.mes===mesParaHud && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
+  const pctMesHud = objMesHud>0 ? Math.round(factMesHud/objMesHud*100) : 0;
   document.getElementById('dg-hud').innerHTML = `
     <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--green)"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg></div>
       <div><div class="m-l">Objetivo anual</div><div class="m-v">$ ${fmtN(objetivo)}<small>USD</small></div></div></div>
+    <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--blue)"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 9h16"/></svg></div>
+      <div><div class="m-l">Objetivo del mes (${MESES_NOMBRES[mesParaHud]})${esMesDeCierreHud?' · cierre':''}</div><div class="m-v">$ ${fmtN(factMesHud)}<small> / $ ${fmtN(objMesHud)} · ${pctMesHud}%</small></div></div></div>
     <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--green)"><path d="M6 18L18 6"/><path d="M9 6h9v9"/></svg></div>
       <div><div class="m-l">Proyectado de cierre</div><div class="m-v" id="dg-proy"></div></div></div>
     <div class="m"><div class="ico"><svg viewBox="0 0 24 24" stroke="var(--amber)"><path d="M5 4h14M5 20h14M7 4v3l5 5-5 5v3M17 4v3l-5 5 5 5v3"/></svg></div>
@@ -3391,8 +3429,8 @@ function renderDashboard(){
     type:'bar',
     data:{labels:mesesLabel,datasets:[
       {label:'Cobrada',data:serie('Cobrada'),backgroundColor:'#2DD4C4',borderRadius:3},
-      {label:'Por cobrar',data:serie('Por cobrar'),backgroundColor:'#D9B25C',borderRadius:3},
-      {label:'Pendiente',data:serie('Pendiente'),backgroundColor:'#A596C4',borderRadius:3},
+      {label:'Conformado',data:serie('Por cobrar'),backgroundColor:'#D9B25C',borderRadius:3},
+      {label:'Pendiente',data:serie('Pendiente'),backgroundColor:'#FF4D97',borderRadius:3},
       {label:'Caída',data:serie('Caída'),backgroundColor:'#E39A8B',borderRadius:3}
     ]},
     options:{responsive:true,maintainAspectRatio:false,
@@ -3702,7 +3740,7 @@ function abrirFichaAsesor(nombre){
     <h3>Próximos pasos sugeridos</h3>
     <div class="box"><ul>${proximosPasos}</ul></div>
 
-    <h3>Por cobrar — fecha estimada</h3>
+    <h3>Conformado — fecha estimada</h3>
     <table><thead><tr><th>Propiedad</th><th>Comisión</th><th>Fecha estimada</th></tr></thead><tbody>${filasPorCobrar}</tbody></table>
     <div class="sub" style="margin-top:6px">Total por cobrar: ${fmtUSD(porCobrarMonto)} en ${porCobrar.length} operaciones</div>
 
@@ -3937,9 +3975,9 @@ function renderOperaciones(){
       <td><input style="${inputStyle}" value="${fmtFecha(o.fechaReserva)}" placeholder="dd/mm/aaaa" ${inputFocus} ${inputBlur('fechaReserva', o.id)}></td>
       <td><input style="${inputStyle}" value="${fmtFecha(o.fechaEsc)}" placeholder="—" ${inputFocus} ${inputBlur('fechaEsc', o.id)}></td>
       <td>
-        <select style="${inputStyle}" onchange="actualizarOp(${o.id},'estado',this.value)">
+        <select style="${inputStyle}${o.estado==='Pendiente'?'color:#fff;background:var(--red);border-radius:5px;padding:2px 6px;font-weight:800':''}" onchange="actualizarOp(${o.id},'estado',this.value)">
           <option value="Pendiente" ${o.estado==='Pendiente'?'selected':''}>Pendiente</option>
-          <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Por cobrar</option>
+          <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Conformado</option>
           <option value="Cobrada" ${o.estado==='Cobrada'?'selected':''}>Cobrada</option>
           <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
         </select>
@@ -4740,7 +4778,7 @@ function renderSeguimientoEquipo(){
   document.getElementById('seg-eq-caidas').textContent = `Caídas: ${caidasMes.length} · ${fmtUSD(montoCaidasMes)}`;
   document.getElementById('seg-eq-legend').innerHTML = `
     <div class="lg"><i class="s-cobr"></i>Cobrado: <b>${fmtUSD(factMes)}</b></div>
-    <div class="lg"><i class="s-porc"></i>Por cobrar: <b>${fmtUSD(porCobrarMes)}</b></div>
+    <div class="lg"><i class="s-porc"></i>Conformado: <b>${fmtUSD(porCobrarMes)}</b></div>
     <div class="lg" title="Reservas hechas pero todavía no aceptadas por ambas partes"><i class="s-pend"></i>Pendiente: <b>${fmtUSD(pendienteMes)}</b></div>`;
   document.getElementById('seg-eq-periodo').textContent = MESES_NOMBRES[mes] + ' ' + anio;
   document.getElementById('seg-eq-ring').style.background = `conic-gradient(var(--green) 0 ${Math.min(100,pctCobrado)}%,rgba(var(--w),.12) ${Math.min(100,pctCobrado)}% 100%)`;
@@ -4959,7 +4997,7 @@ function renderSeguimiento(){
   };
   const obj = segObjetivos?.[vendedor]?.[1] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
-  const anioSeg = new Date().getFullYear();
+  const anioSeg = parseInt(document.getElementById('seg-anio-sel')?.value) || new Date().getFullYear();
 
   // ── Hitos cumplidos (objetivo de nivel, cambio de sistema, viaje) — solo los logrados ──
   // Datos financieros globales del vendedor, usados más abajo para armar el tablero KPI unificado
@@ -5086,7 +5124,21 @@ function renderSeguimiento(){
     const leftViaje = Math.min(100, Math.round(premioViaje/scaleMax*100));
     const left60 = Math.min(100, Math.round(NIVEL60_UMBRAL/scaleMax*100));
     const left70 = Math.min(100, Math.round(NIVEL70_UMBRAL/scaleMax*100));
-    const objMesVendedor = Math.round((obj.f||30000) * pesoMensual(mesActual));
+    // Noviembre, diciembre y enero son el cierre del año: lo que se reserva en nov/dic se suele
+    // cobrar recién en enero y sigue contando para el objetivo del año que cierra. Para esos 3
+    // meses el objetivo mensual deja de calcularse por estacionalidad individual y pasa a ser lo
+    // que le falta al EQUIPO para el objetivo anual, dividido en 3 — igual para todos, empujando
+    // el cierre entre todos. Enero cuenta como cierre del año ANTERIOR al seleccionado.
+    const esMesDeCierre = mesHoy===11 || mesHoy===12 || mesHoy===1;
+    let objMesVendedor;
+    if(esMesDeCierre){
+      const anioCierreEquipo = mesHoy===1 ? anioSeg-1 : anioSeg;
+      const factEquipoCobradaCierre = operaciones.filter(o=>AGENTES_EQUIPO_VISIBLE.includes(normAgente(o.agente)) && o.anio===anioCierreEquipo && o.estado==='Cobrada').reduce((s,o)=>s+(o.comision||0),0);
+      const faltaEquipo = Math.max(0, OBJETIVO_EQUIPO_ANUAL - factEquipoCobradaCierre);
+      objMesVendedor = Math.round(faltaEquipo/3);
+    } else {
+      objMesVendedor = Math.round((obj.f||30000) * pesoMensual(mesHoy));
+    }
     const pctMesVendedor = objMesVendedor>0 ? Math.round(dMes.f/objMesVendedor*100) : 0;
 
     kpiEl.innerHTML = `
@@ -5107,7 +5159,7 @@ function renderSeguimiento(){
             <div class="fact-marker-lbl${est.facturacion>=NIVEL70_UMBRAL?' done':''}" style="left:${left70}%;${left70>85?'transform:translateX(-100%)':''}">📈 70%: ${fmtUSD(NIVEL70_UMBRAL)}</div>` : ''}
           </div>
           <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:11px;color:var(--text2)">
-            <span>Por cobrar: <b>${fmtUSD(facPorCobrar)}</b></span>
+            <span>Conformado: <b>${fmtUSD(facPorCobrar)}</b></span>
             <span>Faltan para objetivo: <b>${fmtUSD(Math.max(0,objetivoBase-est.facturacion))}</b></span>
             <span>Faltan para premio: <b>${fmtUSD(Math.max(0,premioViaje-est.facturacion))}</b></span>
           </div>
@@ -6469,7 +6521,7 @@ OPERACIÓN:
 4. Punta → Vendedor o Comprador. Si no está claro → preguntá
 5. Fecha de cobro → "fechaEsc": fecha del boleto o de la escritura, la que ocurra primero. Si el documento no la indica, preguntá.
 5b. Fecha de reserva → "fechaReserva": la fecha escrita al pie de la reserva, que es el día en que se firma. Si no figura, preguntá.
-6. Estado → reserva nueva = "Por cobrar"
+6. Estado → "estado": preguntá SIEMPRE si la reserva ya está firmada/aceptada por las dos partes ("Por cobrar", llamalo "Conformado" al hablar) o si todavía es una oferta/seña en curso sin confirmar por ambas partes ("Pendiente"). Si no te lo aclaran o no queda claro, asumí "Pendiente" por defecto — en general una reserva recién cargada arranca así. Nunca uses otro valor acá (Cobrada/Caída se cambian después, no al cargar).
 7. % comisión → si dice algo distinto al 3% anotalo en "pct_comision"
 8. Calculá: comisión = precio × pct_comision, ganancia_martina según agente
 
@@ -6621,7 +6673,7 @@ function procesarAccion(accion){
     // Respetar el estado que viene en el JSON
     const estadoMap = {'Cobrada':'Cobrada','Por cobrar':'Por cobrar','Caída':'Caída','Pendiente':'Pendiente','pendiente':'Pendiente',
                        'cobrada':'Cobrada','por cobrar':'Por cobrar','caída':'Caída','caida':'Caída'};
-    const estado = estadoMap[d.estado] || 'Por cobrar';
+    const estado = estadoMap[d.estado] || 'Pendiente';
 
     // Calcular ganancia si no viene en el JSON
     const agNorm = normAgente(d.agente)||d.agente||'Martina';
@@ -6768,7 +6820,7 @@ function openCambiarEstado(id){opIdSeleccionada=id;document.getElementById('moda
 function openAddExchange(){openModal('modalExchange');}
 function openAddGasto(){openModal('modalGasto');}
 
-function guardarOperacion(){
+async function guardarOperacion(){
   const prop = document.getElementById('mo-propiedad').value.trim();
   const precio = parseFloat(document.getElementById('mo-precio').value)||0;
   if(!prop||!precio){showToast('⚠️ Completá propiedad y precio','amber');return;}
@@ -6794,8 +6846,9 @@ function guardarOperacion(){
     fechaEsc: fechaEscVal, fechaReserva: fechaResVal || fechaHoyDDMM(),
     estado: 'Por cobrar', mes, anio, planillaGenerada: false, notas: '', rendicion: 'pendiente_asesor'
   };
+  const ok = await dbGuardar('operaciones', filaOperacion(op));
+  if(!ok) return; // dbGuardar ya mostró el aviso de error; no se agrega si no se guardó de verdad
   operaciones.push(op);
-  dbGuardar('operaciones', filaOperacion(op));
   closeModal('modalNuevaOp');
   renderOperaciones();
   showToast('✅ Operación cargada');
