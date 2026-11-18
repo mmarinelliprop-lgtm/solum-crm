@@ -122,14 +122,32 @@ input.cell:focus,select.cell:focus{border-color:var(--gold);outline:none;backgro
         <option value="all" selected>Todos</option>
       </select>
     </div>
-    <div><span class="filter-label">Estado</span>
-      <select class="filter-select" id="op-estado" onchange="renderTabla()">
-        <option value="all" selected>Todos</option>
-        <option value="Pendiente">Pendiente</option>
-        <option value="Por cobrar">Conformado</option>
-        <option value="Cobrada">Cobrada</option>
-        <option value="Caída">Caída</option>
-      </select>
+    <div style="position:relative">
+      <span class="filter-label">Estado</span>
+      <button type="button" id="op-estado-btn" onclick="toggleEstadoDropdown()" class="filter-select"
+        style="display:flex;align-items:center;gap:6px;min-width:170px;justify-content:space-between">
+        <span id="op-estado-btn-label">Pendiente, Conformado</span><span style="font-size:9px;opacity:.7">▼</span>
+      </button>
+      <div id="op-estado-dropdown" class="hidden" style="position:absolute;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.4);z-index:50;min-width:170px;padding:8px">
+        <div style="display:flex;gap:6px;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.08)">
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosEstados(true)">Seleccionar todos</button>
+          <button type="button" class="btn btn-outline btn-sm" style="flex:1;font-size:10px;padding:4px" onclick="marcarTodosEstados(false)">Deseleccionar</button>
+        </div>
+        <div id="op-estado-checks" style="display:flex;flex-direction:column;gap:2px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--red);font-weight:800;cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Pendiente" checked onchange="renderTabla()" style="cursor:pointer"> Pendiente
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Por cobrar" checked onchange="renderTabla()" style="cursor:pointer"> Conformado
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Cobrada" onchange="renderTabla()" style="cursor:pointer"> Cobrada
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;padding:4px 6px;border-radius:5px">
+            <input type="checkbox" value="Caída" onchange="renderTabla()" style="cursor:pointer"> Caída
+          </label>
+        </div>
+      </div>
     </div>
     <div><span class="filter-label">Año</span>
       <select class="filter-select" id="op-anio" onchange="renderTabla()">
@@ -921,9 +939,35 @@ function poblarFiltroAgentes(){
   if(agentes.includes(actual)) sel.value = actual;
 }
 
+function toggleEstadoDropdown(){
+  const dd = document.getElementById('op-estado-dropdown');
+  if(!dd) return;
+  dd.classList.toggle('hidden');
+}
+document.addEventListener('click', function(e){
+  const dd = document.getElementById('op-estado-dropdown');
+  const btn = document.getElementById('op-estado-btn');
+  if(dd && !dd.classList.contains('hidden') && !dd.contains(e.target) && e.target!==btn && !btn?.contains(e.target)){
+    dd.classList.add('hidden');
+  }
+});
+function marcarTodosEstados(val){
+  document.querySelectorAll('#op-estado-checks input[type="checkbox"]').forEach(c=>c.checked=val);
+  renderTabla();
+}
+function actualizarLabelEstados(seleccionados, total){
+  const lbl = document.getElementById('op-estado-btn-label');
+  if(!lbl) return;
+  if(seleccionados.length===0) lbl.textContent = 'Ninguno';
+  else if(seleccionados.length===total) lbl.textContent = 'Todos';
+  else lbl.textContent = seleccionados.map(v=>v==='Por cobrar'?'Conformado':v).join(', ');
+}
+
 function renderTabla(){
   const mes = document.getElementById('op-mes').value;
-  const estado = document.getElementById('op-estado').value;
+  const estadoCheckboxes = document.querySelectorAll('#op-estado-checks input[type="checkbox"]');
+  const estadosChecks = Array.from(estadoCheckboxes).filter(c=>c.checked).map(c=>c.value);
+  actualizarLabelEstados(estadosChecks, estadoCheckboxes.length);
   const anioVal = document.getElementById('op-anio').value;
   const agenteVal = document.getElementById('op-agente').value;
 
@@ -932,7 +976,8 @@ function renderTabla(){
   if(anioVal!=='all') ops = ops.filter(o=>o.anio===parseInt(anioVal));
   if(mes!=='all') ops = ops.filter(o=>o.mes===parseInt(mes));
   if(mesReservaVal!=='all') ops = ops.filter(o=>o.mesReserva===parseInt(mesReservaVal));
-  if(estado!=='all') ops = ops.filter(o=>o.estado===estado);
+  if(estadosChecks.length>0 && estadosChecks.length<estadoCheckboxes.length) ops = ops.filter(o=>estadosChecks.includes(o.estado));
+  else if(estadosChecks.length===0) ops = [];
   if(agenteVal!=='all') ops = ops.filter(o=>o.agente===agenteVal);
 
   const estadoClass = {'Pendiente':'est-pendiente','Por cobrar':'est-cobrar','Cobrada':'est-cobrada','Caída':'est-caida'};
