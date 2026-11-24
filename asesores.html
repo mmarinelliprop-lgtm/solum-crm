@@ -375,6 +375,19 @@ async function dbGuardar(tipo, fila, _esReintento){
     return false;
   }
 }
+async function dbActualizar(tipo, id, fila, _esReintento){
+  try{
+    const r = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'actualizar',id,fila})});
+    const d = await r.json().catch(()=>null);
+    if(r.ok && (!d || d.ok!==false)) return true;
+    throw new Error((d && d.error) || ('HTTP '+r.status));
+  }catch(e){
+    console.error('dbActualizar error:', e);
+    if(!_esReintento) return dbActualizar(tipo, id, fila, true);
+    showToast('⚠️ No se pudo guardar el cambio en la planilla. Probá de nuevo.');
+    return false;
+  }
+}
 async function dbLeer(tipo){
   try{
     const r = await fetch(DB_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,accion:'leer'})});
@@ -817,8 +830,9 @@ async function cargarTodo(){
       const mesReserva = fReserva ? fReserva.getMonth()+1 : mes;
       const anioReserva = fReserva ? fReserva.getFullYear() : anio;
       return { id:r[0], propiedad:r[1], agente, estado: r[11], mes, anio, mesReserva, anioReserva,
-        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0, comision_vendedor: parseFloat(r[6])||0, fechaEsc, fechaReserva };
-    }).filter(o=>o.agente===sesionActiva);
+        precio: parseFloat(r[4])||0, comision: parseFloat(r[5])||0, comision_vendedor: parseFloat(r[6])||0, fechaEsc, fechaReserva,
+        eliminada: r[17]==='true'||r[17]===true };
+    }).filter(o=>o.agente===sesionActiva && !o.eliminada);
   }
 
   // Búsquedas vigentes del mes actual: cuenta las que siguen "en_proceso" en este momento,
@@ -1711,7 +1725,37 @@ function extraerAccionesAs(text){
 function filaOperacionAs(op){
   return [op.id, op.propiedad, op.agente, op.punta, op.precio, op.comision, op.comision_vendedor||0,
     op.ganancia_martina||0, op.ganancia_solum||0, op.fechaEsc||'', op.fechaReserva||'', op.estado,
-    op.mes, op.anio, false, op.notas||'', 'pendiente_asesor'];
+    op.mes, op.anio, false, op.notas||'', 'pendiente_asesor', op.eliminada||false];
+}
+// Solo Franco puede editar los datos de sus propias operaciones ya cargadas (no es parte del
+// equipo, así que no hay reparto que recalcular: su comisión_vendedor siempre es el 100% de la
+// comisión). El resto de los asesores sigue sin poder editar lo que ya cargaron.
+async function actualizarOpPropia(id, campo, valor){
+  if(sesionActiva!=='Franco') return;
+  const op = operacionesPropias.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  const valorAnterior = op[campo];
+  if(campo==='precio' || campo==='comision'){
+    op[campo] = parseFloat(valor)||0;
+    if(campo==='precio'){
+      // Mantiene el % vigente y solo recalcula el monto, igual criterio que el resto de la app.
+      const pctVigente = valorAnterior ? (op.comision/valorAnterior) : 0.03;
+      op.comision = Math.round(op.precio*pctVigente*100)/100;
+    }
+    op.comision_vendedor = op.comision; // Franco se queda con el 100%
+  } else if(campo==='fechaEsc' || campo==='fechaReserva'){
+    op[campo] = isoToDDMM(valor) || valor;
+    if(campo==='fechaEsc'){
+      const f = parseFechaDDMM(op[campo]);
+      if(f){ op.mes = f.getMonth()+1; op.anio = f.getFullYear(); }
+    }
+  } else {
+    op[campo] = valor;
+  }
+  const ok = await dbActualizar('operaciones', op.id, filaOperacionAs(op));
+  if(!ok){ op[campo] = valorAnterior; renderMisOperaciones(); return; }
+  renderMisOperaciones();
+  showToast('✅ Actualizado');
 }
 
 async function procesarAccionReservaAsesor(accion){
@@ -1859,6 +1903,7 @@ function renderMisOperaciones(){
   // lo pendiente sigue pendiente sin importar qué mes se esté mirando.
   const ops = mesSel==='all' ? todas : todas.filter(o=>o.mes===parseInt(mesSel) && o.anio===anio);
   if(!todas.length){ el.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-top:10px">Todavía no tenés operaciones cargadas.</div>'; return; }
+  const esFranco = sesionActiva==='Franco';
   const estadoColor = {Cobrada:'var(--green)','Por cobrar':'var(--amber)',Caída:'var(--red)',Pendiente:'var(--red)'};
   const estadoLabel = {Cobrada:'Cobrada','Por cobrar':'Conformado',Caída:'Caída',Pendiente:'Pendiente'};
   const totalACobrar = todas.filter(o=>o.estado==='Pendiente'||o.estado==='Por cobrar').reduce((s,o)=>s+(o.comision||0),0);
@@ -1879,7 +1924,23 @@ function renderMisOperaciones(){
   <table class="mis-ops-table"><thead><tr>
     <th>Propiedad</th><th>Precio</th><th>% Comisión</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha de reserva</th><th>Fecha de cobro</th>
   </tr></thead><tbody>
-    ${ops.map(o=>`<tr>
+    ${ops.map(o=> esFranco ? `<tr>
+      <td><input class="inp" style="min-width:140px" value="${o.propiedad||''}" onchange="actualizarOpPropia('${o.id}','propiedad',this.value)"></td>
+      <td><input class="inp" style="width:90px" type="number" value="${o.precio||0}" onchange="actualizarOpPropia('${o.id}','precio',this.value)"></td>
+      <td>${o.precio ? (o.comision/o.precio*100).toFixed(1).replace(/\.0$/,'') : '—'}%</td>
+      <td><input class="inp" style="width:90px" type="number" value="${o.comision||0}" onchange="actualizarOpPropia('${o.id}','comision',this.value)"></td>
+      <td>${fmtN2(o.comision_vendedor)}</td>
+      <td>
+        <select class="inp" onchange="actualizarOpPropia('${o.id}','estado',this.value)">
+          <option value="Pendiente" ${o.estado==='Pendiente'?'selected':''}>Pendiente</option>
+          <option value="Por cobrar" ${o.estado==='Por cobrar'?'selected':''}>Conformado</option>
+          <option value="Cobrada" ${o.estado==='Cobrada'?'selected':''}>Cobrada</option>
+          <option value="Caída" ${o.estado==='Caída'?'selected':''}>Caída</option>
+        </select>
+      </td>
+      <td><input class="inp" style="width:130px" type="date" value="${ddmmToISO(o.fechaReserva)}" onchange="actualizarOpPropia('${o.id}','fechaReserva',this.value)"></td>
+      <td><input class="inp" style="width:130px" type="date" value="${ddmmToISO(o.fechaEsc)}" onchange="actualizarOpPropia('${o.id}','fechaEsc',this.value)"></td>
+    </tr>` : `<tr>
       <td>${o.propiedad||''}</td>
       <td>${fmtN2(o.precio||0)}</td>
       <td>${o.precio ? (o.comision/o.precio*100).toFixed(1).replace(/\.0$/,'') : '—'}%</td>
