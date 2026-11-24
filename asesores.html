@@ -1735,12 +1735,17 @@ async function actualizarOpPropia(id, campo, valor){
   const op = operacionesPropias.find(o=>String(o.id)===String(id));
   if(!op) return;
   const valorAnterior = op[campo];
-  if(campo==='precio' || campo==='comision'){
-    op[campo] = parseFloat(valor)||0;
+  if(campo==='precio' || campo==='comision' || campo==='pctComision'){
     if(campo==='precio'){
       // Mantiene el % vigente y solo recalcula el monto, igual criterio que el resto de la app.
-      const pctVigente = valorAnterior ? (op.comision/valorAnterior) : 0.03;
+      const pctVigente = op.precio ? (op.comision/op.precio) : 0.03;
+      op.precio = parseFloat(valor)||0;
       op.comision = Math.round(op.precio*pctVigente*100)/100;
+    } else if(campo==='pctComision'){
+      const pct = parseFloat(valor)/100 || 0.03;
+      op.comision = Math.round(op.precio*pct*100)/100;
+    } else {
+      op.comision = parseFloat(valor)||0;
     }
     op.comision_vendedor = op.comision; // Franco se queda con el 100%
   } else if(campo==='fechaEsc' || campo==='fechaReserva'){
@@ -1756,6 +1761,21 @@ async function actualizarOpPropia(id, campo, valor){
   if(!ok){ op[campo] = valorAnterior; renderMisOperaciones(); return; }
   renderMisOperaciones();
   showToast('✅ Actualizado');
+}
+// Eliminado lógico (solo Franco, solo sus propias operaciones): desaparece de la vista, la fila
+// queda marcada en la planilla por si hace falta auditarla después — mismo criterio que
+// index.html/operaciones.html.
+async function eliminarOpPropia(id){
+  if(sesionActiva!=='Franco') return;
+  const op = operacionesPropias.find(o=>String(o.id)===String(id));
+  if(!op) return;
+  if(!confirm('¿Está seguro que quiere borrar esta operación?')) return;
+  op.eliminada = true;
+  const ok = await dbActualizar('operaciones', op.id, filaOperacionAs(op));
+  if(!ok){ op.eliminada = false; return; }
+  operacionesPropias = operacionesPropias.filter(o=>String(o.id)!==String(id));
+  renderMisOperaciones();
+  showToast('✅ Operación eliminada');
 }
 
 async function procesarAccionReservaAsesor(accion){
@@ -1922,12 +1942,12 @@ function renderMisOperaciones(){
   </div>
   ${!ops.length ? '<div style="color:var(--text3);font-size:12px;margin-top:10px">Sin operaciones en ese mes.</div>' : `
   <table class="mis-ops-table"><thead><tr>
-    <th>Propiedad</th><th>Precio</th><th>% Comisión</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha de reserva</th><th>Fecha de cobro</th>
+    <th>Propiedad</th><th>Precio</th><th>% Comisión</th><th>Facturación bruta</th><th>Mi comisión</th><th>Estado</th><th>Fecha de reserva</th><th>Fecha de cobro</th>${esFranco?'<th></th>':''}
   </tr></thead><tbody>
     ${ops.map(o=> esFranco ? `<tr>
       <td><input class="inp" style="min-width:140px" value="${o.propiedad||''}" onchange="actualizarOpPropia('${o.id}','propiedad',this.value)"></td>
       <td><input class="inp" style="width:90px" type="number" value="${o.precio||0}" onchange="actualizarOpPropia('${o.id}','precio',this.value)"></td>
-      <td>${o.precio ? (o.comision/o.precio*100).toFixed(1).replace(/\.0$/,'') : '—'}%</td>
+      <td><input class="inp" style="width:70px" type="number" step="0.01" value="${o.precio ? (o.comision/o.precio*100).toFixed(2) : 3}" onchange="actualizarOpPropia('${o.id}','pctComision',this.value)"></td>
       <td><input class="inp" style="width:90px" type="number" value="${o.comision||0}" onchange="actualizarOpPropia('${o.id}','comision',this.value)"></td>
       <td>${fmtN2(o.comision_vendedor)}</td>
       <td>
@@ -1940,6 +1960,7 @@ function renderMisOperaciones(){
       </td>
       <td><input class="inp" style="width:130px" type="date" value="${ddmmToISO(o.fechaReserva)}" onchange="actualizarOpPropia('${o.id}','fechaReserva',this.value)"></td>
       <td><input class="inp" style="width:130px" type="date" value="${ddmmToISO(o.fechaEsc)}" onchange="actualizarOpPropia('${o.id}','fechaEsc',this.value)"></td>
+      <td><button onclick="eliminarOpPropia('${o.id}')" title="Eliminar operación" style="background:var(--card2);color:var(--red);border:1px solid var(--red);border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:12px;line-height:1;padding:0">✕</button></td>
     </tr>` : `<tr>
       <td>${o.propiedad||''}</td>
       <td>${fmtN2(o.precio||0)}</td>
