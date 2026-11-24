@@ -4731,7 +4731,7 @@ function semanaDeHoy(mes, anio){
 function accionesSemanaPct(vendedor, mes, anio){
   const idx = semanaDeHoy(mes, anio);
   if(idx===null) return null;
-  const obj = segObjetivos?.[vendedor]?.[mes] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
+  const obj = {...(OBJ_BASE[vendedor]||OBJ_BASE['Martina']), ...(segObjetivos?.[vendedor]?.[mes]||{})};
   const semMetricas = [
     {key:'p', obj:Math.ceil((obj.p||0)/4)},
     {key:'ec', obj:Math.ceil((obj.ec||2)/4)||2},
@@ -4832,7 +4832,7 @@ function renderSeguimientoEquipo(){
   // ── Ranking de cumplimiento del mes por vendedor ──
   const rankData = SEG_EQUIPO_AGENTES.map(ag=>{
     const d = getSegMes(ag, mes, anio);
-    const obj = segObjetivos?.[ag]?.[mes] || OBJ_BASE[ag] || OBJ_BASE['Martina'];
+    const obj = {...(OBJ_BASE[ag]||OBJ_BASE['Martina']), ...(segObjetivos?.[ag]?.[mes]||{})};
     const metricas = [
       {label:'Captac.', key:'cp', real:d.cp||0, obj:obj.cp||0, color:'#7FA6D6'},
       {label:'Muestras', key:'m', real:d.m||0, obj:obj.m||0, color:'#D9B25C'},
@@ -4906,7 +4906,7 @@ function renderSegTablaSemanal(){
   // obj/real de las 6 métricas numéricas, por vendedor, para la tabla de arriba.
   const porVendedor = {};
   vendedores.forEach(v=>{
-    const obj = segObjetivos?.[v]?.[mes] || OBJ_BASE[v] || OBJ_BASE['Martina'];
+    const obj = {...(OBJ_BASE[v]||OBJ_BASE['Martina']), ...(segObjetivos?.[v]?.[mes]||{})};
     const objSemanaVals = objSemanaProporcional(obj, diasSemana, diasHabilesMes);
     const semData = getSemanas(v, mes);
     const vals = semData[semIdx]?.vals || {};
@@ -4995,7 +4995,7 @@ function renderSeguimiento(){
   const getObj = (m, key) => {
     return segObjetivos?.[vendedor]?.[m]?.[key] ?? OBJ_BASE?.[vendedor]?.[key] ?? 0;
   };
-  const obj = segObjetivos?.[vendedor]?.[1] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
+  const obj = {...(OBJ_BASE[vendedor]||OBJ_BASE['Martina']), ...(segObjetivos?.[vendedor]?.[1]||{})};
   const objVals = [obj.p,obj.ec,obj.acm,obj.cp,obj.pr,obj.ca,obj.b,obj.m,obj.r,obj.v,obj.f,obj.cap];
   const anioSeg = parseInt(document.getElementById('seg-anio-sel')?.value) || new Date().getFullYear();
 
@@ -5242,7 +5242,7 @@ async function generarAnalisisVendedorFinal(vendedor){
 
   const anio = new Date().getFullYear();
   const mesParaObj = new Date().getMonth()+1;
-  const obj = segObjetivos?.[vendedor]?.[mesParaObj] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
+  const obj = {...(OBJ_BASE[vendedor]||OBJ_BASE['Martina']), ...(segObjetivos?.[vendedor]?.[mesParaObj]||{})};
   const getMd = m2 => getSegMes(vendedor, m2, anio);
   const mesActual = new Date().getMonth()+1;
   const allM = Array.from({length:mesActual},(_,i)=>i+1);
@@ -5535,7 +5535,7 @@ function renderCalendarioSemanal(){
   const vendedor = document.getElementById('seg-vendedor-sel')?.value || 'Martina';
   const mes = parseInt(document.getElementById('seg-cal-mes').value);
   const anio = 2026;
-  const obj = segObjetivos?.[vendedor]?.[mes] || OBJ_BASE[vendedor] || OBJ_BASE['Martina'];
+  const obj = {...(OBJ_BASE[vendedor]||OBJ_BASE['Martina']), ...(segObjetivos?.[vendedor]?.[mes]||{})};
 
   // Calcular semanas del mes (lunes a viernes)
   const semanas = getSemanasMes(anio, mes);
