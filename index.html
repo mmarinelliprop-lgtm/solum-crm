@@ -2448,9 +2448,9 @@ function parseFechaDDMM(f){
 }
 function fmtPesos(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
 function calcGanancia(op){
-  // Franco no es parte del equipo: se queda con el 100% de su comisión, nunca genera ganancia
-  // para Martina ni para SOLUM (ver la misma regla en asesores.html al cargar sus reservas).
-  if(op.agente==='Franco') return {propia:0, equipo:0, total:0, solum:0};
+  // Franco no es parte del equipo: su reparto es 70% para él / 30% para SOLUM, nada para Martina
+  // (ver la misma regla en asesores.html/operaciones.html al cargar sus reservas).
+  if(op.agente==='Franco') return {propia:0, equipo:0, total:0, solum:Math.round((op.comision||0)*0.30*100)/100};
   // Si la operación ya trae ganancia_martina calculada, usarla
   if(op.ganancia_martina !== undefined && op.ganancia_martina > 0){
     return {
@@ -2532,6 +2532,7 @@ function pctVigenteNivel(agente, anio, operacionActual){
   const n = normAgente(agente);
   if(n==='Martina') return COMISIONES['Martina']||0.80;
   if(n==='Kito') return COMISIONES['Kito']||0.60;
+  if(n==='Franco') return 0.70; // fijo, no entra en la escalera del equipo
   const inicio = nivelInicioAnio(n, anio);
   const tieneUbicacion = operacionActual && operacionActual.id!==undefined && operacionActual.mes!==undefined;
   const porAcumulado = nivelPorFacturacion(tieneUbicacion ? facturacionAcumuladaPrevia(n, anio, operacionActual) : facturacionAnioDeAgente(n, anio));

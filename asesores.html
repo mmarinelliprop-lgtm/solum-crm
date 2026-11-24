@@ -1747,7 +1747,9 @@ async function actualizarOpPropia(id, campo, valor){
     } else {
       op.comision = parseFloat(valor)||0;
     }
-    op.comision_vendedor = op.comision; // Franco se queda con el 100%
+    // Franco: 70% para él, 30% para SOLUM.
+    op.comision_vendedor = Math.round(op.comision*0.70*100)/100;
+    op.ganancia_solum = Math.round((op.comision-op.comision_vendedor)*100)/100;
   } else if(campo==='fechaEsc' || campo==='fechaReserva'){
     op[campo] = isoToDDMM(valor) || valor;
     if(campo==='fechaEsc'){
@@ -1792,11 +1794,13 @@ async function procesarAccionReservaAsesor(accion){
   const anioParaPct = (parseFechaDDMM(fechaEsc) || new Date()).getFullYear();
   const pct = pctVigenteAsesor(anioParaPct);
   const esMartinaProp = sesionActiva==='Martina';
-  // Franco no es parte del equipo: se queda con toda su comisión, sin cortar para Martina ni SOLUM.
+  // Franco no es parte del equipo: 70% para él, 30% para SOLUM, nada para Martina.
   const esFranco = sesionActiva==='Franco';
   let ganancia_solum, comision_vendedor, ganancia_martina;
   if(esFranco){
-    ganancia_solum = 0; ganancia_martina = 0; comision_vendedor = comision;
+    comision_vendedor = Math.round(comision*0.70*100)/100;
+    ganancia_solum = Math.round((comision-comision_vendedor)*100)/100;
+    ganancia_martina = 0;
   } else {
     ganancia_solum = Math.round(comision*(esMartinaProp?0.20:0.30)*100)/100;
     comision_vendedor = esMartinaProp ? 0 : Math.round(comision*pct*100)/100;

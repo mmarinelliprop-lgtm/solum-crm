@@ -423,6 +423,7 @@ function facturacionAcumuladaPrevia(agente, anio, operacionActual){
 function pctAsesorVigente(op){
   if(op.agente==='Martina') return 0.80;
   if(op.agente==='Kito') return 0.60;
+  if(op.agente==='Franco') return 0.70; // fijo, no entra en la escalera del equipo
   const inicio = nivelInicioAnio(op.agente, op.anio);
   // Si la operación ya tiene id/mes (existente), toma la facturación previa a ESA operación;
   // si no (operación nueva que todavía no tiene posición en la planilla), usa el total del año.
@@ -448,10 +449,10 @@ async function recalcularComisiones(){
   for(const op of cobradas){
     let comVendedor, ganMartina, ganSolum;
     if(op.agente==='Franco'){
-      // Franco no es parte del equipo: se queda con el 100% de su comisión.
-      comVendedor = op.comision;
+      // Franco no es parte del equipo: 70% para él, 30% para SOLUM, nada para Martina.
+      comVendedor = Math.round(op.comision*0.70);
       ganMartina = 0;
-      ganSolum = 0;
+      ganSolum = op.comision - comVendedor;
     } else if(op.agente==='Martina'){
       comVendedor = 0;
       ganMartina = Math.round(op.comision*0.80);
@@ -880,7 +881,9 @@ async function actualizarCampo(id, campo, valor){
       op.ganancia_martina = Math.round(op.comision*0.80);
       op.ganancia_solum = op.comision - op.ganancia_martina;
     } else if(op.agente==='Franco'){
-      op.comision_vendedor = op.comision; op.ganancia_martina = 0; op.ganancia_solum = 0;
+      op.comision_vendedor = Math.round(op.comision*0.70*100)/100;
+      op.ganancia_martina = 0;
+      op.ganancia_solum = op.comision - op.comision_vendedor;
     } else {
       const pctAgente = pctAsesorVigente(op);
       op.comision_vendedor = Math.round(op.comision*pctAgente);
