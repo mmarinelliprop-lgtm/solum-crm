@@ -3530,7 +3530,11 @@ function abrirFichaAsesor(nombre){
   const anioF = new Date().getFullYear();
   const opsAgente = operaciones.filter(o=>normAgente(o.agente)===nombre && o.anio===anioF);
   const cobradas = opsAgente.filter(o=>o.estado==='Cobrada');
-  const porCobrar = opsAgente.filter(o=>o.estado==='Por cobrar');
+  // "A cobrar" = Por cobrar (Conformado) + Pendiente, sin filtrar por año — mismo criterio que
+  // facPorCobrarDeAgente() y la propia asesores.html. Antes esta ficha sumaba solo "Por cobrar"
+  // del año en curso, lo que la hacía no coincidir con lo que el asesor ve en su propia página
+  // (que no filtra por año: lo pendiente de cobro sigue pendiente sin importar el año de reserva).
+  const porCobrar = operaciones.filter(o=>normAgente(o.agente)===nombre && (o.estado==='Por cobrar'||o.estado==='Pendiente'));
   const caidas = opsAgente.filter(o=>o.estado==='Caída');
   const facturado = cobradas.reduce((s,o)=>s+(o.comision||0),0);
   const porCobrarMonto = porCobrar.reduce((s,o)=>s+(o.comision||0),0);
@@ -3741,9 +3745,9 @@ function abrirFichaAsesor(nombre){
     <h3>Próximos pasos sugeridos</h3>
     <div class="box"><ul>${proximosPasos}</ul></div>
 
-    <h3>Conformado — fecha estimada</h3>
+    <h3>A cobrar (Conformado + Pendiente)</h3>
     <table><thead><tr><th>Propiedad</th><th>Comisión</th><th>Fecha estimada</th></tr></thead><tbody>${filasPorCobrar}</tbody></table>
-    <div class="sub" style="margin-top:6px">Total por cobrar: ${fmtUSD(porCobrarMonto)} en ${porCobrar.length} operaciones</div>
+    <div class="sub" style="margin-top:6px">Total a cobrar: ${fmtUSD(porCobrarMonto)} en ${porCobrar.length} operaciones</div>
 
     <h3>Listado completo de operaciones ${anioF}</h3>
     <table><thead><tr><th>Propiedad</th><th>Punta</th><th>Comisión</th><th>Fecha</th><th>Estado</th></tr></thead><tbody>${filasCompleto}</tbody></table>
@@ -3921,7 +3925,7 @@ function renderOperaciones(){
 
   const totMiGan = ops.reduce((s,o)=>s+calcGanancia(o).total,0);
   const totMiGanCob = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+calcGanancia(o).total,0);
-  const totMiGanPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+calcGanancia(o).total,0);
+  const totMiGanPend = ops.filter(o=>o.estado==='Por cobrar'||o.estado==='Pendiente').reduce((s,o)=>s+calcGanancia(o).total,0);
   // SOLUM = 20% del total (lo que queda en oficina de operaciones propias) + 30% de las del equipo
   const totSolum = ops.reduce((s,o)=>{
     const g = calcGanancia(o);
@@ -3996,7 +4000,7 @@ function renderOperaciones(){
   const totComPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
   const totComCaida = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
   const totSolumCob = ops.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
-  const totSolumPend = ops.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
+  const totSolumPend = ops.filter(o=>o.estado==='Por cobrar'||o.estado==='Pendiente').reduce((s,o)=>s+(o.ganancia_solum||o.comision*0.30),0);
 
   const totCaidasMiGan = ops.filter(o=>o.estado==='Caída').reduce((s,o)=>s+(o.ganancia_martina||calcGanancia(o).total),0);
 
@@ -4034,7 +4038,7 @@ function renderOperaciones(){
   const vendGanCobMes = mesesLabels.map((_,i)=>
     opsAnio.filter(o=>o.mes===i+1&&o.estado==='Cobrada').reduce((s,o)=>s+gananciaVendedor(o),0));
   const vendGanPendMes = mesesLabels.map((_,i)=>
-    opsAnio.filter(o=>o.mes===i+1&&o.estado==='Por cobrar').reduce((s,o)=>s+gananciaVendedor(o),0));
+    opsAnio.filter(o=>o.mes===i+1&&(o.estado==='Por cobrar'||o.estado==='Pendiente')).reduce((s,o)=>s+gananciaVendedor(o),0));
 
   // Gráfico unificado — ganancia del/de los vendedor/es seleccionado/s
   destroyChart('chartOpsUnificado');
@@ -4059,7 +4063,7 @@ function renderOperaciones(){
   const totalGanCaido = opsAnio.filter(o=>o.estado==='Caída').reduce((s,o)=>s+gananciaVendedor(o),0);
 
   const totalFactCobrado = opsAnio.filter(o=>o.estado==='Cobrada').reduce((s,o)=>s+o.comision,0);
-  const totalFactPendiente = opsAnio.filter(o=>o.estado==='Por cobrar').reduce((s,o)=>s+o.comision,0);
+  const totalFactPendiente = opsAnio.filter(o=>o.estado==='Por cobrar'||o.estado==='Pendiente').reduce((s,o)=>s+o.comision,0);
   const totalFactCaida = opsAnio.filter(o=>o.estado==='Caída').reduce((s,o)=>s+o.comision,0);
 
   const mesActual = new Date().getMonth()+1;
